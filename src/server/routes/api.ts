@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
+import { QueueWorker } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
@@ -11,6 +12,7 @@ import { config } from '../../config/env.js';
 
 export const apiRouter = Router();
 const queue = new PersistentJobQueue();
+const worker = new QueueWorker();
 const renderer = new PlaywrightImageRenderer();
 const dedupeService = new ArticleDedupeService();
 
@@ -433,11 +435,25 @@ apiRouter.post('/preview/render', async (req: Request, res: Response) => {
   }
 });
 
-// 7. Manual trigger: Poll RSS Now
+// 7. Manual trigger: Poll RSS Now & Process Next Job
 apiRouter.post('/poll-now', async (req: Request, res: Response) => {
   try {
     const results = await dedupeService.pollAllActiveSources();
-    res.json({ success: true, results });
+    const job = await queue.fetchNextJob();
+    let publishedPostId: string | null = null;
+
+    if (job) {
+      console.log(`[Manual Poll] Immediate worker execution for job ${job._id}...`);
+      await worker.processJob(job);
+      publishedPostId = job.articleId || null;
+    }
+
+    res.json({
+      success: true,
+      results,
+      processedJob: !!job,
+      jobId: job ? job._id : null,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
