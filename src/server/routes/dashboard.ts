@@ -1126,13 +1126,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           <div class="space-y-3.5 text-xs">
             <div>
               <label class="block font-semibold text-slate-300 mb-1">Google OAuth Client ID</label>
-              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com" placeholder="xxxxx.apps.googleusercontent.com" />
+              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="" placeholder="xxxxx.apps.googleusercontent.com" />
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block font-semibold text-slate-300 mb-1">Client Secret (Google Cloud)</label>
-                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" placeholder="GOCSPX-xxxxxxxxxxxxxxxx" />
+                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="" placeholder="Enter Client Secret" />
               </div>
 
               <div>
@@ -1154,9 +1154,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               </ol>
             </div>
 
-            <div class="pt-2 flex justify-end">
-              <button onclick="saveYouTubeSettings()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition shadow-sm active:scale-95">
-                Save & Authenticate YouTube
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300">
+              <span class="truncate"><span class="text-slate-400">OAuth Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">https://.../api/youtube/auth/callback</span></span>
+              <button onclick="copyRedirectUri()" class="ml-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 text-[10px] font-sans flex items-center gap-1 active:scale-95 transition">📋 Copy</button>
+            </div>
+
+            <div class="pt-2 flex flex-wrap items-center justify-between gap-3">
+              <button onclick="startGoogleOAuth()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-xs flex items-center gap-2 shadow-glow-red transition active:scale-95 border border-red-400/40">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>1-Click Google Sign-In</span>
+              </button>
+
+              <button onclick="saveYouTubeSettings()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition shadow-sm active:scale-95">
+                Save & Authenticate
               </button>
             </div>
           </div>
@@ -2743,8 +2753,44 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    // Initial load
+    async function startGoogleOAuth() {
+      try {
+        showToast('Generating Google sign-in session...');
+        const res = await safeFetchJson('/api/youtube/auth/url');
+        if (res.ok && res.data && res.data.authUrl) {
+          window.location.href = res.data.authUrl;
+        } else {
+          showToast('Could not start OAuth: ' + (res.data?.error || 'Unknown error'), true);
+        }
+      } catch (e) {
+        showToast('OAuth Error: ' + e.message, true);
+      }
+    }
+
+    function copyRedirectUri() {
+      const uri = window.location.origin + '/api/youtube/auth/callback';
+      navigator.clipboard.writeText(uri).then(() => {
+        showToast('✓ Redirect URI copied to clipboard: ' + uri);
+      }).catch(() => {
+        showToast(uri);
+      });
+    }
+
+    // Update redirect URI display dynamically
+    setTimeout(() => {
+      const disp = document.getElementById('yt-redirect-uri-display');
+      if (disp) disp.innerText = window.location.origin + '/api/youtube/auth/callback';
+    }, 200);
+
+    // Initial load & Tab URL check
     loadOverview();
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'youtube') {
+      switchTab('youtube');
+      if (urlParams.get('auth') === 'success') {
+        setTimeout(() => showToast('🎉 YouTube Channel Successfully Connected!'), 500);
+      }
+    }
   </script>
 </body>
 </html>`;

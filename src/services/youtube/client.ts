@@ -60,6 +60,56 @@ export class YouTubeClient {
     }
   }
 
+  /**
+   * Exchanges authorization code for refresh_token and access_token
+   */
+  public async exchangeCodeForTokens(
+    code: string,
+    redirectUri: string
+  ): Promise<{ refreshToken: string; accessToken: string }> {
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+    });
+
+    const res = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    const data = (await res.json()) as any;
+    if (!res.ok || data.error) {
+      throw new Error(`Token exchange failed: ${data.error_description || data.error || res.statusText}`);
+    }
+
+    if (data.refresh_token) {
+      this.refreshToken = data.refresh_token;
+      try {
+        const db = getDatabase();
+        await db.collection<Setting>('settings').updateOne(
+          { _id: 'YOUTUBE_REFRESH_TOKEN' },
+          { $set: { value: data.refresh_token, updatedAt: new Date() } },
+          { upsert: true }
+        );
+      } catch (err) {
+        console.warn('Could not persist refresh token to database:', err);
+      }
+    }
+
+    this.cachedAccessToken = data.access_token;
+    this.tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+
+    return {
+      refreshToken: data.refresh_token || '',
+      accessToken: data.access_token,
+    };
+  }
+
   public isConfigured(): boolean {
     return Boolean(this.clientId && this.clientSecret && this.refreshToken);
   }

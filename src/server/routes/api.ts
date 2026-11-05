@@ -1214,8 +1214,8 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DISABLE_POSTER: 'true',
       REEL_DURATION_SECONDS: '15',
       DEFAULT_REEL_THEME: 'studio-red',
-      YOUTUBE_CLIENT_ID: '998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com',
-      YOUTUBE_CLIENT_SECRET: '',
+      YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
+      YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
       AUTO_POST_YOUTUBE: 'true',
     };
@@ -1284,9 +1284,9 @@ apiRouter.get('/youtube/status', async (req: Request, res: Response) => {
       success: true,
       isConfigured,
       autoPost: autoPostSetting ? autoPostSetting.value !== 'false' : true,
-      clientId: clientIdSetting?.value || '998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com',
-      hasClientSecret: Boolean(clientSecretSetting?.value),
-      hasRefreshToken: Boolean(refreshTokenSetting?.value),
+      clientId: clientIdSetting?.value || process.env.YOUTUBE_CLIENT_ID || '',
+      hasClientSecret: Boolean(clientSecretSetting?.value || process.env.YOUTUBE_CLIENT_SECRET),
+      hasRefreshToken: Boolean(refreshTokenSetting?.value || process.env.YOUTUBE_REFRESH_TOKEN),
       channel,
       error,
     });
@@ -1388,6 +1388,43 @@ apiRouter.get('/youtube/logs', async (req: Request, res: Response) => {
     res.json({ success: true, logs });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/youtube/auth/url', async (req: Request, res: Response) => {
+  const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+  const host = req.get('host');
+  const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
+  const db = getDatabase();
+  const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+  const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
+  const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+
+  res.json({
+    authUrl,
+    redirectUri,
+  });
+});
+
+apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
+  try {
+    const code = req.query.code as string;
+    if (!code) {
+      return res.status(400).send('Authorization code is missing from Google callback.');
+    }
+
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host');
+    const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
+
+    await ytClient.initCredentials();
+    await ytClient.exchangeCodeForTokens(code, redirectUri);
+
+    res.redirect('/?tab=youtube&auth=success');
+  } catch (err: any) {
+    res.status(500).send(`YouTube Authentication Failed: ${err.message}`);
   }
 });
 
