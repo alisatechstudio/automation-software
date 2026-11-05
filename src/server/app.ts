@@ -34,6 +34,9 @@ export function createServer(): Express {
   app.use('/assets', express.static(config.ASSETS_DIR));
   app.use('/rendered', express.static(path.join(config.DATA_DIR, 'rendered')));
 
+  // Favicon handler to avoid browser 404 logs
+  app.get('/favicon.ico', (req: Request, res: Response) => res.status(204).end());
+
   // Unauthenticated Health Check Endpoint (Returns 200 so Vercel/containers don't kill the service)
   app.get(['/health', '/healthz'], async (req: Request, res: Response) => {
     const mongoReady = isMongoConnected();
@@ -99,6 +102,11 @@ export function createServer(): Express {
 
   // Database Connection Auto-Retry Middleware
   app.use(async (req: Request, res: Response, next: NextFunction) => {
+    // Template preview endpoints don't require database access
+    if (req.path.startsWith('/api/preview')) {
+      return next();
+    }
+
     // If MongoDB is not connected, try to reconnect lazily
     if (!isMongoConnected()) {
       await initMongoDb();
@@ -106,7 +114,7 @@ export function createServer(): Express {
 
     // If still not connected and accessing root or web UI, show helpful Setup Diagnostics
     if (!isMongoConnected()) {
-      if (req.path.startsWith('/api') && req.path !== '/api/cron') {
+      if (req.path.startsWith('/api') && req.path !== '/api/cron' && !req.path.startsWith('/api/preview')) {
         res.status(503).json({
           error: 'MongoDB Not Connected',
           details: getLastMongoError() || 'MONGODB_URI not configured in Vercel',

@@ -340,20 +340,54 @@ apiRouter.get('/templates', (req: Request, res: Response) => {
   res.json(Object.values(AVAILABLE_TEMPLATES));
 });
 
+apiRouter.post('/preview/html', (req: Request, res: Response) => {
+  try {
+    const { templateId, headline, category, imageUrl } = req.body;
+
+    const sampleHeadline =
+      headline ||
+      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+
+    const html = renderer.compileHtml({
+      templateId: templateId || 'template-canva-bdnews',
+      headline: sampleHeadline,
+      category: category || 'বিশেষ খবর',
+      imageUrl: imageUrl || undefined,
+    });
+
+    res.json({
+      success: true,
+      html,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/preview/render', async (req: Request, res: Response) => {
   try {
     const { templateId, headline, category, imageUrl } = req.body;
 
     const sampleHeadline =
       headline ||
-      'রিপাবলিকানদের ঘাঁটি এলাকায় ডেমোক্র্যাটদের নাটকীয় জয়: হোয়াইট হাউসের রাজনীতিতে নতুন মেরুকরণ ও আলোড়ন';
+      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
 
-    const buffer = await renderer.renderToBuffer({
-      templateId: templateId || 'template-square-breaking',
+    // 8-second safety timeout on serverless to avoid 504 Gateway Timeout
+    const renderPromise = renderer.renderToBuffer({
+      templateId: templateId || 'template-canva-bdnews',
       headline: sampleHeadline,
-      category: category || 'ব্রেকিং নিউজ',
+      category: category || 'বিশেষ খবর',
       imageUrl: imageUrl || undefined,
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Serverless Chromium render timed out (Use Instant Live Preview)')),
+        8500
+      )
+    );
+
+    const buffer = await Promise.race([renderPromise, timeoutPromise]);
 
     const base64Data = `data:image/png;base64,${buffer.toString('base64')}`;
     res.json({
@@ -362,8 +396,12 @@ apiRouter.post('/preview/render', async (req: Request, res: Response) => {
       sizeBytes: buffer.length,
     });
   } catch (err: any) {
-    console.error('[PreviewRender] Error:', err);
-    res.status(500).json({ error: err.message });
+    console.warn('[PreviewRender] Warning:', err.message);
+    res.status(200).json({
+      success: false,
+      error: err.message,
+      useHtmlPreview: true,
+    });
   }
 });
 

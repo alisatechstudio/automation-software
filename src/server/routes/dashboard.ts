@@ -290,8 +290,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
 
         <div class="lg:col-span-7 bg-slate-900 border border-slate-800 p-6 rounded-xl flex flex-col items-center justify-center min-h-[500px]">
-          <div id="preview-container" class="w-full max-w-lg aspect-square bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center overflow-hidden relative shadow-2xl">
-            <div id="preview-placeholder" class="text-slate-500 text-sm text-center px-4">Click "Render Live Preview" to compile the HTML/CSS template and render with Playwright</div>
+          <div id="preview-container" class="w-[510px] h-[510px] max-w-full aspect-square bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center overflow-hidden relative shadow-2xl">
+            <div id="preview-placeholder" class="text-slate-500 text-sm text-center px-4">Click "Render Live Preview" to view the Canva template with Bengali auto-fit</div>
+            <iframe id="preview-frame" class="w-[1080px] h-[1080px] origin-top-left border-0 hidden" style="transform: scale(0.472);" sandbox="allow-scripts allow-same-origin"></iframe>
             <img id="preview-img" class="w-full h-full object-contain hidden" alt="Preview Result" />
           </div>
           <div id="preview-meta" class="mt-4 text-xs font-mono text-slate-400"></div>
@@ -617,40 +618,42 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function renderPreview() {
       const spinner = document.getElementById('preview-spinner');
+      const frame = document.getElementById('preview-frame');
       const img = document.getElementById('preview-img');
       const placeholder = document.getElementById('preview-placeholder');
       const meta = document.getElementById('preview-meta');
 
       spinner.classList.remove('hidden');
-      meta.innerText = 'Compiling HTML/CSS and rendering with Playwright...';
+      meta.innerText = 'Rendering instant live template...';
+
+      const payload = {
+        templateId: document.getElementById('preview-template').value,
+        category: document.getElementById('preview-category').value,
+        headline: document.getElementById('preview-headline').value,
+        imageUrl: document.getElementById('preview-image').value,
+      };
 
       try {
-        const payload = {
-          templateId: document.getElementById('preview-template').value,
-          category: document.getElementById('preview-category').value,
-          headline: document.getElementById('preview-headline').value,
-          imageUrl: document.getElementById('preview-image').value,
-        };
-
-        const res = await fetch('/api/preview/render', {
+        // Fast instant HTML compilation (5ms)
+        const res = await fetch('/api/preview/html', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
 
-        if (data.success) {
-          img.src = data.imageUri;
-          img.classList.remove('hidden');
+        if (data.success && data.html) {
+          frame.srcdoc = data.html;
+          frame.classList.remove('hidden');
+          img.classList.add('hidden');
           placeholder.classList.add('hidden');
-          meta.innerText = 'Render complete (' + Math.round(data.sizeBytes / 1024) + ' KB)';
+          meta.innerText = '✓ Live Interactive Template Preview Ready';
         } else {
-          meta.innerText = 'Render failed: ' + data.error;
-          showToast(data.error || 'Preview failed', true);
+          meta.innerText = 'Preview error: ' + (data.error || 'Failed to compile template');
         }
       } catch (e) {
         meta.innerText = 'Error: ' + e.message;
-        showToast('Error rendering preview', true);
+        showToast('Error generating preview: ' + e.message, true);
       } finally {
         spinner.classList.add('hidden');
       }

@@ -132,6 +132,29 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     };
   }
 
+  public compileHtml(input: RenderInput): string {
+    const templateId = input.templateId || TEMPLATES.CANVA_BDNEWS;
+    const { compiled } = this.getCompiledTemplate(templateId);
+
+    const dateFormatted =
+      input.dateText ||
+      new Intl.DateTimeFormat('bn-BD', {
+        dateStyle: 'full',
+      }).format(new Date());
+
+    return compiled({
+      headline: input.headline,
+      category: input.category || 'বিশেষ খবর',
+      dateText: dateFormatted,
+      imageUrl: input.imageUrl || this.fallbackImageBase64,
+      fallbackImage: this.fallbackImageBase64,
+      logoUrl: input.logoUrl || this.logoBase64,
+      fontNotoSansBengali: this.fontNotoBase64,
+      fontHindSiliguriBold: this.fontHindBoldBase64,
+      brandColor: input.brandColor || '#dc2626',
+    });
+  }
+
   public async renderToBuffer(input: RenderInput): Promise<Buffer> {
     const templateId = input.templateId || TEMPLATES.SQUARE_BREAKING;
     const { compiled, width, height } = this.getCompiledTemplate(templateId);
