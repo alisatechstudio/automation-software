@@ -25,7 +25,8 @@ export interface AppConfig {
 }
 
 const rootDir = process.cwd();
-const dataDir = process.env.DATA_DIR || path.join(rootDir, 'data');
+const isVercel = !!process.env.VERCEL;
+const dataDir = process.env.DATA_DIR || (isVercel ? '/tmp/data' : path.join(rootDir, 'data'));
 const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 
 export const config: AppConfig = {
@@ -34,7 +35,7 @@ export const config: AppConfig = {
   MONGODB_URI:
     process.env.MONGODB_URI ||
     process.env.MONGODB_URL ||
-    'mongodb://127.0.0.1:27017/news_automation',
+    (isVercel ? '' : 'mongodb://127.0.0.1:27017/news_automation'),
   MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || 'news_automation',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'ChangeMeImmediately123!',
   POLL_INTERVAL_CRON: process.env.POLL_INTERVAL_CRON || '*/10 * * * *', // Every 10 minutes

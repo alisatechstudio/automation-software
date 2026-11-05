@@ -19,6 +19,14 @@ export function createServer(): Express {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // Strip Vercel rewrite prefix if present
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.url.startsWith('/api/index')) {
+      req.url = req.url.replace(/^\/api\/index/, '') || '/';
+    }
+    next();
+  });
+
   // Request logger
   app.use(requestLogger);
 
@@ -93,10 +101,18 @@ export function createServer(): Express {
       await initMongoDb();
     }
 
-    // If still not connected and accessing root UI, show helpful Setup Diagnostics
-    if (!isMongoConnected() && (req.path === '/' || req.path === '')) {
-      const maskedUri = (config.MONGODB_URI || '').replace(/:([^@]+)@/, ':****@');
-      const errorMsg = getLastMongoError() || 'Connection refused or timeout';
+    // If still not connected and accessing root or web UI, show helpful Setup Diagnostics
+    if (!isMongoConnected()) {
+      if (req.path.startsWith('/api') && req.path !== '/api/cron') {
+        res.status(503).json({
+          error: 'MongoDB Not Connected',
+          details: getLastMongoError() || 'MONGODB_URI not configured in Vercel',
+        });
+        return;
+      }
+
+      const maskedUri = (process.env.MONGODB_URI || config.MONGODB_URI || '').replace(/:([^@]+)@/, ':****@') || '(Not Set)';
+      const errorMsg = getLastMongoError() || 'MONGODB_URI environment variable is missing';
 
       const setupHtml = `<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -153,6 +169,17 @@ export function createServer(): Express {
   // Mount API & Web Dashboard
   app.use('/api', apiRouter);
   app.use('/', dashboardRouter);
+
+  // Global Error Handler
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('[Global Server Error]:', err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: err?.message || String(err),
+      });
+    }
+  });
 
   return app;
 }

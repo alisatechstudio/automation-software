@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import handlebars from 'handlebars';
-import { chromium, Browser, BrowserContext } from 'playwright';
+import type { Browser, BrowserContext } from 'playwright';
 import { ImageRenderer, RenderInput, RenderOutput } from './types.js';
 import { AVAILABLE_TEMPLATES, TEMPLATES } from '../../config/constants.js';
 import { config } from '../../config/env.js';
@@ -42,17 +42,25 @@ export class PlaywrightImageRenderer implements ImageRenderer {
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser || !this.browser.isConnected()) {
-      this.browser = await chromium.launch({
-        headless: true,
-        executablePath: process.env.CHROMIUM_PATH || undefined,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--font-render-hinting=none',
-        ],
-      });
+      try {
+        const { chromium } = await import('playwright');
+        this.browser = await chromium.launch({
+          headless: true,
+          executablePath: process.env.CHROMIUM_PATH || undefined,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--font-render-hinting=none',
+          ],
+        });
+      } catch (err: any) {
+        console.warn(`[PlaywrightImageRenderer] Headless Chromium not available: ${err.message}`);
+        throw new Error(
+          `Headless Chromium is not available in this runtime (${err.message}). Queue worker will gracefully use original news photo.`
+        );
+      }
     }
     return this.browser;
   }
@@ -65,11 +73,26 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     const templateDef = AVAILABLE_TEMPLATES[templateId] || AVAILABLE_TEMPLATES[TEMPLATES.SQUARE_BREAKING];
 
     if (!this.templatesCache.has(templateDef.id)) {
-      const templatePath = path.join(__dirname, '..', '..', 'templates', templateDef.filename);
-      if (!fs.existsSync(templatePath)) {
-        throw new Error(`Template file not found at ${templatePath}`);
+      const candidatePaths = [
+        path.join(process.cwd(), 'src', 'templates', templateDef.filename),
+        path.join(process.cwd(), 'dist', 'src', 'templates', templateDef.filename),
+        path.join(__dirname, '..', '..', 'templates', templateDef.filename),
+        path.join(__dirname, '..', 'templates', templateDef.filename),
+      ];
+
+      let source = '';
+      for (const p of candidatePaths) {
+        if (fs.existsSync(p)) {
+          source = fs.readFileSync(p, 'utf8');
+          break;
+        }
       }
-      const source = fs.readFileSync(templatePath, 'utf8');
+
+      if (!source) {
+        // Fallback inline template to prevent crash
+        source = `<!DOCTYPE html><html><body style="background:#111;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;padding:40px;"><h1>{{headline}}</h1></body></html>`;
+      }
+
       const compiled = handlebars.compile(source);
       this.templatesCache.set(templateDef.id, compiled);
     }

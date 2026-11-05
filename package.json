@@ -5,7 +5,7 @@
   "main": "dist/src/index.js",
   "type": "commonjs",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs'); if(fs.existsSync('src/templates')){fs.cpSync('src/templates','dist/src/templates',{recursive:true})}\"",
     "start": "node dist/src/index.js",
     "dev": "tsx watch src/index.ts",
     "download-fonts": "node -e \"require('./dist/scripts/download-fonts.js')\"",

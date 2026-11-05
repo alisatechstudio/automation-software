@@ -17,7 +17,14 @@ export function getLastMongoError(): string | null {
 
 export async function getMongoClient(): Promise<MongoClient> {
   if (!client) {
-    const uri = process.env.MONGODB_URI || config.MONGODB_URI;
+    const uri = process.env.MONGODB_URI || process.env.MONGODB_URL || config.MONGODB_URI;
+
+    if (!uri) {
+      throw new Error(
+        'MONGODB_URI environment variable is missing. Please add MONGODB_URI in Vercel Project Settings > Environment Variables.'
+      );
+    }
+
     console.log(`[MongoDB] Connecting with Vercel Integration pool to ${maskUri(uri)}...`);
 
     const options: MongoClientOptions = {
@@ -29,14 +36,15 @@ export async function getMongoClient(): Promise<MongoClient> {
 
     const newClient = new MongoClient(uri, options);
 
-    // Attach the client to ensure proper cleanup on Vercel function suspension
+    await newClient.connect();
+
+    // Attach the client after successful connection to ensure proper cleanup on Vercel function suspension
     try {
       attachDatabasePool(newClient);
     } catch (e) {
       // Non-fatal in non-serverless environments
     }
 
-    await newClient.connect();
     client = newClient;
     isConnected = true;
     lastError = null;
