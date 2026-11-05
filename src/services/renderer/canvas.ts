@@ -21,7 +21,7 @@ export class CanvasCardRenderer implements ImageRenderer {
       path.join(__dirname, '..', '..', '..', 'assets', 'fonts'),
     ];
 
-    let fontsDir = candidatePaths.find((p) => fs.existsSync(p));
+    const fontsDir = candidatePaths.find((p) => fs.existsSync(p));
 
     if (fontsDir) {
       const boldPath = path.join(fontsDir, 'HindSiliguri-Bold.ttf');
@@ -43,70 +43,121 @@ export class CanvasCardRenderer implements ImageRenderer {
   }
 
   /**
-   * Renders the 1080x1080 Canva Replica News Card to a high-quality JPEG Buffer
+   * Renders the ultra-crisp 1080x1080 Television Studio-Grade News Card to a high-quality JPEG Buffer.
+   * Engineered for maximum Bengali typography readability, high contrast, and brand consistency.
    */
   public async renderCard(input: RenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const width = 1080;
-    const height = 1080;
+    const width = input.width || 1080;
+    const height = input.height || 1080;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
     const headline = (input.headline || '').trim();
     const category = (input.category || 'বিশেষ খবর').trim();
     const imageUrl = input.imageUrl;
+    const website = input.website || 'https://bdnews.site';
 
-    // 1. Deep red gradient background
-    const bgGrad = ctx.createRadialGradient(540, 324, 50, 540, 540, 750);
-    bgGrad.addColorStop(0, '#7d0202');
-    bgGrad.addColorStop(0.55, '#4d0000');
-    bgGrad.addColorStop(1, '#250000');
+    // --- 1. STUDIO BROADCAST RED BACKGROUND ---
+    // Deep multi-stop radial gradient for television studio depth
+    const bgGrad = ctx.createRadialGradient(540, 360, 40, 540, 540, 780);
+    bgGrad.addColorStop(0, '#8c0404');
+    bgGrad.addColorStop(0.35, '#6a0101');
+    bgGrad.addColorStop(0.7, '#3d0000');
+    bgGrad.addColorStop(1, '#1a0000');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Subtle dark vignette overlays
-    const vig1 = ctx.createRadialGradient(216, 864, 0, 216, 864, 600);
-    vig1.addColorStop(0, 'rgba(0,0,0,0.4)');
-    vig1.addColorStop(1, 'transparent');
-    ctx.fillStyle = vig1;
-    ctx.fillRect(0, 0, width, height);
-
-    // 2. Top Category Badge ("বিশেষ খবর" / "ব্রেকিং নিউজ")
+    // Elegant curved light streaks (studio broadcast ambient flare)
     ctx.save();
-    ctx.font = 'bold 28px "Hind Siliguri", sans-serif';
-    const badgeText = category;
-    const badgeWidth = ctx.measureText(badgeText).width + 76;
-    const badgeHeight = 44;
-    const badgeX = (width - badgeWidth) / 2;
-    const badgeY = 28;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 22);
-    ctx.fill();
+    ctx.moveTo(-100, 200);
+    ctx.bezierCurveTo(300, 100, 800, 450, 1180, 250);
+    ctx.lineWidth = 140;
+    ctx.strokeStyle = 'rgba(255, 60, 60, 0.05)';
+    ctx.stroke();
 
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#8b0000';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(badgeText, 540, badgeY + badgeHeight / 2 + 2);
+    ctx.beginPath();
+    ctx.moveTo(-100, 900);
+    ctx.bezierCurveTo(350, 750, 750, 1050, 1180, 850);
+    ctx.lineWidth = 120;
+    ctx.strokeStyle = 'rgba(255, 80, 80, 0.04)';
+    ctx.stroke();
     ctx.restore();
 
-    // 3. News Photo Frame (990x400)
+    // Corner Vignettes for cinematic focus
+    const vigTop = ctx.createLinearGradient(0, 0, 0, 180);
+    vigTop.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
+    vigTop.addColorStop(1, 'transparent');
+    ctx.fillStyle = vigTop;
+    ctx.fillRect(0, 0, width, 180);
+
+    const vigBottom = ctx.createLinearGradient(0, 900, 0, 1080);
+    vigBottom.addColorStop(0, 'transparent');
+    vigBottom.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+    ctx.fillStyle = vigBottom;
+    ctx.fillRect(0, 900, width, 180);
+
+    // --- 2. TOP CATEGORY BADGE ("🔴 বিশেষ খবর") ---
+    ctx.save();
+    ctx.font = 'bold 28px "Hind Siliguri", sans-serif';
+    const cleanCategory = category || 'বিশেষ খবর';
+    const catTextWidth = ctx.measureText(cleanCategory).width;
+
+    // Badge dimensions with broadcast dot indicator
+    const dotRadius = 5;
+    const dotGap = 12;
+    const paddingX = 36;
+    const badgeWidth = catTextWidth + dotRadius * 2 + dotGap + paddingX * 2;
+    const badgeHeight = 46;
+    const badgeX = (width - badgeWidth) / 2;
+    const badgeY = 26;
+
+    // Badge Glass Shadow & Body
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 23);
+    ctx.fill();
+
+    // Subtle inner border
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = 'rgba(220, 38, 38, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Red broadcast live dot
+    const dotX = badgeX + paddingX + dotRadius;
+    const dotY = badgeY + badgeHeight / 2;
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Category Text (High contrast crimson)
+    ctx.fillStyle = '#850000';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cleanCategory, dotX + dotRadius + dotGap, dotY + 1);
+    ctx.restore();
+
+    // --- 3. NEWS PHOTO FRAME (990x405) ---
     const photoX = 45;
     const photoY = 88;
     const photoW = 990;
-    const photoH = 400;
-    const photoRadius = 24;
+    const photoH = 405;
+    const photoRadius = 26;
 
+    // Deep Drop Shadow behind photo frame
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 25;
-    ctx.shadowOffsetY = 10;
-    ctx.fillStyle = '#111111';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 14;
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
     ctx.fill();
@@ -118,7 +169,7 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
     ctx.clip();
 
-    let imageLoaded = false;
+    let photoRendered = false;
     if (imageUrl) {
       try {
         const img = await loadImage(imageUrl);
@@ -141,28 +192,36 @@ export class CanvasCardRenderer implements ImageRenderer {
           drawY = photoY - (drawH - photoH) / 2;
         }
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
-        imageLoaded = true;
-      } catch (err: any) {
-        console.warn(`[CanvasCardRenderer] Could not load article image (${imageUrl}):`, err.message);
+        photoRendered = true;
+      } catch (e: any) {
+        console.warn(`[CanvasCardRenderer] Could not load article image (${imageUrl}):`, e.message);
       }
     }
 
-    if (!imageLoaded) {
-      // Fallback dark gradient for photo frame
+    if (!photoRendered) {
+      // Elegant fallback news graphic
       const fallbackGrad = ctx.createLinearGradient(photoX, photoY, photoX + photoW, photoY + photoH);
       fallbackGrad.addColorStop(0, '#1e293b');
-      fallbackGrad.addColorStop(1, '#0f172a');
+      fallbackGrad.addColorStop(1, '#090d16');
       ctx.fillStyle = fallbackGrad;
       ctx.fillRect(photoX, photoY, photoW, photoH);
 
-      ctx.fillStyle = '#64748b';
-      ctx.font = '24px "Hind Siliguri", sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 32px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('BD News 24/7 Official News Update', photoX + photoW / 2, photoY + photoH / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('BD News 24/7 • শীর্ষ সংবাদ', photoX + photoW / 2, photoY + photoH / 2);
     }
+
+    // Soft bottom dark gradient over photo so white border and elements pop
+    const photoBottomGrad = ctx.createLinearGradient(0, photoY + photoH - 90, 0, photoY + photoH);
+    photoBottomGrad.addColorStop(0, 'transparent');
+    photoBottomGrad.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+    ctx.fillStyle = photoBottomGrad;
+    ctx.fillRect(photoX, photoY + photoH - 90, photoW, 90);
     ctx.restore();
 
-    // White border around photo
+    // Crisp White Border around photo
     ctx.save();
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 6;
@@ -171,90 +230,115 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // 4. Brand Bar (Logo + "বিডি নিউজ ২৪/৭")
-    const brandY = 512;
-    const logoSize = 68;
-    const logoX = 350;
+    // --- 4. BRAND BAR (Logo + "বিডি নিউজ ২৪/৭") - PERFECTLY CENTERED ---
+    const brandCenterY = 545;
+    const logoSize = 72;
 
+    ctx.save();
+    ctx.font = 'bold 44px "Hind Siliguri", sans-serif';
+    const brandText = 'বিডি নিউজ ২৪/৭';
+    const brandTextWidth = ctx.measureText(brandText).width;
+    const brandGap = 18;
+    const totalBrandWidth = logoSize + brandGap + brandTextWidth;
+    const brandStartX = (width - totalBrandWidth) / 2;
+    const logoX = brandStartX;
+    const textX = brandStartX + logoSize + brandGap;
+
+    // Render circular logo
     const logoCandidates = [
+      input.logoUrl,
       path.join(config.ASSETS_DIR, 'images', 'bdnews-logo.png'),
       path.join(config.ASSETS_DIR, 'images', 'favicon.png'),
       path.join(process.cwd(), 'assets', 'images', 'bdnews-logo.png'),
       path.join(process.cwd(), 'assets', 'images', 'favicon.png'),
-    ];
+      path.join(__dirname, '..', '..', '..', 'assets', 'images', 'bdnews-logo.png'),
+      path.join(__dirname, '..', '..', '..', 'assets', 'images', 'favicon.png'),
+    ].filter(Boolean) as string[];
 
-    const finalLogoPath = logoCandidates.find((p) => fs.existsSync(p));
+    const finalLogoPath = logoCandidates.find((p) => p && (p.startsWith('http') || fs.existsSync(p)));
 
-    ctx.save();
     if (finalLogoPath) {
       try {
         const logoImg = await loadImage(finalLogoPath);
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 14;
         ctx.beginPath();
-        ctx.arc(logoX + logoSize / 2, brandY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+        ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(logoImg, logoX, brandY, logoSize, logoSize);
+        ctx.drawImage(logoImg, logoX, brandCenterY - logoSize / 2, logoSize, logoSize);
         ctx.restore();
 
+        // White ring border around logo
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(logoX + logoSize / 2, brandY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+        ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
         ctx.stroke();
-      } catch (e) {
-        // Fallback
+      } catch (e: any) {
+        console.warn('[CanvasCardRenderer] Could not load brand logo:', e.message);
       }
     }
 
-    // Channel Name text
+    // Channel Name Text (Crystal Clear White with Drop Shadow)
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 12;
     ctx.shadowOffsetY = 3;
-    ctx.fillText('বিডি নিউজ ২৪/৭', logoX + logoSize + 18, brandY + logoSize / 2);
+    ctx.fillText(brandText, textX, brandCenterY + 1);
     ctx.restore();
 
-    // 5. White Headline Card (990x295)
+    // --- 5. ULTRA-CLEAR WHITE HEADLINE CARD (990x305) ---
     const cardX = 45;
-    const cardY = 605;
+    const cardY = 600;
     const cardW = 990;
-    const cardH = 295;
+    const cardH = 305;
     const cardRadius = 32;
 
+    // 3D Drop Shadow behind headline card
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 30;
-    ctx.shadowOffsetY = 12;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 35;
+    ctx.shadowOffsetY = 15;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
     ctx.fill();
+
+    // Ultra-subtle border for card definition
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = 'rgba(180, 0, 0, 0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
 
-    // Draw Wrapped Bengali Headline Text
+    // --- BENGALI HEADLINE TEXT FORMATTING & MAXIMUM VISIBILITY ---
     ctx.save();
-    ctx.fillStyle = '#990000';
+    // Deep, high-contrast rich ruby crimson: Maximum contrast against white background
+    ctx.fillStyle = '#800000';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'top';
 
-    // Dynamic auto-fitting font size based on length
-    let fontSize = 52;
-    if (headline.length > 70) fontSize = 46;
-    if (headline.length > 100) fontSize = 40;
-    if (headline.length > 130) fontSize = 35;
-    if (headline.length > 160) fontSize = 30;
+    const cleanHeadline = headline.trim();
+    const maxTextWidth = cardW - 84; // 42px horizontal padding on each side
+
+    // Calculate optimal font size to balance card filling and legibility
+    let fontSize = 54;
+    if (cleanHeadline.length > 60) fontSize = 50;
+    if (cleanHeadline.length > 85) fontSize = 46;
+    if (cleanHeadline.length > 115) fontSize = 41;
+    if (cleanHeadline.length > 145) fontSize = 36;
+    if (cleanHeadline.length > 180) fontSize = 32;
 
     ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
 
-    const words = headline.split(/\s+/);
+    // Word-wrap logic respecting Bengali compound words
+    const words = cleanHeadline.split(/\s+/);
     const lines: string[] = [];
     let currentLine = '';
-    const maxTextWidth = cardW - 88;
 
     for (const word of words) {
       const testLine = currentLine ? currentLine + ' ' + word : word;
@@ -267,50 +351,93 @@ export class CanvasCardRenderer implements ImageRenderer {
     }
     if (currentLine) lines.push(currentLine);
 
-    const lineHeight = fontSize * 1.35;
+    // Line height with generous spacing for Bengali matras (ী, ু, র্, etc.)
+    const lineHeight = Math.round(fontSize * 1.38);
     const totalTextHeight = lines.length * lineHeight;
-    const startY = cardY + (cardH - totalTextHeight) / 2 + lineHeight / 2;
+
+    // Mathematically exact vertical centering inside the 305px card
+    const startY = cardY + (cardH - totalTextHeight) / 2;
 
     lines.forEach((line, index) => {
-      ctx.fillText(line, 540, startY + index * lineHeight);
+      ctx.fillText(line, width / 2, startY + index * lineHeight);
     });
     ctx.restore();
 
-    // 6. Bottom Footer Bar ("Follow us on: https://bdnews.site" & "বিস্তারিত কমেন্টে")
-    const footerY = 945;
+    // --- 6. BOTTOM FOOTER ENGAGEMENT BAR ---
+    const footerY = 948;
+    const footerH = 54;
 
-    // Follow us pill
+    // Left: "🌐 Follow us on : bdnews.site"
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    const followW = 460;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.beginPath();
-    ctx.roundRect(45, footerY, 440, 52, 26);
+    ctx.roundRect(45, footerY, followW, footerH, 27);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '20px "Noto Sans Bengali", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Follow us on :  https://bdnews.site', 65, footerY + 26);
-    ctx.restore();
-
-    // "বিস্তারিত কমেন্টে" ribbon pill
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    // Small Globe icon circle
+    const iconRadius = 13;
+    const iconCenterX = 45 + 24;
+    const iconCenterY = footerY + footerH / 2;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
-    ctx.roundRect(835, footerY, 200, 52, 12);
+    ctx.arc(iconCenterX, iconCenterY, iconRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('বিস্তারিত কমেন্টে', 935, footerY + 28);
+    ctx.fillText('🌐', iconCenterX, iconCenterY);
+
+    // Clean domain display
+    const cleanHost = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    ctx.font = '500 18px "Noto Sans Bengali", sans-serif';
+    ctx.fillStyle = '#cbd5e1';
+    ctx.textAlign = 'left';
+    ctx.fillText('Follow us on :', iconCenterX + iconRadius + 10, iconCenterY);
+
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(cleanHost, iconCenterX + iconRadius + 130, iconCenterY);
     ctx.restore();
 
-    // Return high-quality JPEG Buffer (95% quality)
+    // Right: "💬 বিস্তারিত কমেন্টে" Ribbon Pill
+    ctx.save();
+    const ribbonW = 210;
+    const ribbonX = width - 45 - ribbonW;
+
+    // Elegant White Ribbon with Silver Glow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(ribbonX, footerY, ribbonW, footerH, 16);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = 'rgba(203, 213, 225, 0.8)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Chat Icon + Bold Bengali Text
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💬', ribbonX + 20, footerY + footerH / 2 + 1);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.fillText('বিস্তারিত কমেন্টে', ribbonX + 50, footerY + footerH / 2 + 1);
+    ctx.restore();
+
+    // Output 95% Quality JPEG Buffer
     return canvas.toBuffer('image/jpeg', 95);
   }
 

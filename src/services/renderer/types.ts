@@ -8,6 +8,7 @@ export interface RenderInput {
   templateId?: string;
   width?: number;
   height?: number;
+  website?: string;
 }
 
 export interface RenderOutput {
