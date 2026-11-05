@@ -94,6 +94,9 @@ export function createServer(): Express {
     }
   });
 
+  // Password-protected routes (Health check & /api/cron bypass inside authMiddleware)
+  app.use(authMiddleware);
+
   // Database Connection Auto-Retry Middleware
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     // If MongoDB is not connected, try to reconnect lazily
@@ -162,9 +165,6 @@ export function createServer(): Express {
 
     next();
   });
-
-  // Password-protected routes
-  app.use(authMiddleware);
 
   // Mount API & Web Dashboard
   app.use('/api', apiRouter);

@@ -8,6 +8,7 @@ export interface AppConfig {
   NODE_ENV: string;
   MONGODB_URI: string;
   MONGODB_DB_NAME: string;
+  ADMIN_USERNAME: string;
   ADMIN_PASSWORD: string;
   POLL_INTERVAL_CRON: string;
   MAX_ARTICLE_AGE_HOURS: number;
@@ -37,7 +38,8 @@ export const config: AppConfig = {
     process.env.MONGODB_URL ||
     (isVercel ? '' : 'mongodb://127.0.0.1:27017/news_automation'),
   MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || 'news_automation',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'ChangeMeImmediately123!',
+  ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'Admin',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'SAROmyw4',
   POLL_INTERVAL_CRON: process.env.POLL_INTERVAL_CRON || '*/10 * * * *', // Every 10 minutes
   MAX_ARTICLE_AGE_HOURS: parseInt(process.env.MAX_ARTICLE_AGE_HOURS || '24', 10),
   MAX_POSTS_PER_HOUR: parseInt(process.env.MAX_POSTS_PER_HOUR || '10', 10),

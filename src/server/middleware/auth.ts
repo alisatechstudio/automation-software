@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { config } from '../../config/env.js';
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // Allow health check without authentication
-  if (req.path === '/health' || req.path === '/healthz') {
+  // Allow health check and cron endpoint without basic authentication
+  if (req.path === '/health' || req.path === '/healthz' || req.path === '/api/cron') {
     return next();
   }
 
@@ -21,10 +21,17 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 
   const credentials = Buffer.from(parts[1], 'base64').toString('utf8');
-  const [username, password] = credentials.split(':');
+  const [username, ...passwordParts] = credentials.split(':');
+  const password = passwordParts.join(':');
 
-  // Any username accepted, password must match ADMIN_PASSWORD
-  if (password === config.ADMIN_PASSWORD) {
+  const expectedUsername = (config.ADMIN_USERNAME || 'Admin').toLowerCase();
+  const incomingUsername = (username || '').toLowerCase();
+
+  // Validate username and password
+  if (
+    incomingUsername === expectedUsername &&
+    password === config.ADMIN_PASSWORD
+  ) {
     return next();
   }
 
