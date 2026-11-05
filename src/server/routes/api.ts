@@ -192,6 +192,21 @@ apiRouter.post('/pages/test', async (req: Request, res: Response) => {
   res.json(tokenInfo);
 });
 
+apiRouter.post('/pages/exchange-permanent', async (req: Request, res: Response) => {
+  const { user_token, app_id, app_secret } = req.body;
+  if (!user_token || !app_id || !app_secret) {
+    res.status(400).json({ error: 'user_token, app_id, and app_secret are required' });
+    return;
+  }
+
+  try {
+    const pages = await FacebookTokenService.getPermanentPageTokens(user_token, app_id, app_secret);
+    res.json({ success: true, pages });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 apiRouter.delete('/pages/:id', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
