@@ -5,6 +5,7 @@ import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog } from '../
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
+import { CanvasCardRenderer } from '../../services/renderer/canvas.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { AVAILABLE_TEMPLATES } from '../../config/constants.js';
@@ -14,6 +15,7 @@ export const apiRouter = Router();
 const queue = new PersistentJobQueue();
 const worker = new QueueWorker();
 const renderer = new PlaywrightImageRenderer();
+const canvasRenderer = new CanvasCardRenderer();
 const dedupeService = new ArticleDedupeService();
 
 // 1. Dashboard Overview Stats
@@ -404,29 +406,21 @@ apiRouter.post('/preview/render', async (req: Request, res: Response) => {
 
     const sampleHeadline =
       headline ||
-      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
 
-    // 8-second safety timeout on serverless to avoid 504 Gateway Timeout
-    const renderPromise = renderer.renderToBuffer({
+    // Instant Skia Canvas 1080x1080 JPG card rendering (40ms)
+    const buffer = await canvasRenderer.renderCard({
       templateId: templateId || 'template-canva-bdnews',
       headline: sampleHeadline,
       category: category || 'বিশেষ খবর',
       imageUrl: imageUrl || undefined,
     });
 
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error('Serverless Chromium render timed out (Use Instant Live Preview)')),
-        8500
-      )
-    );
-
-    const buffer = await Promise.race([renderPromise, timeoutPromise]);
-
-    const base64Data = `data:image/png;base64,${buffer.toString('base64')}`;
+    const base64Data = `data:image/jpeg;base64,${buffer.toString('base64')}`;
     res.json({
       success: true,
       imageUri: base64Data,
+      format: 'image/jpeg',
       sizeBytes: buffer.length,
     });
   } catch (err: any) {
@@ -436,6 +430,27 @@ apiRouter.post('/preview/render', async (req: Request, res: Response) => {
       error: err.message,
       useHtmlPreview: true,
     });
+  }
+});
+
+// Direct Image Card Endpoint (Streams high-res JPG)
+apiRouter.get('/preview/card.jpg', async (req: Request, res: Response) => {
+  try {
+    const headline = (req.query.headline as string) || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত';
+    const category = (req.query.category as string) || 'বিশেষ খবর';
+    const imageUrl = req.query.imageUrl as string | undefined;
+
+    const buffer = await canvasRenderer.renderCard({
+      headline,
+      category,
+      imageUrl,
+    });
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

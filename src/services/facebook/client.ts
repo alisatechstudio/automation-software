@@ -69,8 +69,8 @@ export class FacebookGraphClient {
     const url = `https://graph.facebook.com/${this.apiVersion}/${pageId}/photos`;
 
     const formData = new FormData();
-    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
-    formData.append('source', blob, 'news_post.png');
+    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' });
+    formData.append('source', blob, 'news_card.jpg');
     formData.append('caption', caption);
     formData.append('published', 'true');
     formData.append('access_token', accessToken);

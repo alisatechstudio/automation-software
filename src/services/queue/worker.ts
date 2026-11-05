@@ -3,6 +3,7 @@ import { getDatabase, isMongoConnected } from '../../db/index.js';
 import { NewsArticle, FacebookPage, RssSource, Job, PostLog } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
+import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
 import { config } from '../../config/env.js';
@@ -10,6 +11,7 @@ import { config } from '../../config/env.js';
 export class QueueWorker {
   private queue: PersistentJobQueue;
   private renderer: PlaywrightImageRenderer;
+  private canvasRenderer: CanvasCardRenderer;
   private fbClient: FacebookGraphClient;
   private alertService: TelegramAlertService;
   private isRunning: boolean = false;
@@ -18,6 +20,7 @@ export class QueueWorker {
   constructor() {
     this.queue = new PersistentJobQueue();
     this.renderer = new PlaywrightImageRenderer();
+    this.canvasRenderer = new CanvasCardRenderer();
     this.fbClient = new FacebookGraphClient();
     this.alertService = new TelegramAlertService();
   }
@@ -129,24 +132,48 @@ export class QueueWorker {
       // 2. Random Jitter Delay (30-60s) to avoid spam flags
       await this.applyPostingJitter();
 
-      // 3. Render Image with Graceful Fallback
+      // 3. Render High-Quality 1080x1080 JPG News Card
       let renderedBuffer: Buffer;
       let renderedPath: string | undefined;
 
       try {
-        console.log(`[QueueWorker] Rendering image for article "${article.title}" with template ${templateId}...`);
-        const renderResult = await this.renderer.render({
-          templateId: templateId || source?.templateId || 'template-canva-bdnews',
-          headline: article.title,
-          category: article.category || 'সাধারণ',
-          dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
-          imageUrl: article.imageUrl || undefined,
-        });
-        renderedBuffer = renderResult.imageBuffer;
-        renderedPath = renderResult.outputPath;
+        console.log(`[QueueWorker] Rendering 1080x1080 JPG news card for article "${article.title}"...`);
+        // Use high-performance Skia Canvas for Canva replica cards (instant 40ms serverless execution)
+        if (templateId === 'template-canva-bdnews' || !templateId || source?.templateId === 'template-canva-bdnews' || process.env.VERCEL) {
+          const renderResult = await this.canvasRenderer.render({
+            templateId: 'template-canva-bdnews',
+            headline: article.title,
+            category: article.category || 'বিশেষ খবর',
+            imageUrl: article.imageUrl || undefined,
+          });
+          renderedBuffer = renderResult.imageBuffer;
+          renderedPath = renderResult.outputPath;
+        } else {
+          const renderResult = await this.renderer.render({
+            templateId: templateId || source?.templateId || 'template-canva-bdnews',
+            headline: article.title,
+            category: article.category || 'বিশেষ খবর',
+            dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
+            imageUrl: article.imageUrl || undefined,
+          });
+          renderedBuffer = renderResult.imageBuffer;
+          renderedPath = renderResult.outputPath;
+        }
       } catch (renderError: any) {
-        console.warn(`[QueueWorker] Playwright render failed: ${renderError.message}. Initiating graceful fallback to original news image...`);
-        renderedBuffer = await this.fetchOriginalImageFallback(article.imageUrl);
+        console.warn(`[QueueWorker] Primary render failed: ${renderError.message}. Using Canvas Card fallback...`);
+        try {
+          const fallbackResult = await this.canvasRenderer.render({
+            templateId: 'template-canva-bdnews',
+            headline: article.title,
+            category: article.category || 'বিশেষ খবর',
+            imageUrl: article.imageUrl || undefined,
+          });
+          renderedBuffer = fallbackResult.imageBuffer;
+          renderedPath = fallbackResult.outputPath;
+        } catch (canvasErr: any) {
+          console.warn(`[QueueWorker] Canvas render also failed: ${canvasErr.message}. Gracefully using original photo...`);
+          renderedBuffer = await this.fetchOriginalImageFallback(article.imageUrl);
+        }
       }
 
       // 4. Format Caption & First Comment
