@@ -2285,20 +2285,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         spinner.classList.add('hidden');
       }
     }
-          statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
-          loadReelLogs();
-        } else {
-          showToast('Publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
-          statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
-        }
-      } catch (e) {
-        showToast('Error publishing reel: ' + e.message, true);
-      } finally {
-        btn.disabled = false;
-        btn.classList.remove('opacity-50');
-        spinner.classList.add('hidden');
-      }
-    }
 
     async function loadReelLogs() {
       try {
