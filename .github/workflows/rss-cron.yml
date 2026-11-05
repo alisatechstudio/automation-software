@@ -1,0 +1,17 @@
+name: Automated News Ingestion Cron
+
+on:
+  schedule:
+    # Runs every 10 minutes automatically via GitHub Actions (Free)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping News Ingestion Endpoint
+        run: |
+          echo "Pinging Vercel news automation endpoint..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://automation-software-fiez.vercel.app/api/cron")
+          echo "HTTP Response Status: $STATUS"
