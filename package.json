@@ -16,6 +16,7 @@
     "test:pipeline": "tsx test/test-end-to-end.ts"
   },
   "dependencies": {
+    "@vercel/functions": "^3.10.6",
     "cheerio": "^1.1.2",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",

@@ -1,4 +1,5 @@
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient, MongoClientOptions, Db } from 'mongodb';
+import { attachDatabasePool } from '@vercel/functions';
 import { config } from '../config/env.js';
 
 let client: MongoClient | null = null;
@@ -16,17 +17,30 @@ export function getLastMongoError(): string | null {
 
 export async function getMongoClient(): Promise<MongoClient> {
   if (!client) {
-    console.log(`[MongoDB] Connecting to ${maskUri(config.MONGODB_URI)}...`);
-    client = new MongoClient(config.MONGODB_URI, {
-      maxPoolSize: 20,
-      minPoolSize: 1,
+    const uri = process.env.MONGODB_URI || config.MONGODB_URI;
+    console.log(`[MongoDB] Connecting with Vercel Integration pool to ${maskUri(uri)}...`);
+
+    const options: MongoClientOptions = {
+      appName: 'devrel.vercel.integration',
+      maxIdleTimeMS: 5000,
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
-    });
-    await client.connect();
+    };
+
+    const newClient = new MongoClient(uri, options);
+
+    // Attach the client to ensure proper cleanup on Vercel function suspension
+    try {
+      attachDatabasePool(newClient);
+    } catch (e) {
+      // Non-fatal in non-serverless environments
+    }
+
+    await newClient.connect();
+    client = newClient;
     isConnected = true;
     lastError = null;
-    console.log('[MongoDB] Connected successfully to MongoDB host');
+    console.log('[MongoDB] Connected successfully to MongoDB host (Vercel Integration Pool Active)');
   }
   return client;
 }
@@ -111,3 +125,5 @@ function maskUri(uri: string): string {
     return 'mongodb://***';
   }
 }
+
+export default client;
