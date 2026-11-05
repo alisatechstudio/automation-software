@@ -42,24 +42,52 @@ export class PlaywrightImageRenderer implements ImageRenderer {
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser || !this.browser.isConnected()) {
+      let chromiumExecutable = process.env.CHROMIUM_PATH || undefined;
+      let chromiumArgs = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--font-render-hinting=none',
+      ];
+      let headlessMode: boolean | 'shell' = true;
+
+      // On Vercel / AWS Lambda, use @sparticuz/chromium serverless binary
+      if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        try {
+          const sparticuzModule = await import('@sparticuz/chromium');
+          const sparticuz = (sparticuzModule as any).default || sparticuzModule;
+          chromiumExecutable = await sparticuz.executablePath();
+          chromiumArgs = sparticuz.args || chromiumArgs;
+          headlessMode = sparticuz.headless ?? true;
+          console.log('[Playwright] Loaded @sparticuz/chromium for Vercel at', chromiumExecutable);
+        } catch (e: any) {
+          console.warn('[Playwright] @sparticuz/chromium load failed:', e.message);
+        }
+      }
+
+      // Try playwright-core with the configured executable path
       try {
-        const { chromium } = await import('playwright');
-        this.browser = await chromium.launch({
-          headless: true,
-          executablePath: process.env.CHROMIUM_PATH || undefined,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--font-render-hinting=none',
-          ],
+        const { chromium: coreChromium } = await import('playwright-core');
+        this.browser = await coreChromium.launch({
+          headless: headlessMode as any,
+          executablePath: chromiumExecutable,
+          args: chromiumArgs,
         });
-      } catch (err: any) {
-        console.warn(`[PlaywrightImageRenderer] Headless Chromium not available: ${err.message}`);
-        throw new Error(
-          `Headless Chromium is not available in this runtime (${err.message}). Queue worker will gracefully use original news photo.`
-        );
+      } catch (coreErr: any) {
+        // Fallback to standard playwright for local development / VPS
+        try {
+          const { chromium: standardChromium } = await import('playwright');
+          this.browser = await standardChromium.launch({
+            headless: true,
+            args: chromiumArgs,
+          });
+        } catch (stdErr: any) {
+          console.warn(`[PlaywrightImageRenderer] Headless Chromium launch failed: ${coreErr.message}`);
+          throw new Error(
+            `Headless Chromium is not available in this runtime (${coreErr.message}). Queue worker will gracefully use original news photo.`
+          );
+        }
       }
     }
     return this.browser;
