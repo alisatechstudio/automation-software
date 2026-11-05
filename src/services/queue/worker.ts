@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getDatabase, isMongoConnected } from '../../db/index.js';
-import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, Setting } from '../../db/schema.js';
+import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, Setting } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
@@ -229,6 +229,73 @@ export class QueueWorker {
 
         const durationMs = Date.now() - startTime;
 
+        // =========================================================================
+        // STORIES: Render & Publish JPG Poster Card to Facebook Page Stories (NOT feed)
+        // =========================================================================
+        let storyPhotoId: string | null = null;
+        let storyId: string | null = null;
+        let storyStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
+
+        const storySetting = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
+        const shouldPostStory = storySetting ? storySetting.value !== 'false' : true;
+
+        if (shouldPostStory) {
+          try {
+            console.log(`[QueueWorker] 📸 Rendering 1080x1080 JPG poster card for Facebook Stories (NOT feed)...`);
+            const storyStartTime = Date.now();
+            const posterRenderResult = await this.canvasRenderer.render({
+              templateId: 'template-canva-bdnews',
+              headline: article.title,
+              category: article.category || 'বিশেষ খবর',
+              imageUrl: article.imageUrl || undefined,
+            });
+
+            const storyPublishResult = await this.fbClient.publishPhotoStory(
+              page._id,
+              page.accessToken,
+              posterRenderResult.imageBuffer,
+              config.DRY_RUN
+            );
+
+            storyPhotoId = storyPublishResult.photoId;
+            storyId = storyPublishResult.storyId;
+            storyStatus = config.DRY_RUN ? 'dry_run' : 'success';
+
+            await db.collection<StoryLog>('story_logs').insertOne({
+              _id: crypto.randomUUID(),
+              articleId: article._id,
+              articleTitle: article.title,
+              pageId: page._id,
+              pageName: page.name,
+              fbPhotoId: storyPhotoId,
+              fbStoryId: storyId,
+              renderedImagePath: posterRenderResult.outputPath || null,
+              durationMs: Date.now() - storyStartTime,
+              status: storyStatus,
+              createdAt: new Date(),
+            });
+
+            console.log(`✓ [QueueWorker] Successfully published JPG poster card to Facebook Stories! (Story ID: ${storyId})`);
+          } catch (storyErr: any) {
+            storyStatus = 'failed';
+            console.warn(`[QueueWorker] Facebook Story publish encountered an error (Feed Reel is safe):`, storyErr.message);
+            try {
+              await db.collection<StoryLog>('story_logs').insertOne({
+                _id: crypto.randomUUID(),
+                articleId: article._id,
+                articleTitle: article.title,
+                pageId: page._id,
+                pageName: page.name,
+                fbPhotoId: '',
+                fbStoryId: '',
+                status: 'failed',
+                errorMessage: storyErr.message || String(storyErr),
+                createdAt: new Date(),
+              });
+            } catch (e) {}
+          }
+        }
+
         // Record Post & Reel Log
         const logId = crypto.randomUUID();
         const logDoc: PostLog = {
@@ -238,6 +305,8 @@ export class QueueWorker {
           fbPostId: reelPostId,
           fbReelId: reelVideoId,
           fbVideoId: reelVideoId,
+          fbStoryId: storyId,
+          storyStatus: storyStatus,
           caption: reelCaption,
           durationMs,
           status: config.DRY_RUN ? 'dry_run' : 'success',
@@ -749,5 +818,61 @@ export class QueueWorker {
     });
 
     return { success: true, videoId, postId };
+  }
+
+  /**
+   * Manually render and publish a JPG news card to Facebook Page Stories (NOT feed)
+   */
+  public async publishStoryForArticle(
+    articleId: string,
+    pageId?: string
+  ): Promise<{ success: boolean; photoId: string; storyId: string; pageName: string }> {
+    const db = getDatabase();
+    const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
+    if (!article) {
+      throw new Error(`Article ${articleId} not found`);
+    }
+
+    let page: FacebookPage | null = null;
+    if (pageId && pageId !== 'all') {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: pageId });
+    }
+    if (!page) {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    }
+    if (!page) {
+      throw new Error('No active Facebook Page found');
+    }
+
+    const storyStartTime = Date.now();
+    const renderResult = await this.canvasRenderer.render({
+      templateId: 'template-canva-bdnews',
+      headline: article.title,
+      category: article.category || 'বিশেষ খবর',
+      imageUrl: article.imageUrl || undefined,
+    });
+
+    const { photoId, storyId } = await this.fbClient.publishPhotoStory(
+      page._id,
+      page.accessToken,
+      renderResult.imageBuffer,
+      config.DRY_RUN
+    );
+
+    await db.collection<StoryLog>('story_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: article._id,
+      articleTitle: article.title,
+      pageId: page._id,
+      pageName: page.name,
+      fbPhotoId: photoId,
+      fbStoryId: storyId,
+      renderedImagePath: renderResult.outputPath || null,
+      durationMs: Date.now() - storyStartTime,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    return { success: true, photoId, storyId, pageName: page.name };
   }
 }

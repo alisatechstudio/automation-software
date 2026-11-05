@@ -287,6 +287,71 @@ export class FacebookGraphClient {
   }
 
   /**
+   * Publishes a photo to Facebook Page Stories (NOT to the feed).
+   * 1. Uploads photo as unpublished: POST /{page-id}/photos with published=false
+   * 2. Publishes to Page Stories: POST /{page-id}/photo_stories with photo_id
+   */
+  public async publishPhotoStory(
+    pageId: string,
+    accessToken: string,
+    imageBuffer: Buffer,
+    dryRun: boolean = config.DRY_RUN
+  ): Promise<{ photoId: string; storyId: string }> {
+    if (dryRun) {
+      const mockPhotoId = `dryrun_photo_${Date.now()}`;
+      const mockStoryId = `dryrun_story_${Date.now()}`;
+      console.log(`[FacebookClient - DRY RUN] Simulated photo story publish to page ${pageId}`);
+      console.log(`  Image size: ${imageBuffer.length} bytes`);
+      return { photoId: mockPhotoId, storyId: mockStoryId };
+    }
+
+    // Step 1: Upload photo as unpublished (will NOT appear on page feed)
+    console.log(`[FacebookClient] Uploading photo for story (unpublished) to page ${pageId}...`);
+    const uploadUrl = `https://graph.facebook.com/${this.apiVersion}/${pageId}/photos`;
+    const formData = new FormData();
+    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' });
+    formData.append('source', blob, 'story_poster.jpg');
+    formData.append('published', 'false');
+    formData.append('access_token', accessToken);
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const uploadData = (await uploadRes.json()) as any;
+    if (!uploadRes.ok || uploadData.error) {
+      this.handleGraphError(uploadData.error, `Photo story upload (step 1) to ${pageId} failed`);
+    }
+
+    const photoId = uploadData.id;
+    if (!photoId) {
+      throw new Error(`Failed to obtain photo_id for story on page ${pageId}`);
+    }
+
+    // Step 2: Publish photo to Facebook Page Stories
+    console.log(`[FacebookClient] Publishing photo ${photoId} to Page Stories via POST /${pageId}/photo_stories...`);
+    const storyUrl = `https://graph.facebook.com/${this.apiVersion}/${pageId}/photo_stories`;
+    const storyParams = new URLSearchParams();
+    storyParams.append('photo_id', photoId);
+    storyParams.append('access_token', accessToken);
+
+    const storyRes = await fetch(storyUrl, {
+      method: 'POST',
+      body: storyParams,
+    });
+
+    const storyData = (await storyRes.json()) as any;
+    if (!storyRes.ok || storyData.error) {
+      this.handleGraphError(storyData.error, `Publish photo to stories (step 2) for ${pageId} failed`);
+    }
+
+    const storyId = storyData.id || storyData.post_id || photoId;
+    console.log(`✓ [FacebookClient] Photo published to Page Stories successfully! Photo ID: ${photoId}, Story ID: ${storyId}`);
+    return { photoId, storyId };
+  }
+
+  /**
    * Helper that parses Facebook Graph API errors and throws meaningful errors
    */
   private handleGraphError(error: any, contextMessage: string): never {

@@ -77,6 +77,8 @@ export interface PostLog {
   fbCommentId?: string | null;
   fbReelId?: string | null;
   fbVideoId?: string | null;
+  fbStoryId?: string | null;
+  storyStatus?: 'success' | 'failed' | 'dry_run' | 'skipped';
   renderedImagePath?: string | null;
   renderedVideoPath?: string | null;
   caption?: string | null;
@@ -96,6 +98,21 @@ export interface ReelLog {
   theme?: string;
   fbVideoId: string;
   fbPostId: string;
+  durationMs?: number | null;
+  status: 'success' | 'failed' | 'dry_run';
+  errorMessage?: string | null;
+  createdAt: Date;
+}
+
+export interface StoryLog {
+  _id: string;
+  articleId?: string | null;
+  articleTitle: string;
+  pageId: string;
+  pageName: string;
+  fbPhotoId: string;
+  fbStoryId: string;
+  renderedImagePath?: string | null;
   durationMs?: number | null;
   status: 'success' | 'failed' | 'dry_run';
   errorMessage?: string | null;

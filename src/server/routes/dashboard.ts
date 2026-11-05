@@ -799,27 +799,27 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
           </div>
           <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <span>🎬 BD News 24/7 Reels Studio</span>
-            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(১৫ সেকেন্ডের টিভি স্টুডিও রিলস)</span>
+            <span>🎬 BD News 24/7 Reels & Stories Studio</span>
+            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(রিলস ফিডে • পোস্টার স্টোরিজে)</span>
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-            ১৫ সেকেন্ডের ফুল মোশন ভিডিও রিল — পোস্টার সাময়িকভাবে বন্ধ রেখে প্রতিটি নিউজের জন্য সরাসরি ১৫ সেকেন্ডের এইচডি ভিডিও রিল পোস্ট হবে।
+            ১৫ সেকেন্ডের ফুল মোশন ভিডিও রিল প্রকাশিত হবে সরাসরি <strong>পেজ ফিড ও রিলসে</strong>, আর প্রিমিয়াম জেপিজি নিউজ কার্ডটি পোস্ট হবে <strong>২৪ ঘণ্টার পেজ স্টোরিজে (ফিডে নয়)</strong>।
           </p>
         </div>
 
         <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-shrink-0">
-          <!-- Disable Poster (Reels Only) Toggle Card -->
-          <div class="w-full sm:w-auto bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
+          <!-- Poster to Stories Only Toggle Card -->
+          <div class="w-full sm:w-auto bg-slate-950/80 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
             <div class="text-left">
               <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>Post Reels Only</span>
-                <span id="poster-disable-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ACTIVE</span>
+                <span>Poster to Stories (Not Feed)</span>
+                <span id="stories-poster-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800">ACTIVE</span>
               </div>
-              <div class="text-[11px] text-slate-400">পোস্টার বন্ধ রেখে শুধুমাত্র রিল</div>
+              <div class="text-[11px] text-slate-400">পোস্টার স্টোরিজে যাবে, ফিডে নয়</div>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="toggle-disable-poster" checked onchange="handleDisablePosterToggle(this.checked)" class="sr-only peer">
-              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              <input type="checkbox" id="toggle-post-stories" checked onchange="handlePostStoriesToggle(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
             </label>
           </div>
 
@@ -858,9 +858,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           <div class="text-[11px] text-slate-500 mt-1">Full 15s Broadcast Jingle</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-emerald-400">Active Mode</div>
-          <div class="text-2xl font-black text-emerald-400 mt-1">Reels Only</div>
-          <div class="text-[11px] text-slate-500 mt-1">Poster card disabled</div>
+          <div class="text-xs font-mono uppercase text-purple-400">Distribution Mode</div>
+          <div class="text-lg font-black text-purple-400 mt-1">Reels ➜ Feed</div>
+          <div class="text-[11px] text-slate-400 mt-1">JPG Poster ➜ Stories (Not Feed)</div>
         </div>
       </div>
 
@@ -929,14 +929,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </div>
 
           <!-- Actions -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md">
               <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>Generate & Preview</span>
+              <span>Preview Reel</span>
             </button>
-            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-3 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-glow-red transition active:scale-95">
+            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-3 px-3 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-              <span>Publish Reel Now</span>
+              <span>Publish Reel (Feed)</span>
+            </button>
+            <button onclick="publishStoryNow()" id="btn-publish-story" class="py-3 px-3 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700/80 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg">
+              <span>📸 Post to Stories</span>
             </button>
           </div>
 
@@ -2078,6 +2081,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800' 
               : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
           }
+
+          const postStories = res.data.postPosterToStories !== false;
+          const toggleStories = document.getElementById('toggle-post-stories');
+          const storiesBadge = document.getElementById('stories-poster-badge');
+          if (toggleStories) toggleStories.checked = postStories;
+          if (storiesBadge) {
+            storiesBadge.innerText = postStories ? 'ACTIVE' : 'OFF';
+            storiesBadge.className = postStories 
+              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800' 
+              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
+          }
         }
       } catch (e) {
         console.error(e);
@@ -2114,6 +2128,24 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           loadReelSettings();
         } else {
           showToast('Failed to update Auto-Reels setting', true);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      }
+    }
+
+    async function handlePostStoriesToggle(checked) {
+      try {
+        const res = await safeFetchJson('/api/reels/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postPosterToStories: checked })
+        });
+        if (res.ok) {
+          showToast(checked ? '✓ JPG poster will publish to Page Stories (Not Feed)' : 'Page Stories auto-post disabled');
+          loadReelSettings();
+        } else {
+          showToast('Failed to update setting', true);
         }
       } catch (e) {
         showToast('Error: ' + e.message, true);
@@ -2283,6 +2315,47 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         btn.disabled = false;
         btn.classList.remove('opacity-50');
         spinner.classList.add('hidden');
+      }
+    }
+
+    async function publishStoryNow() {
+      const headline = document.getElementById('reel-headline-input').value.trim();
+      const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
+      const imageUrl = document.getElementById('reel-image-input').value.trim();
+      const pageId = document.getElementById('reel-page-select').value;
+
+      if (!headline) {
+        showToast('Please enter a Bengali headline', true);
+        return;
+      }
+
+      const statusEl = document.getElementById('reel-action-status');
+      const btn = document.getElementById('btn-publish-story');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      statusEl.classList.remove('hidden');
+      statusEl.innerText = 'Rendering 1080x1080 JPG card and publishing to Facebook Stories (NOT feed)...';
+
+      try {
+        const res = await safeFetchJson('/api/stories/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ headline, category, imageUrl, pageId })
+        });
+
+        if (res.ok && res.data && res.data.success) {
+          showToast('✓ Successfully posted JPG poster to ' + (res.data.pageName || 'Facebook') + ' Stories!');
+          statusEl.innerText = '✓ Published to Stories! Photo ID: ' + res.data.photoId + ', Story ID: ' + res.data.storyId;
+        } else {
+          showToast('Story publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
+          statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
+        }
+      } catch (e) {
+        showToast('Error publishing story: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
       }
     }
 

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
@@ -37,6 +37,9 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const reelsCount = await db.collection('reel_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
+    const storiesCount = await db.collection('story_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
+    });
     const successfulPosts = await db.collection('post_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
@@ -49,6 +52,7 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
       groupsCount,
       groupSharesCount,
       reelsCount,
+      storiesCount,
       successfulPosts,
       dryRun: config.DRY_RUN,
     });
@@ -688,12 +692,14 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
     const db = getDatabase();
     const autoReel = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
     const disablePoster = await db.collection<Setting>('settings').findOne({ _id: 'DISABLE_POSTER' });
+    const postStories = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
     const reelDuration = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
     const reelTheme = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
 
     res.json({
       autoPostReels: autoReel ? autoReel.value !== 'false' : true,
-      disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Default to true: poster disabled
+      disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Feed poster disabled
+      postPosterToStories: postStories ? postStories.value !== 'false' : true, // Stories poster enabled
       reelDuration: parseInt(reelDuration?.value || '15', 10) || 15, // Default 15 seconds
       reelTheme: reelTheme?.value || 'rolling', // Default to rolling round-robin rotation
     });
@@ -704,7 +710,7 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
 
 apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
   try {
-    const { autoPostReels, disablePoster, reelDuration, reelTheme } = req.body;
+    const { autoPostReels, disablePoster, postPosterToStories, reelDuration, reelTheme } = req.body;
     const db = getDatabase();
     const settingsCol = db.collection<Setting>('settings');
 
@@ -719,6 +725,13 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       await settingsCol.updateOne(
         { _id: 'DISABLE_POSTER' },
         { $set: { value: Boolean(disablePoster) ? 'true' : 'false', updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (postPosterToStories !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'POST_POSTER_TO_STORIES' },
+        { $set: { value: Boolean(postPosterToStories) ? 'true' : 'false', updatedAt: new Date() } },
         { upsert: true }
       );
     }
@@ -741,9 +754,122 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       success: true,
       autoPostReels: autoPostReels !== undefined ? Boolean(autoPostReels) : true,
       disablePoster: disablePoster !== undefined ? Boolean(disablePoster) : true,
+      postPosterToStories: postPosterToStories !== undefined ? Boolean(postPosterToStories) : true,
       reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 15,
-      reelTheme: reelTheme || 'studio-red',
+      reelTheme: reelTheme || 'rolling',
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// FACEBOOK STORIES API
+// -------------------------------------------------------------
+apiRouter.post('/stories/publish', async (req: Request, res: Response) => {
+  try {
+    const { articleId, headline, category, imageUrl, pageId } = req.body;
+    const db = getDatabase();
+
+    let targetHeadline = headline;
+    let targetCategory = category || 'বিশেষ খবর';
+    let targetImageUrl = imageUrl;
+    let finalArticleId = articleId;
+
+    if (articleId) {
+      const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
+      if (art) {
+        targetHeadline = targetHeadline || art.title;
+        targetCategory = targetCategory || art.category || 'বিশেষ খবর';
+        targetImageUrl = targetImageUrl || art.imageUrl;
+      }
+    } else {
+      const latestArt = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1 } });
+      if (latestArt) {
+        targetHeadline = targetHeadline || latestArt.title;
+        targetCategory = targetCategory || latestArt.category || 'বিশেষ খবর';
+        targetImageUrl = targetImageUrl || latestArt.imageUrl;
+        finalArticleId = latestArt._id;
+      }
+    }
+
+    if (!targetHeadline) {
+      res.status(400).json({ error: 'Headline is required to generate Story poster' });
+      return;
+    }
+
+    let page: FacebookPage | null = null;
+    if (pageId && pageId !== 'all') {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: pageId });
+    }
+    if (!page) {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    }
+    if (!page) {
+      res.status(400).json({ error: 'No active Facebook Page found' });
+      return;
+    }
+
+    console.log(`[Stories API] Rendering 1080x1080 JPG poster card for "${targetHeadline}"...`);
+    const startTime = Date.now();
+    const renderResult = await canvasRenderer.render({
+      templateId: 'template-canva-bdnews',
+      headline: targetHeadline,
+      category: targetCategory,
+      imageUrl: targetImageUrl || undefined,
+    });
+
+    const fbClient = new FacebookGraphClient();
+    console.log(`[Stories API] Publishing JPG Poster to Facebook Page Stories on ${page.name}...`);
+    const { photoId, storyId } = await fbClient.publishPhotoStory(
+      page._id,
+      page.accessToken,
+      renderResult.imageBuffer,
+      config.DRY_RUN
+    );
+
+    const durationMs = Date.now() - startTime;
+
+    await db.collection<StoryLog>('story_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: finalArticleId || null,
+      articleTitle: targetHeadline,
+      pageId: page._id,
+      pageName: page.name,
+      fbPhotoId: photoId,
+      fbStoryId: storyId,
+      renderedImagePath: renderResult.outputPath || null,
+      durationMs,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      photoId,
+      storyId,
+      pageId: page._id,
+      pageName: page.name,
+      durationMs,
+      headline: targetHeadline,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/stories/logs', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const logs = await db
+      .collection<StoryLog>('story_logs')
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    res.json(logs);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
