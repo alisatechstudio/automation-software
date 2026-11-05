@@ -12,15 +12,16 @@ async function bootstrap() {
   console.log(`⏱️  Poll Interval: "${config.POLL_INTERVAL_CRON}"`);
   console.log('====================================================');
 
-  // 1. Initialize MongoDB connection and indexes
-  console.log('[Bootstrap] Initializing MongoDB connection & indexes...');
-  await initMongoDb();
-
-  // 2. Start HTTP server (Admin UI + API + Health)
+  // 1. Start HTTP server FIRST so Vercel & healthchecks get an instant response
   const app = createServer();
-  const server = app.listen(config.PORT, () => {
-    console.log(`✓ [Server] Admin Dashboard listening at http://localhost:${config.PORT}`);
-    console.log(`✓ [Server] Health check available at http://localhost:${config.PORT}/health`);
+  const server = app.listen(config.PORT, '0.0.0.0', () => {
+    console.log(`✓ [Server] Admin Dashboard listening at http://0.0.0.0:${config.PORT}`);
+    console.log(`✓ [Server] Health check available at http://0.0.0.0:${config.PORT}/health`);
+  });
+
+  // 2. Connect to MongoDB asynchronously (non-blocking for HTTP server)
+  initMongoDb().catch((err) => {
+    console.warn('[Bootstrap] Initial MongoDB connection attempt failed:', err.message);
   });
 
   // 3. Start Pipeline Coordinator (Scheduler + Worker)

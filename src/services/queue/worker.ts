@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getDatabase } from '../../db/index.js';
+import { getDatabase, isMongoConnected } from '../../db/index.js';
 import { NewsArticle, FacebookPage, RssSource, Job, PostLog } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
@@ -44,6 +44,12 @@ export class QueueWorker {
   }
 
   private async tick(): Promise<void> {
+    if (!isMongoConnected()) {
+      // Database not connected yet, wait before retrying
+      this.scheduleNextTick(10000);
+      return;
+    }
+
     try {
       const job = await this.queue.fetchNextJob();
       if (job) {

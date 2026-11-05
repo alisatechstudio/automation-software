@@ -11,6 +11,7 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY src/ ./src/
+COPY api/ ./api/
 RUN npm run build
 
 # Prune development dependencies so node_modules is production-ready
@@ -44,6 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
 COPY --from=builder /app/dist ./dist
+COPY src/templates ./dist/src/templates
 COPY src/templates ./dist/templates
 COPY assets ./assets
 
@@ -53,4 +55,4 @@ RUN mkdir -p /app/data/rendered
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

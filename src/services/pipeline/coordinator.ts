@@ -1,6 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { ArticleDedupeService } from '../rss/dedupe.js';
 import { QueueWorker } from '../queue/worker.js';
+import { isMongoConnected, initMongoDb } from '../../db/index.js';
 import { config } from '../../config/env.js';
 
 export class PipelineCoordinator {
@@ -19,11 +20,15 @@ export class PipelineCoordinator {
     // 1. Start queue worker
     this.worker.start();
 
-    // 2. Perform initial RSS poll upon startup
-    console.log('[Coordinator] Triggering initial RSS poll on startup...');
-    this.dedupeService
-      .pollAllActiveSources()
-      .catch((err) => console.error('[Coordinator] Initial poll error:', err));
+    // 2. Perform initial RSS poll upon startup if MongoDB is ready
+    if (isMongoConnected()) {
+      console.log('[Coordinator] Triggering initial RSS poll on startup...');
+      this.dedupeService
+        .pollAllActiveSources()
+        .catch((err) => console.error('[Coordinator] Initial poll error:', err));
+    } else {
+      console.log('[Coordinator] Waiting for MongoDB connection before initial RSS poll...');
+    }
 
     // 3. Schedule cron job
     const cronExpr = config.POLL_INTERVAL_CRON;
@@ -31,7 +36,12 @@ export class PipelineCoordinator {
       this.cronTask = cron.schedule(cronExpr, async () => {
         console.log(`[Coordinator - Cron] Running scheduled RSS poll at ${new Date().toISOString()}`);
         try {
-          await this.dedupeService.pollAllActiveSources();
+          if (!isMongoConnected()) {
+            await initMongoDb();
+          }
+          if (isMongoConnected()) {
+            await this.dedupeService.pollAllActiveSources();
+          }
         } catch (err) {
           console.error('[Coordinator - Cron] Error during scheduled RSS poll:', err);
         }
@@ -51,3 +61,4 @@ export class PipelineCoordinator {
     console.log('[Coordinator] Pipeline coordinator stopped cleanly.');
   }
 }
+

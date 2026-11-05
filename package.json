@@ -2,11 +2,11 @@
   "name": "fb-automation",
   "version": "1.0.0",
   "description": "Self-hosted news-to-Facebook automation platform with Playwright rendering & Bangla font support",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "type": "commonjs",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "dev": "tsx watch src/index.ts",
     "download-fonts": "node -e \"require('./dist/scripts/download-fonts.js')\"",
     "test:rss": "tsx test/test-rss.ts",
