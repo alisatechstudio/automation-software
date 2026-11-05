@@ -68,15 +68,6 @@ export interface Job {
   updatedAt: Date;
 }
 
-export interface GroupShareRecord {
-  groupId: string;
-  groupName: string;
-  fbSharePostId?: string | null;
-  status: 'success' | 'failed' | 'skipped';
-  errorMessage?: string | null;
-  sharedAt: Date;
-}
-
 export interface PostLog {
   _id: string;
   articleId: string;
@@ -90,33 +81,6 @@ export interface PostLog {
   durationMs?: number | null;
   status: 'success' | 'failed' | 'dry_run';
   errorMessage?: string | null;
-  sharedGroups?: GroupShareRecord[];
-  createdAt: Date;
-}
-
-export interface FacebookGroup {
-  _id: string; // Facebook Group ID (Numeric or string ID)
-  name: string;
-  pageId?: string; // Associated Page ID (optional)
-  categories: string[]; // List of matched categories or tags (e.g. ['রাজনীতি', 'খেলাধুলা'] or ['*'] for all)
-  accessToken?: string | null; // Optional custom user/page token; falls back to Page token
-  autoShare: boolean; // Whether auto-share is active for this group
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface GroupShareLog {
-  _id: string;
-  articleId: string;
-  articleTitle: string;
-  pageId: string;
-  groupId: string;
-  groupName: string;
-  postUrl: string;
-  fbSharePostId?: string | null;
-  status: 'success' | 'failed' | 'skipped';
-  errorMessage?: string | null;
   createdAt: Date;
 }
 
@@ -125,4 +89,42 @@ export interface Setting {
   value: string;
   description?: string | null;
   updatedAt: Date;
+}
+
+export interface FacebookGroup {
+  _id: string; // Facebook Group ID (or numeric string)
+  name: string;
+  categories: string[]; // e.g. ['all'] or ['রাজনীতি', 'খেলাধুলা', 'জাতীয়']
+  autoShare: boolean;
+  isActive?: boolean;
+  pageId?: string; // Connected page ID or 'all'
+  accessToken?: string | null; // Optional user token override; if null/empty, uses Page access token
+  delaySeconds?: number; // Delay between group shares (default 5s)
+  totalShares?: number;
+  lastSharedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GroupShareRecord {
+  groupId: string;
+  groupName: string;
+  fbSharePostId?: string;
+  status: 'success' | 'failed';
+  errorMessage?: string;
+  sharedAt: Date;
+}
+
+export interface GroupShareLog {
+  _id: string;
+  groupId: string;
+  groupName: string;
+  articleId: string;
+  articleTitle: string;
+  fbPostId: string;
+  sharePostId?: string | null;
+  status: 'success' | 'failed' | 'dry_run' | 'skipped';
+  errorMessage?: string | null;
+  durationMs?: number | null;
+  createdAt: Date;
 }

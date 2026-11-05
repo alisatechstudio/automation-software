@@ -1,11 +1,10 @@
 import crypto from 'crypto';
 import { getDatabase, isMongoConnected } from '../../db/index.js';
-import { NewsArticle, FacebookPage, RssSource, Job, PostLog } from '../../db/schema.js';
+import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { FacebookGraphClient } from '../facebook/client.js';
-import { GroupShareService } from '../facebook/group-share.js';
 import { TelegramAlertService } from '../alert/telegram.js';
 import { config } from '../../config/env.js';
 
@@ -14,7 +13,6 @@ export class QueueWorker {
   private renderer: PlaywrightImageRenderer;
   private canvasRenderer: CanvasCardRenderer;
   private fbClient: FacebookGraphClient;
-  private groupShareService: GroupShareService;
   private alertService: TelegramAlertService;
   private isRunning: boolean = false;
   private loopTimeout: NodeJS.Timeout | null = null;
@@ -24,7 +22,6 @@ export class QueueWorker {
     this.renderer = new PlaywrightImageRenderer();
     this.canvasRenderer = new CanvasCardRenderer();
     this.fbClient = new FacebookGraphClient();
-    this.groupShareService = new GroupShareService(this.fbClient);
     this.alertService = new TelegramAlertService();
   }
 
@@ -210,23 +207,6 @@ export class QueueWorker {
         config.DRY_RUN
       );
 
-      // 5b. Auto-Share to Relevant Facebook Groups
-      let sharedGroups: any[] = [];
-      try {
-        console.log(`[QueueWorker] Checking for relevant Facebook groups to auto-share...`);
-        sharedGroups = await this.groupShareService.autoShareArticle(
-          article,
-          page,
-          postId,
-          photoId
-        );
-        if (sharedGroups.length > 0) {
-          console.log(`[QueueWorker] Group auto-share completed for ${sharedGroups.length} group(s).`);
-        }
-      } catch (groupErr: any) {
-        console.warn(`[QueueWorker] Group auto-share warning (non-fatal):`, groupErr.message);
-      }
-
       const durationMs = Date.now() - startTime;
 
       // 6. Record Post Log
@@ -241,7 +221,6 @@ export class QueueWorker {
         renderedImagePath: renderedPath || null,
         caption,
         comment: commentText,
-        sharedGroups,
         durationMs,
         status: config.DRY_RUN ? 'dry_run' : 'success',
         createdAt: new Date(),
@@ -253,6 +232,13 @@ export class QueueWorker {
       await this.queue.markCompleted(job._id);
 
       console.log(`✓ [QueueWorker] Successfully processed & published article "${article.title.substring(0, 40)}..." (Took ${durationMs}ms)`);
+
+      // 7. Auto Share to Relevant Facebook Groups (Non-blocking)
+      try {
+        await this.autoShareToRelevantGroups(page, article, postId);
+      } catch (groupShareErr: any) {
+        console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
+      }
     } catch (err: any) {
       const durationMs = Date.now() - startTime;
       const errorMessage = err.message || String(err);
@@ -346,5 +332,173 @@ export class QueueWorker {
       imageUrl: undefined,
     });
     return fallbackSvg;
+  }
+
+  /**
+   * Automatically shares a newly published Facebook Page post to relevant Facebook Groups.
+   * Matches groups based on configured category tags, keywords, or wildcard ('all' / '*').
+   */
+  public async autoShareToRelevantGroups(
+    page: FacebookPage,
+    article: NewsArticle,
+    postId: string
+  ): Promise<any[]> {
+    const db = getDatabase();
+    const groupsCol = db.collection<FacebookGroup>('facebook_groups');
+    const shareLogsCol = db.collection<GroupShareLog>('group_share_logs');
+
+    // 1. Fetch active groups configured for this page or 'all'
+    const groups = await groupsCol
+      .find({
+        autoShare: true,
+        $or: [
+          { pageId: page._id },
+          { pageId: { $exists: false } },
+          { pageId: 'all' },
+          { pageId: '' },
+          { pageId: null as any },
+        ],
+      })
+      .toArray();
+
+    if (!groups.length) {
+      return [];
+    }
+
+    // 2. Filter groups by relevance
+    const relevantGroups = groups.filter((g) => this.isGroupRelevant(g, article));
+
+    if (!relevantGroups.length) {
+      console.log(`[QueueWorker] No Facebook groups matched relevance criteria for article "${article.title}".`);
+      return [];
+    }
+
+    console.log(
+      `[QueueWorker] Found ${relevantGroups.length} relevant group(s) to share post "${article.title.substring(0, 30)}...": ` +
+        relevantGroups.map((g) => g.name).join(', ')
+    );
+
+    const postPermalink = `https://www.facebook.com/${postId}`;
+    const shareMessage = `🔴 ${article.title}\n\nবিস্তারিত পড়ুন প্রথম কমেন্টে বা লিংকে:`;
+    const shareResults: any[] = [];
+
+    for (const group of relevantGroups) {
+      const shareStartTime = Date.now();
+      // Apply stagger delay to respect Meta API rate limits and avoid spam detection (default 3s on Vercel, 5s elsewhere)
+      const delaySec = process.env.VERCEL ? Math.min(group.delaySeconds || 3, 3) : (group.delaySeconds || 5);
+      await new Promise((r) => setTimeout(r, delaySec * 1000));
+
+      const tokenToUse = group.accessToken || page.accessToken;
+      const shareLogId = crypto.randomUUID();
+
+      try {
+        console.log(`[QueueWorker] Sharing to group "${group.name}" (${group._id})...`);
+        const { sharePostId } = await this.fbClient.shareToGroup(
+          group._id,
+          tokenToUse,
+          postPermalink,
+          shareMessage,
+          config.DRY_RUN
+        );
+
+        const durationMs = Date.now() - shareStartTime;
+
+        await shareLogsCol.insertOne({
+          _id: shareLogId,
+          groupId: group._id,
+          groupName: group.name,
+          articleId: article._id,
+          articleTitle: article.title,
+          fbPostId: postId,
+          sharePostId,
+          status: config.DRY_RUN ? 'dry_run' : 'success',
+          durationMs,
+          createdAt: new Date(),
+        } as any);
+
+        await groupsCol.updateOne(
+          { _id: group._id },
+          {
+            $inc: { totalShares: 1 },
+            $set: { lastSharedAt: new Date(), updatedAt: new Date() },
+          }
+        );
+
+        shareResults.push({
+          groupId: group._id,
+          groupName: group.name,
+          status: 'success',
+          sharePostId,
+        });
+
+        console.log(`✓ [QueueWorker] Successfully shared to group "${group.name}"! Share ID: ${sharePostId}`);
+      } catch (err: any) {
+        const durationMs = Date.now() - shareStartTime;
+        console.warn(`[QueueWorker] Failed to share to group "${group.name}" (${group._id}):`, err.message);
+
+        await shareLogsCol.insertOne({
+          _id: shareLogId,
+          groupId: group._id,
+          groupName: group.name,
+          articleId: article._id,
+          articleTitle: article.title,
+          fbPostId: postId,
+          status: 'failed',
+          errorMessage: err.message || String(err),
+          durationMs,
+          createdAt: new Date(),
+        } as any);
+
+        shareResults.push({
+          groupId: group._id,
+          groupName: group.name,
+          status: 'failed',
+          error: err.message,
+        });
+      }
+    }
+
+    return shareResults;
+  }
+
+  /**
+   * Determines if a Facebook group is relevant for a given article.
+   * Matches wildcard ('all', '*'), category equality, or headline/summary keywords.
+   */
+  public isGroupRelevant(group: FacebookGroup, article: NewsArticle): boolean {
+    if (!group.categories || group.categories.length === 0) return true;
+
+    const normalizedCats = group.categories.map((c) => c.trim().toLowerCase()).filter(Boolean);
+    if (
+      normalizedCats.includes('all') ||
+      normalizedCats.includes('*') ||
+      normalizedCats.includes('সব') ||
+      normalizedCats.includes('সকল')
+    ) {
+      return true;
+    }
+
+    const articleCat = (article.category || '').trim().toLowerCase();
+    const articleTitle = (article.title || '').toLowerCase();
+    const articleDesc = (article.description || '').toLowerCase();
+
+    // Check category match
+    if (
+      articleCat &&
+      normalizedCats.some(
+        (c) => c === articleCat || articleCat.includes(c) || c.includes(articleCat)
+      )
+    ) {
+      return true;
+    }
+
+    // Check keyword match in headline or description
+    for (const cat of normalizedCats) {
+      if (cat && (articleTitle.includes(cat) || articleDesc.includes(cat))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

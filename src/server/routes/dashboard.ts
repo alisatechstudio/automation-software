@@ -255,8 +255,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         Facebook Pages
       </button>
       <button onclick="switchTab('groups')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        Auto-Share Groups
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span>Groups (গ্রুপ শেয়ার)</span>
       </button>
       <button onclick="switchTab('preview')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -276,7 +276,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     <div id="tab-overview" class="tab-content space-y-8">
       
       <!-- 3D Holographic Stat Cards Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
         <!-- Card 1: Pending Queue -->
         <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
@@ -346,24 +346,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
               <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400"></span>
               BD News 24/7 Official
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 5: Auto-Share Groups -->
-        <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer col-span-2 sm:col-span-1" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
-          <div class="tilt-card-inner">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-blue-400/90 font-mono">Auto Groups</span>
-              <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-              </div>
-            </div>
-            <div id="stat-groups" class="text-3xl sm:text-4xl font-extrabold mt-3 text-white tracking-tight font-mono">0</div>
-            <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-              Auto-Share Targets
             </div>
           </div>
         </div>
@@ -639,119 +621,107 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       </div>
     </div>
 
-    <!-- 4b. FACEBOOK GROUPS & AUTO-SHARING TAB -->
-    <div id="tab-groups" class="tab-content hidden space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Add Facebook Group Form -->
-        <div class="glass-panel p-6 rounded-2xl h-fit space-y-4">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-              </div>
-              <h3 class="text-base font-bold text-white">Add Auto-Share Group</h3>
-            </div>
-            <button type="button" onclick="discoverPageGroups()" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 px-2.5 py-1 rounded-lg bg-cyan-950/40 border border-cyan-800/50 transition flex items-center gap-1 active:scale-95">
-              <span>🔍</span> Discover
-            </button>
+    <!-- 4.5. FACEBOOK GROUPS AUTO-SHARE TAB -->
+    <div id="tab-groups" class="tab-content hidden space-y-8">
+      
+      <!-- Header Banner & Action Button -->
+      <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-emerald-500/20 shadow-glow-emerald">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Smart Audience Targeting
           </div>
-          
-          <form id="add-group-form" onsubmit="handleAddGroup(event)" class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Facebook Group ID</label>
-              <input type="text" id="group-id" required placeholder="e.g. 123456789012345" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono transition">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Group Name / Community Label</label>
-              <input type="text" id="group-name" required placeholder="e.g. বাংলাদেশ সংবাদ ও পাঠক ফোরাম" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono flex items-center justify-between">
-                <span>Relevant Categories / Keywords</span>
-                <span class="text-[10px] text-blue-400 normal-case">* for all</span>
-              </label>
-              <input type="text" id="group-categories" placeholder="e.g. রাজনীতি, জাতীয়, বিশেষ খবর, খেলাধুলা" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-              <div class="mt-1 text-[11px] text-slate-500 leading-tight">Separate categories or keywords with commas. Articles with matching category or keywords will automatically be shared to this group. Enter <code>*</code> to share all articles.</div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Custom Access Token (Optional)</label>
-              <textarea id="group-token" rows="2" placeholder="Leave empty to automatically use active Page Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"></textarea>
-            </div>
-            <div class="flex items-center justify-between py-1 px-1">
-              <label class="text-xs text-slate-300 font-medium cursor-pointer" for="group-auto-share">
-                Auto-Share on Publication
-              </label>
-              <input type="checkbox" id="group-auto-share" checked class="w-4 h-4 rounded text-blue-600 bg-slate-900 border-slate-700 focus:ring-blue-500 focus:ring-offset-slate-950">
-            </div>
-            <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Save Facebook Group
-            </button>
-            <div id="discover-results-box" class="text-xs p-3.5 rounded-xl bg-slate-950 border border-slate-800 hidden font-mono space-y-2"></div>
-          </form>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+            <span>Facebook Groups Auto-Sharing</span>
+            <span class="text-sm font-normal text-emerald-400 font-bengali bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-800/40">গ্রুপ অটো-শেয়ার</span>
+          </h2>
+          <p class="text-sm text-slate-400 max-w-2xl leading-relaxed">
+            স্বয়ংক্রিয়ভাবে আপনার পেজে প্রকাশিত সংবাদ পোস্ট ক্যাটাগরি ও কিওয়ার্ড মিলিয়ে প্রাসঙ্গিক ফেসবুক গ্রুপে শেয়ার করুন। প্রতি গ্রুপে অ্যান্টি-স্প্যাম নিরাপদ ডিলে নিশ্চিত করা হয়।
+          </p>
         </div>
 
-        <!-- Groups List & Auto-Share Activity -->
-        <div class="lg:col-span-2 space-y-6">
-          <div class="glass-panel rounded-2xl p-6 space-y-5">
-            <div class="flex items-center justify-between">
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
-                Connected Facebook Groups
-              </h3>
-              <span id="groups-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-blue-950/60 text-blue-400 border border-blue-800/50">0 Groups</span>
-            </div>
-
-            <!-- Operational Notice -->
-            <div class="p-4 bg-slate-950/90 border border-slate-800/90 rounded-xl text-xs space-y-2 text-slate-300 shadow-inner">
-              <div class="font-bold text-blue-400 flex items-center gap-2">
-                <span class="text-base">🚀</span> Intelligent Group Auto-Sharing:
-              </div>
-              <ul class="list-disc list-inside space-y-1 text-slate-400 pl-1 leading-relaxed">
-                <li><strong class="text-slate-200">Relevance Matcher:</strong> The queue automatically analyzes each news article's title, summary, and category against group tags before sharing.</li>
-                <li><strong class="text-slate-200">Anti-Spam Safeguards:</strong> A staggered delay (2-4s) is inserted between group shares to comply with Meta community standards and avoid rate limits.</li>
-                <li><strong class="text-slate-200">Page Identity:</strong> Shares are posted directly via your Page token. Ensure your Facebook Page is an admin or linked to the target group.</li>
-              </ul>
-            </div>
-
-            <div id="groups-list" class="space-y-3.5">
-              <div class="text-sm text-slate-500 font-mono">Loading connected groups...</div>
-            </div>
-          </div>
-
-          <!-- Recent Group Share Logs -->
-          <div class="glass-panel rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                Recent Group Auto-Share Executions
-              </h3>
-              <button onclick="loadGroupShares()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1">
-                <span>🔄</span> Refresh
-              </button>
-            </div>
-
-            <div class="overflow-x-auto rounded-xl border border-slate-800/80">
-              <table class="w-full text-left text-xs">
-                <thead class="bg-slate-950/90 text-slate-400 font-mono uppercase text-[10px] tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">Article Title</th>
-                    <th class="px-4 py-3">Target Group</th>
-                    <th class="px-4 py-3">Time</th>
-                    <th class="px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="group-shares-table-body" class="divide-y divide-slate-800/60 bg-slate-950/40">
-                  <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 font-mono">No group shares recorded yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
+        <!-- Add Group Button -->
+        <button onclick="openAddGroupModal()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center gap-2.5 shadow-lg shadow-emerald-950/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-emerald-400/30 whitespace-nowrap">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Add Facebook Group (গ্রুপ যুক্ত করুন)</span>
+        </button>
       </div>
+
+      <!-- Quick Stats Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-slate-400">Total Configured</div>
+          <div id="stat-groups-total" class="text-2xl font-black text-white mt-1">0</div>
+          <div class="text-[11px] text-slate-500 mt-1">Registered targets</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-emerald-400">Auto-Share Active</div>
+          <div id="stat-groups-active" class="text-2xl font-black text-emerald-400 mt-1">0</div>
+          <div class="text-[11px] text-slate-500 mt-1">Broadcasting live</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-cyan-400">Total Executed Shares</div>
+          <div id="stat-groups-shares" class="text-2xl font-black text-cyan-400 mt-1">0</div>
+          <div class="text-[11px] text-slate-500 mt-1">Posts shared to groups</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-amber-400">Anti-Spam Safeguard</div>
+          <div class="text-2xl font-black text-amber-400 mt-1">5s Safe Jitter</div>
+          <div class="text-[11px] text-slate-500 mt-1">Meta rate-limit protected</div>
+        </div>
+      </div>
+
+      <!-- Configured Groups List / Grid -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            Active Facebook Group Targets
+          </h3>
+          <span class="text-xs font-mono text-slate-400">Auto-matches Category & Keywords</span>
+        </div>
+
+        <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="text-sm text-slate-500 font-mono col-span-full py-8 text-center glass-panel rounded-2xl">
+            Loading configured Facebook groups...
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Group Share Logs Table -->
+      <div class="glass-panel rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="text-base">📋</span>
+            <span>Recent Group Share Logs (সর্বশেষ গ্রুপ শেয়ার হিস্ট্রি)</span>
+          </h3>
+          <button onclick="loadGroupShares()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="pb-3 font-semibold">Article Headline</th>
+                <th class="pb-3 font-semibold">Target Group</th>
+                <th class="pb-3 font-semibold">FB Post ID</th>
+                <th class="pb-3 font-semibold">Duration</th>
+                <th class="pb-3 font-semibold">Time</th>
+                <th class="pb-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="group-shares-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="6" class="py-6 text-center text-slate-500">Loading group share logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
     <!-- 5. TEMPLATE PREVIEW TAB -->
@@ -877,6 +847,76 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
   </main>
 
+  <!-- Add Group Modal -->
+  <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-xl p-6 sm:p-8 rounded-3xl border border-emerald-500/30 shadow-2xl relative space-y-6">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">👥</div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Add Facebook Group</h3>
+            <p class="text-xs text-slate-400">ফেসবুক গ্রুপে অটো শেয়ার কনফিগার করুন</p>
+          </div>
+        </div>
+        <button onclick="closeAddGroupModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">✕</button>
+      </div>
+
+      <form id="form-add-group" onsubmit="handleSaveGroup(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Facebook Group ID or URL <span class="text-rose-400">*</span></label>
+          <input id="group-id-input" type="text" placeholder="e.g. 123456789012345 or https://facebook.com/groups/yourgroup" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
+          <p class="text-[11px] text-slate-500 mt-1">You can paste the full group link or numeric Group ID.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Group Display Name <span class="text-rose-400">*</span></label>
+          <input id="group-name-input" type="text" placeholder="e.g. বাংলাদেশ ব্রেকিং নিউজ গ্রুপ" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Relevant Categories / Keywords (প্রাসঙ্গিক বিষয়)</label>
+          <div class="flex flex-wrap gap-1.5 mb-2">
+            <button type="button" onclick="toggleCategoryTag(this, 'all')" class="cat-pill active px-2.5 py-1 text-xs rounded-lg border border-emerald-600 bg-emerald-950/60 text-emerald-300 font-semibold transition">সব (All Posts)</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'রাজনীতি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">রাজনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'খেলাধুলা')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">খেলাধুলা</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'জাতীয়')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">জাতীয়</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'আন্তর্জাতিক')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">আন্তর্জাতিক</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'অর্থনীতি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">অর্থনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'বিনোদন')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">বিনোদন</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'শিক্ষা')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">শিক্ষা</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'প্রযুক্তি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">প্রযুক্তি</button>
+          </div>
+          <input id="group-categories-input" type="text" value="all" placeholder="e.g. all, রাজনীতি, ক্রিকেট (comma separated)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+          <p class="text-[11px] text-slate-500 mt-1">If set to "all", this group will receive every news post. Otherwise, only articles matching these categories or keywords will be shared.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Target Facebook Page</label>
+            <select id="group-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+              <option value="all">All Active Pages</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Stagger Delay (Seconds)</label>
+            <input id="group-delay-input" type="number" min="1" max="60" value="5" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Optional Access Token Override</label>
+          <input id="group-token-input" type="text" placeholder="Leave empty to automatically use Page Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
+          <p class="text-[11px] text-slate-500 mt-1">By default, it uses the Page's Access Token. Provide a User Token if sharing as an admin user.</p>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+          <button type="button" onclick="closeAddGroupModal()" class="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition">Cancel</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/60 transition transform hover:scale-105 active:scale-95">Save & Enable Auto-Share</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- 3D Notification Floating Toast -->
   <div id="toast" class="fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl text-sm font-medium shadow-2xl hidden transition-all duration-500 z-50 flex items-center gap-3 backdrop-blur-xl border"></div>
 
@@ -997,7 +1037,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'queue') loadQueue();
       if (tabId === 'sources') loadSources();
       if (tabId === 'pages') loadPages();
-      if (tabId === 'groups') { loadGroups(); loadGroupShares(); }
+      if (tabId === 'groups') loadGroups();
       if (tabId === 'settings') loadSettings();
     }
 
@@ -1026,7 +1066,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           animateValue('stat-published', data.successfulPosts || 0);
           animateValue('stat-sources', data.sourcesCount || 0);
           animateValue('stat-pages', data.pagesCount || 0);
-          animateValue('stat-groups', data.groupsCount || 0);
 
           const badge = document.getElementById('dry-run-badge');
           const radar = document.getElementById('status-pulse-radar');
@@ -1318,196 +1357,278 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       loadPages();
     }
 
-    // --- FACEBOOK AUTO-SHARE GROUPS ---
+    // --- FACEBOOK GROUPS AUTO-SHARING ---
+    let cachedGroups = [];
+
     async function loadGroups() {
       try {
-        const res = await safeFetchJson('/api/groups');
-        const groups = (res.ok && res.data) ? res.data : [];
-        const list = document.getElementById('groups-list');
-        const badge = document.getElementById('groups-count-badge');
-        if (badge) badge.innerText = groups.length + ' Groups';
+        const [groupsRes, sharesRes, statsRes] = await Promise.all([
+          safeFetchJson('/api/groups'),
+          safeFetchJson('/api/groups/shares?limit=25'),
+          safeFetchJson('/api/stats')
+        ]);
+
+        const groups = (groupsRes.ok && Array.isArray(groupsRes.data)) ? groupsRes.data : [];
+        cachedGroups = groups;
+
+        const totalCount = groups.length;
+        const activeCount = groups.filter(g => g.autoShare).length;
+        const totalShares = groups.reduce((acc, g) => acc + (g.totalShares || 0), 0);
+
+        const elTotal = document.getElementById('stat-groups-total');
+        const elActive = document.getElementById('stat-groups-active');
+        const elShares = document.getElementById('stat-groups-shares');
+        if (elTotal) elTotal.innerText = totalCount;
+        if (elActive) elActive.innerText = activeCount;
+        if (elShares) elShares.innerText = totalShares;
+
+        const container = document.getElementById('groups-container');
+        if (!container) return;
 
         if (groups.length === 0) {
-          list.innerHTML = '<div class="text-sm text-slate-500 font-mono py-4 text-center">No Facebook groups configured yet. Use the form on the left or click "Discover" to link a group.</div>';
-          return;
-        }
-
-        list.innerHTML = groups.map(g => {
-          const categoryBadges = (g.categories || []).map(cat => 
-            \`<span class="px-2 py-0.5 rounded-md text-[10px] font-mono \${cat === '*' ? 'bg-amber-950/60 text-amber-300 border border-amber-800/50' : 'bg-slate-900 text-slate-300 border border-slate-800'}">\${cat === '*' ? '★ All News' : cat}</span>\`
-          ).join('');
-
-          return \`
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition gap-4">
-              <div class="space-y-1.5 flex-1">
-                <div class="font-bold text-slate-100 flex items-center gap-2">
-                  <span>\${g.name}</span>
-                  \${g.auto_share 
-                    ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Auto-Share On</span>'
-                    : '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-400 border border-slate-800">Disabled</span>'
-                  }
-                </div>
-                <div class="text-xs text-slate-400 font-mono">Group ID: <span class="text-slate-300">\${g.id}</span></div>
-                <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span class="text-[10px] text-slate-500 font-mono">Filters:</span>
-                  \${categoryBadges || '<span class="text-[10px] text-slate-500">None</span>'}
-                </div>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <button onclick="testShareGroup('\${g.id}')" class="text-xs text-blue-400 hover:text-blue-300 px-3 py-1.5 bg-blue-950/40 hover:bg-blue-900/60 rounded-lg border border-blue-800/50 transition flex items-center gap-1 active:scale-95">
-                  <span>⚡</span> Test Share
-                </button>
-                <button onclick="deleteGroup('\${g.id}')" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition active:scale-95">
-                  Delete
-                </button>
-              </div>
+          container.innerHTML = \`
+            <div class="col-span-full py-12 px-6 text-center glass-panel rounded-2xl border border-dashed border-slate-800 space-y-3">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-950/60 text-emerald-400 flex items-center justify-center text-xl border border-emerald-800/40">👥</div>
+              <h4 class="text-base font-bold text-slate-200">No Facebook Groups configured yet</h4>
+              <p class="text-xs text-slate-400 max-w-md mx-auto">
+                Add target Facebook Groups to automatically broadcast your published news cards to relevant community feeds.
+              </p>
+              <button onclick="openAddGroupModal()" class="mt-2 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-lg shadow-emerald-950/60">
+                + Add Your First Group
+              </button>
             </div>
           \`;
-        }).join('');
+        } else {
+          container.innerHTML = groups.map(g => {
+            const categories = Array.isArray(g.categories) ? g.categories : ['all'];
+            const catPills = categories.map(c => {
+              if (c.toLowerCase() === 'all') {
+                return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">All Posts (সকল)</span>';
+              }
+              return \`<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-900 text-slate-300 border border-slate-700/80">\${c}</span>\`;
+            }).join(' ');
+
+            const lastSharedText = g.lastSharedAt ? new Date(g.lastSharedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) : 'Never';
+
+            return \`
+              <div class="tilt-card glass-panel rounded-2xl p-5 border \${g.autoShare ? 'border-emerald-500/30 shadow-glow-emerald/30' : 'border-slate-800'} relative overflow-hidden flex flex-col justify-between group" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+                <div class="space-y-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-9 h-9 rounded-xl \${g.autoShare ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'} flex items-center justify-center font-bold text-sm">👥</div>
+                      <div>
+                        <h4 class="font-bold text-slate-100 text-sm group-hover:text-emerald-300 transition">\${g.name}</h4>
+                        <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                          <span>ID: \${g._id}</span>
+                          <a href="https://facebook.com/groups/\${g._id}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline">↗</a>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider \${g.autoShare ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/80' : 'bg-slate-900 text-slate-500 border border-slate-800'}">
+                      \${g.autoShare ? 'Active' : 'Paused'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div class="text-[10px] uppercase font-mono text-slate-400 mb-1 font-semibold">Matched Categories:</div>
+                    <div class="flex flex-wrap gap-1">\${catPills}</div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
+                    <div>Shares: <span class="text-slate-200 font-bold">\${g.totalShares || 0}</span></div>
+                    <div class="truncate">Last: <span class="text-slate-200">\${lastSharedText}</span></div>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-800">
+                  <button onclick="testShareGroup('\${g._id}', '\${g.name.replace(/'/g, \"\\\\'\")}')" class="px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
+                    <span>🚀 Test Share</span>
+                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="toggleGroupAutoShare('\${g._id}', \${g.autoShare})" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs transition" title="\${g.autoShare ? 'Pause Auto-Share' : 'Enable Auto-Share'}">
+                      \${g.autoShare ? '⏸ Pause' : '▶ Enable'}
+                    </button>
+                    <button onclick="deleteGroup('\${g._id}')" class="px-2 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-xs transition" title="Delete Group">
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            \`;
+          }).join('');
+        }
+
+        renderGroupShareLogs((sharesRes.ok && Array.isArray(sharesRes.data)) ? sharesRes.data : []);
       } catch (err) {
         console.error('Error loading groups:', err);
       }
     }
 
-    async function handleAddGroup(e) {
+    function renderGroupShareLogs(shares) {
+      const tbody = document.getElementById('group-shares-table-body');
+      if (!tbody) return;
+
+      if (!shares || shares.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500 font-mono">No group shares executed yet. Shares happen automatically when new news is published!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = shares.map(s => {
+        const isSuccess = s.status === 'success' || s.status === 'dry_run';
+        const statusBadge = isSuccess
+          ? \`<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold">\${s.status === 'dry_run' ? 'DRY RUN' : 'SHARED'}</span>\`
+          : \`<span class="px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-400 border border-rose-800/60 font-bold" title="\${(s.errorMessage || '').replace(/"/g, '&quot;')}">FAILED</span>\`;
+
+        const timeStr = s.createdAt ? new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) : '-';
+        const postLink = s.fbPostId
+          ? \`<a href="https://facebook.com/\${s.fbPostId}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline font-mono truncate block max-w-[130px]">\${s.fbPostId} ↗</a>\`
+          : '-';
+
+        return \`
+          <tr class="hover:bg-slate-900/40 transition">
+            <td class="py-3 pr-4 font-sans font-medium text-slate-200 max-w-xs truncate" title="\${s.articleTitle || ''}">\${s.articleTitle || '-'}</td>
+            <td class="py-3 pr-4 text-emerald-300 font-sans">\${s.groupName || s.groupId}</td>
+            <td class="py-3 pr-4">\${postLink}</td>
+            <td class="py-3 pr-4 text-slate-400">\${s.durationMs ? s.durationMs + 'ms' : '-'}</td>
+            <td class="py-3 pr-4 text-slate-400 whitespace-nowrap">\${timeStr}</td>
+            <td class="py-3 pr-2">\${statusBadge}</td>
+          </tr>
+        \`;
+      }).join('');
+    }
+
+    async function loadGroupShares() {
+      const res = await safeFetchJson('/api/groups/shares?limit=25');
+      if (res.ok && Array.isArray(res.data)) {
+        renderGroupShareLogs(res.data);
+        showToast('Group shares refreshed');
+      }
+    }
+
+    async function openAddGroupModal() {
+      const modal = document.getElementById('modal-add-group');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      // Populate pages select
+      try {
+        const pagesRes = await safeFetchJson('/api/pages');
+        const select = document.getElementById('group-page-select');
+        if (select && pagesRes.ok && Array.isArray(pagesRes.data)) {
+          select.innerHTML = '<option value="all">All Active Pages (ডিফল্ট)</option>' +
+            pagesRes.data.map(p => \`<option value="\${p.id}">\${p.name} (\${p.id})</option>\`).join('');
+        }
+      } catch (e) {}
+    }
+
+    function closeAddGroupModal() {
+      const modal = document.getElementById('modal-add-group');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function toggleCategoryTag(btn, cat) {
+      const input = document.getElementById('group-categories-input');
+      if (!input) return;
+
+      let currentCats = input.value.split(',').map(c => c.trim()).filter(Boolean);
+
+      if (cat === 'all') {
+        input.value = 'all';
+        document.querySelectorAll('.cat-pill').forEach(b => {
+          b.classList.remove('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
+          b.classList.add('border-slate-700', 'bg-slate-900', 'text-slate-300');
+        });
+        btn.classList.add('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
+        btn.classList.remove('border-slate-700', 'bg-slate-900', 'text-slate-300');
+        return;
+      }
+
+      // If 'all' was in there, remove it
+      currentCats = currentCats.filter(c => c.toLowerCase() !== 'all');
+
+      const idx = currentCats.indexOf(cat);
+      if (idx > -1) {
+        currentCats.splice(idx, 1);
+        btn.classList.remove('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
+        btn.classList.add('border-slate-700', 'bg-slate-900', 'text-slate-300');
+      } else {
+        currentCats.push(cat);
+        btn.classList.add('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
+        btn.classList.remove('border-slate-700', 'bg-slate-900', 'text-slate-300');
+      }
+
+      input.value = currentCats.length > 0 ? currentCats.join(', ') : 'all';
+    }
+
+    async function handleSaveGroup(e) {
       e.preventDefault();
-      const rawCategories = document.getElementById('group-categories').value;
+      const id = document.getElementById('group-id-input').value.trim();
+      const name = document.getElementById('group-name-input').value.trim();
+      const categories = document.getElementById('group-categories-input').value.trim();
+      const pageId = document.getElementById('group-page-select').value;
+      const delaySeconds = document.getElementById('group-delay-input').value;
+      const accessToken = document.getElementById('group-token-input').value.trim();
+
       const payload = {
-        id: document.getElementById('group-id').value.trim(),
-        name: document.getElementById('group-name').value.trim(),
-        categories: rawCategories ? rawCategories.split(',').map(s => s.trim()).filter(Boolean) : ['*'],
-        access_token: document.getElementById('group-token').value.trim() || null,
-        auto_share: document.getElementById('group-auto-share').checked,
+        id,
+        name,
+        categories,
+        page_id: pageId,
+        delay_seconds: parseInt(delaySeconds, 10) || 5,
+        access_token: accessToken || null,
+        auto_share: true,
       };
 
-      try {
-        const res = await safeFetchJson('/api/groups', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+      const res = await safeFetchJson('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-        if (res.ok && res.data && res.data.success) {
-          showToast('Facebook group saved successfully!');
-          document.getElementById('add-group-form').reset();
-          document.getElementById('group-auto-share').checked = true;
-          loadGroups();
-          loadOverview();
-        } else {
-          showToast(res.data?.error || 'Failed to save group', true);
-        }
-      } catch (err) {
-        showToast(err.message || 'Network error saving group', true);
+      if (res.ok && res.data && res.data.success) {
+        showToast(\`Group "\${name}" added successfully!\`);
+        closeAddGroupModal();
+        document.getElementById('form-add-group').reset();
+        loadGroups();
+      } else {
+        showToast(res.error || res.data?.error || 'Failed to save group', true);
+      }
+    }
+
+    async function toggleGroupAutoShare(id, currentStatus) {
+      const res = await safeFetchJson('/api/groups/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_share: !currentStatus })
+      });
+
+      if (res.ok) {
+        showToast(\`Auto-share \${!currentStatus ? 'enabled' : 'paused'} for group\`);
+        loadGroups();
+      } else {
+        showToast(res.error || 'Failed to update group', true);
       }
     }
 
     async function deleteGroup(id) {
-      if (!confirm('Are you sure you want to remove this group from auto-sharing?')) return;
-      try {
-        await fetch('/api/groups/' + id, { method: 'DELETE' });
-        showToast('Group removed from auto-sharing');
+      if (!confirm('Are you sure you want to remove this group from auto-share?')) return;
+      const res = await safeFetchJson('/api/groups/' + id, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('Group removed');
         loadGroups();
-        loadOverview();
-      } catch (err) {
-        showToast(err.message, true);
+      } else {
+        showToast(res.error || 'Failed to delete group', true);
       }
     }
 
-    async function testShareGroup(id) {
-      showToast('Sharing latest published news post to group ' + id + '...');
-      try {
-        const res = await safeFetchJson('/api/groups/' + id + '/test-share', {
-          method: 'POST'
-        });
-
-        if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully shared to group! Share ID: ' + (res.data.result?.fbSharePostId || 'OK'));
-          loadGroupShares();
-        } else {
-          showToast('⚠️ Group Share failed: ' + (res.data?.result?.errorMessage || res.data?.error || 'Error'), true);
-          loadGroupShares();
-        }
-      } catch (err) {
-        showToast('Network error during test share: ' + err.message, true);
-      }
-    }
-
-    async function discoverPageGroups() {
-      const box = document.getElementById('discover-results-box');
-      box.classList.remove('hidden');
-      box.innerHTML = '<div class="text-cyan-400 animate-pulse flex items-center gap-2"><span>🔄</span> Scanning Facebook Page for linked groups...</div>';
-
-      try {
-        const res = await safeFetchJson('/api/groups/discover', { method: 'POST' });
-        if (res.ok && res.data && res.data.groups) {
-          const groups = res.data.groups;
-          if (groups.length === 0) {
-            box.innerHTML = '<div class="text-amber-400">No linked groups discovered directly from Page. You can manually enter your Group ID and Group Name in the form above!</div>';
-            return;
-          }
-
-          box.innerHTML = '<div class="text-xs font-bold text-slate-200 mb-2">Discovered Groups:</div>' +
-            groups.map(g => \`
-              <div class="flex items-center justify-between p-2 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px]">
-                <div>
-                  <div class="font-bold text-slate-200">\${g.name}</div>
-                  <div class="text-slate-400 font-mono">ID: \${g.id} (\${g.privacy || 'Group'})</div>
-                </div>
-                <button type="button" onclick="selectDiscoveredGroup('\${g.id}', '\${g.name.replace(/'/g, "\\\\'")}')" class="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] active:scale-95">Use This</button>
-              </div>
-            \`).join('');
-        } else {
-          box.innerHTML = '<div class="text-rose-400">Failed to discover: ' + (res.data?.error || 'Unknown error') + '</div>';
-        }
-      } catch (err) {
-        box.innerHTML = '<div class="text-rose-400">Network error scanning groups: ' + err.message + '</div>';
-      }
-    }
-
-    function selectDiscoveredGroup(id, name) {
-      document.getElementById('group-id').value = id;
-      document.getElementById('group-name').value = name;
-      showToast('Selected group ' + name);
-    }
-
-    async function loadGroupShares() {
-      try {
-        const res = await safeFetchJson('/api/groups/shares?limit=20');
-        const logs = (res.ok && res.data) ? res.data : [];
-        const tbody = document.getElementById('group-shares-table-body');
-        if (!tbody) return;
-
-        if (logs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 font-mono">No group shares recorded yet. Auto-shares run when new articles are published.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = logs.map(l => {
-          const isSuccess = l.status === 'success';
-          const statusBadge = isSuccess
-            ? '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">Success</span>'
-            : '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-950/60 text-rose-400 border border-rose-800/50" title="' + (l.errorMessage || '') + '">Failed</span>';
-
-          const timeStr = l.createdAt ? new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-          const postUrl = l.postUrl || '#';
-
-          return \`
-            <tr class="hover:bg-slate-900/40 transition font-mono">
-              <td class="px-4 py-2.5">\${statusBadge}</td>
-              <td class="px-4 py-2.5 font-sans font-medium text-slate-200 truncate max-w-[200px]" title="\${l.articleTitle || ''}">\${l.articleTitle || 'News Article'}</td>
-              <td class="px-4 py-2.5 text-slate-300 truncate max-w-[150px]">\${l.groupName || l.groupId}</td>
-              <td class="px-4 py-2.5 text-slate-400 text-[11px]">\${timeStr}</td>
-              <td class="px-4 py-2.5 text-right font-sans">
-                \${isSuccess && l.fbSharePostId 
-                  ? \`<a href="https://www.facebook.com/\${l.fbSharePostId}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs underline font-mono">View Share ↗</a>\`
-                  : \`<span class="text-slate-500 text-[11px]">\${l.errorMessage ? l.errorMessage.substring(0, 30) + '...' : '-'}</span>\`
-                }
-              </td>
-            </tr>
-          \`;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading group shares:', err);
+    async function testShareGroup(id, groupName) {
+      showToast(\`Initiating test share to "\${groupName}"...\`);
+      const res = await safeFetchJson('/api/groups/' + id + '/test-share', { method: 'POST' });
+      if (res.ok && res.data && res.data.success) {
+        showToast(\`✓ Shared successfully to "\${groupName}"!\`);
+        loadGroups();
+      } else {
+        showToast(res.data?.error || res.error || 'Test share failed', true);
       }
     }
 

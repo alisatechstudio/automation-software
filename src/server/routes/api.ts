@@ -2,13 +2,12 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog } from '../../db/schema.js';
-import { FacebookGraphClient } from '../../services/facebook/client.js';
-import { GroupShareService } from '../../services/facebook/group-share.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
 import { CanvasCardRenderer } from '../../services/renderer/canvas.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
+import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { AVAILABLE_TEMPLATES } from '../../config/constants.js';
 import { config } from '../../config/env.js';
@@ -19,8 +18,6 @@ const worker = new QueueWorker();
 const renderer = new PlaywrightImageRenderer();
 const canvasRenderer = new CanvasCardRenderer();
 const dedupeService = new ArticleDedupeService();
-const fbClient = new FacebookGraphClient();
-const groupShareService = new GroupShareService(fbClient);
 
 // 1. Dashboard Overview Stats
 apiRouter.get('/stats', async (req: Request, res: Response) => {
@@ -32,8 +29,8 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const pagesCount = await db.collection('facebook_pages').countDocuments();
     const sourcesCount = await db.collection('rss_sources').countDocuments();
     const groupsCount = await db.collection('facebook_groups').countDocuments();
-    const groupSharesCount = await db.collection('group_shares').countDocuments({
-      status: 'success',
+    const groupSharesCount = await db.collection('group_share_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
     });
     const successfulPosts = await db.collection('post_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
@@ -259,6 +256,236 @@ apiRouter.delete('/pages/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ==============================================================================
+// 3.5. Facebook Groups (Auto-Share to Relevant Groups)
+// ==============================================================================
+apiRouter.get('/groups', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const groups = await db
+      .collection<FacebookGroup>('facebook_groups')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(groups);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/groups', async (req: Request, res: Response) => {
+  try {
+    let { id, name, categories, auto_share, page_id, access_token, delay_seconds } = req.body;
+
+    if (!id || !name) {
+      res.status(400).json({ error: 'Group ID (or URL) and Group Name are required' });
+      return;
+    }
+
+    // Auto extract group ID if user provided a URL (e.g. facebook.com/groups/123456789)
+    let cleanId = id.toString().trim();
+    const urlMatch = cleanId.match(/facebook\.com\/groups\/([^\/?#]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      cleanId = urlMatch[1];
+    }
+
+    // Parse categories: support array or comma-separated string
+    let parsedCategories: string[] = [];
+    if (Array.isArray(categories)) {
+      parsedCategories = categories.map((c) => String(c).trim()).filter(Boolean);
+    } else if (typeof categories === 'string') {
+      parsedCategories = categories
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+    }
+    if (parsedCategories.length === 0) {
+      parsedCategories = ['all'];
+    }
+
+    const db = getDatabase();
+
+    const doc: FacebookGroup = {
+      _id: cleanId,
+      name: name.trim(),
+      categories: parsedCategories,
+      autoShare: auto_share !== undefined ? Boolean(auto_share) : true,
+      pageId: page_id ? page_id.trim() : 'all',
+      accessToken: access_token ? access_token.trim() : null,
+      delaySeconds: delay_seconds ? parseInt(delay_seconds, 10) : 5,
+      totalShares: 0,
+      lastSharedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.collection<FacebookGroup>('facebook_groups').updateOne(
+      { _id: cleanId },
+      {
+        $set: {
+          name: doc.name,
+          categories: doc.categories,
+          autoShare: doc.autoShare,
+          pageId: doc.pageId,
+          accessToken: doc.accessToken,
+          delaySeconds: doc.delaySeconds,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          totalShares: 0,
+          lastSharedAt: null,
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+
+    res.status(201).json({ success: true, group: doc });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.put('/groups/:id', async (req: Request, res: Response) => {
+  try {
+    const groupId = req.params.id;
+    const { name, categories, auto_share, page_id, access_token, delay_seconds } = req.body;
+
+    const db = getDatabase();
+    const updateFields: any = { updatedAt: new Date() };
+
+    if (name !== undefined) updateFields.name = String(name).trim();
+    if (auto_share !== undefined) updateFields.autoShare = Boolean(auto_share);
+    if (page_id !== undefined) updateFields.pageId = String(page_id).trim();
+    if (access_token !== undefined) updateFields.accessToken = access_token ? String(access_token).trim() : null;
+    if (delay_seconds !== undefined) updateFields.delaySeconds = parseInt(delay_seconds, 10) || 5;
+
+    if (categories !== undefined) {
+      if (Array.isArray(categories)) {
+        updateFields.categories = categories.map((c) => String(c).trim()).filter(Boolean);
+      } else if (typeof categories === 'string') {
+        updateFields.categories = categories.split(',').map((c) => c.trim()).filter(Boolean);
+      }
+    }
+
+    await db.collection<FacebookGroup>('facebook_groups').updateOne(
+      { _id: groupId },
+      { $set: updateFields }
+    );
+
+    res.json({ success: true, groupId });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.delete('/groups/:id', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    await db.collection<FacebookGroup>('facebook_groups').deleteOne({ _id: req.params.id });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/groups/shares', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const limit = parseInt(req.query.limit as string, 10) || 30;
+    const shares = await db
+      .collection<GroupShareLog>('group_share_logs')
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    res.json(shares);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/groups/:id/test-share', async (req: Request, res: Response) => {
+  try {
+    const groupId = req.params.id;
+    const db = getDatabase();
+
+    const group = await db.collection<FacebookGroup>('facebook_groups').findOne({ _id: groupId });
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // Find latest published log
+    const latestPost = await db
+      .collection<PostLog>('post_logs')
+      .findOne({ status: { $in: ['success', 'dry_run'] }, fbPostId: { $ne: null } }, { sort: { createdAt: -1 } });
+
+    if (!latestPost || !latestPost.fbPostId) {
+      res.status(400).json({ error: 'No published Facebook posts found to test share with. Please publish a post first.' });
+      return;
+    }
+
+    // Find token to use
+    let tokenToUse = group.accessToken;
+    if (!tokenToUse) {
+      const page = await db.collection<FacebookPage>('facebook_pages').findOne({
+        ...(group.pageId && group.pageId !== 'all' ? { _id: group.pageId } : { isActive: true })
+      });
+      if (page) {
+        tokenToUse = page.accessToken;
+      }
+    }
+
+    if (!tokenToUse) {
+      res.status(400).json({ error: 'No active Facebook Access Token found for this group or connected page' });
+      return;
+    }
+
+    const postPermalink = `https://www.facebook.com/${latestPost.fbPostId}`;
+    const fbGraph = new FacebookGraphClient();
+    const message = `🔴 [টেস্ট শেয়ার]\n\nবিস্তারিত দেখুনঃ`;
+
+    const result = await fbGraph.shareToGroup(
+      groupId,
+      tokenToUse,
+      postPermalink,
+      message,
+      config.DRY_RUN
+    );
+
+    // Record share log
+    await db.collection<GroupShareLog>('group_share_logs').insertOne({
+      _id: crypto.randomUUID(),
+      groupId: group._id,
+      groupName: group.name,
+      articleId: latestPost.articleId,
+      articleTitle: 'Manual Test Share',
+      fbPostId: latestPost.fbPostId,
+      sharePostId: result.sharePostId,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      durationMs: 400,
+      createdAt: new Date(),
+    } as any);
+
+    await db.collection<FacebookGroup>('facebook_groups').updateOne(
+      { _id: groupId },
+      { $inc: { totalShares: 1 }, $set: { lastSharedAt: new Date() } }
+    );
+
+    res.json({
+      success: true,
+      sharePostId: result.sharePostId,
+      groupName: group.name,
+      postUrl: postPermalink,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, classification: (err as any).classification });
+  }
+});
+
 // 4. Queue & Job Management
 apiRouter.get('/queue', async (req: Request, res: Response) => {
   try {
@@ -363,7 +590,6 @@ apiRouter.get('/logs', async (req: Request, res: Response) => {
             fb_photo_id: '$fbPhotoId',
             fb_post_id: '$fbPostId',
             fb_comment_id: '$fbCommentId',
-            shared_groups: '$sharedGroups',
             duration_ms: '$durationMs',
             created_at: '$createdAt',
             article_title: { $arrayElemAt: ['$articleDoc.title', 0] },
@@ -605,238 +831,6 @@ apiRouter.post('/settings', async (req: Request, res: Response) => {
     }
 
     res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==============================================================================
-// 10. Facebook Group Auto-Sharing Management
-// ==============================================================================
-
-// List all configured Facebook groups
-apiRouter.get('/groups', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const groups = await db
-      .collection<FacebookGroup>('facebook_groups')
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
-
-    res.json(
-      groups.map((g) => ({
-        id: g._id,
-        _id: g._id,
-        name: g.name,
-        pageId: g.pageId,
-        categories: g.categories || [],
-        auto_share: g.autoShare ?? true,
-        is_active: g.isActive ?? true,
-        hasCustomToken: !!(g.accessToken && g.accessToken.trim()),
-        created_at: g.createdAt,
-      }))
-    );
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Add or update a Facebook group
-apiRouter.post('/groups', async (req: Request, res: Response) => {
-  const { id, name, categories, auto_share, is_active, access_token, page_id } = req.body;
-
-  if (!id || !name) {
-    res.status(400).json({ error: 'Group ID and Group Name are required' });
-    return;
-  }
-
-  try {
-    const db = getDatabase();
-    const cleanId = String(id).trim();
-    const cleanName = String(name).trim();
-
-    // Parse categories: string array or comma-separated string
-    let parsedCategories: string[] = [];
-    if (Array.isArray(categories)) {
-      parsedCategories = categories.map((c) => String(c).trim()).filter(Boolean);
-    } else if (typeof categories === 'string') {
-      parsedCategories = categories.split(',').map((c) => c.trim()).filter(Boolean);
-    }
-
-    if (parsedCategories.length === 0) {
-      parsedCategories = ['*']; // Default to all news
-    }
-
-    const groupDoc: FacebookGroup = {
-      _id: cleanId,
-      name: cleanName,
-      pageId: page_id ? String(page_id).trim() : undefined,
-      categories: parsedCategories,
-      accessToken: access_token ? String(access_token).trim() : null,
-      autoShare: auto_share !== false,
-      isActive: is_active !== false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await db.collection<FacebookGroup>('facebook_groups').updateOne(
-      { _id: cleanId },
-      {
-        $set: {
-          name: groupDoc.name,
-          pageId: groupDoc.pageId,
-          categories: groupDoc.categories,
-          accessToken: groupDoc.accessToken,
-          autoShare: groupDoc.autoShare,
-          isActive: groupDoc.isActive,
-          updatedAt: new Date(),
-        },
-        $setOnInsert: {
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
-
-    res.json({ success: true, group: groupDoc });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update group
-apiRouter.put('/groups/:id', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const { name, categories, auto_share, is_active, access_token } = req.body;
-    const updateData: any = { updatedAt: new Date() };
-
-    if (name) updateData.name = String(name).trim();
-    if (auto_share !== undefined) updateData.autoShare = Boolean(auto_share);
-    if (is_active !== undefined) updateData.isActive = Boolean(is_active);
-    if (access_token !== undefined) updateData.accessToken = access_token ? String(access_token).trim() : null;
-
-    if (categories !== undefined) {
-      let parsedCategories: string[] = [];
-      if (Array.isArray(categories)) {
-        parsedCategories = categories.map((c) => String(c).trim()).filter(Boolean);
-      } else if (typeof categories === 'string') {
-        parsedCategories = categories.split(',').map((c) => c.trim()).filter(Boolean);
-      }
-      updateData.categories = parsedCategories;
-    }
-
-    await db.collection<FacebookGroup>('facebook_groups').updateOne(
-      { _id: req.params.id },
-      { $set: updateData }
-    );
-
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete group
-apiRouter.delete('/groups/:id', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    await db.collection<FacebookGroup>('facebook_groups').deleteOne({ _id: req.params.id });
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Auto-discover groups linked to connected page or token
-apiRouter.post('/groups/discover', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const activePage = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
-
-    if (!activePage) {
-      res.status(400).json({ error: 'No active Facebook Page found to query groups' });
-      return;
-    }
-
-    const linkedGroups = await fbClient.getLinkedGroups(activePage._id, activePage.accessToken);
-    res.json({
-      success: true,
-      pageName: activePage.name,
-      pageId: activePage._id,
-      groups: linkedGroups,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Test share to a specific group
-apiRouter.post('/groups/:id/test-share', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const groupId = req.params.id;
-
-    const group = await db.collection<FacebookGroup>('facebook_groups').findOne({ _id: groupId });
-    if (!group) {
-      res.status(404).json({ error: `Group ${groupId} not found` });
-      return;
-    }
-
-    // Find the latest published post
-    const latestLog = await db
-      .collection<PostLog>('post_logs')
-      .findOne({ status: { $in: ['success', 'dry_run'] }, fbPostId: { $ne: null } }, { sort: { createdAt: -1 } });
-
-    if (!latestLog) {
-      res.status(400).json({ error: 'No published posts available to test share. Please publish a post first.' });
-      return;
-    }
-
-    const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: latestLog.articleId });
-    if (!article) {
-      res.status(400).json({ error: 'Article corresponding to latest post not found.' });
-      return;
-    }
-
-    const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: latestLog.pageId });
-    if (!page) {
-      res.status(400).json({ error: 'Page corresponding to latest post not found.' });
-      return;
-    }
-
-    const result = await groupShareService.shareToSpecificGroup(
-      groupId,
-      article,
-      page,
-      latestLog.fbPostId!
-    );
-
-    res.json({
-      success: result.status === 'success',
-      result,
-      articleTitle: article.title,
-      postId: latestLog.fbPostId,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get recent group share logs
-apiRouter.get('/groups/shares', async (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const limit = parseInt(req.query.limit as string) || 30;
-    const logs = await db
-      .collection<GroupShareLog>('group_shares')
-      .find({})
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .toArray();
-
-    res.json(logs);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

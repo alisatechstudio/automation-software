@@ -132,7 +132,7 @@ export class FacebookGraphClient {
   }
 
   /**
-   * Shares a post link with caption to a Facebook Group feed via POST /{group-id}/feed
+   * Shares a published Facebook Page post to a Facebook Group via POST /{group-id}/feed
    */
   public async shareToGroup(
     groupId: string,
@@ -140,13 +140,13 @@ export class FacebookGraphClient {
     postUrl: string,
     message: string,
     dryRun: boolean = config.DRY_RUN
-  ): Promise<{ shareId: string }> {
+  ): Promise<{ sharePostId: string; shareId: string }> {
     if (dryRun) {
       const mockShareId = `${groupId}_dryrun_share_${Date.now()}`;
-      console.log(`[FacebookClient - DRY RUN] Simulated share to group ${groupId}:`);
-      console.log(`  Message: ${message}`);
+      console.log(`[FacebookClient - DRY RUN] Simulated share to Group ${groupId}:`);
       console.log(`  Link: ${postUrl}`);
-      return { shareId: mockShareId };
+      console.log(`  Message: ${message}`);
+      return { sharePostId: mockShareId, shareId: mockShareId };
     }
 
     const url = `https://graph.facebook.com/${this.apiVersion}/${groupId}/feed`;
@@ -157,8 +157,8 @@ export class FacebookGraphClient {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message,
         link: postUrl,
+        message,
         access_token: accessToken,
       }),
     });
@@ -166,74 +166,10 @@ export class FacebookGraphClient {
     const data = (await response.json()) as any;
 
     if (!response.ok || data.error) {
-      this.handleGraphError(data.error, `Share to group ${groupId} failed`);
+      this.handleGraphError(data.error, `Share to Group ${groupId} failed`);
     }
 
-    return { shareId: data.id };
-  }
-
-  /**
-   * Fetches groups linked to or managed by a Facebook Page or User token
-   */
-  public async getLinkedGroups(
-    targetId: string,
-    accessToken: string
-  ): Promise<Array<{ id: string; name: string; privacy?: string }>> {
-    try {
-      const url = `https://graph.facebook.com/${this.apiVersion}/${targetId}/groups?fields=id,name,privacy&access_token=${encodeURIComponent(
-        accessToken
-      )}`;
-      const response = await fetch(url);
-      const data = (await response.json()) as any;
-
-      if (!response.ok || data.error) {
-        console.warn(`[FacebookClient] Could not fetch groups for ${targetId}:`, data.error?.message);
-        return [];
-      }
-
-      return (data.data || []).map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        privacy: item.privacy,
-      }));
-    } catch (e: any) {
-      console.warn(`[FacebookClient] Error fetching groups:`, e.message);
-      return [];
-    }
-  }
-
-  /**
-   * Validates access to a Facebook Group using an access token
-   */
-  public async validateGroupAccess(
-    groupId: string,
-    accessToken: string
-  ): Promise<{ isValid: boolean; name?: string; privacy?: string; error?: string }> {
-    try {
-      const url = `https://graph.facebook.com/${this.apiVersion}/${groupId}?fields=id,name,privacy&access_token=${encodeURIComponent(
-        accessToken
-      )}`;
-      const response = await fetch(url);
-      const data = (await response.json()) as any;
-
-      if (!response.ok || data.error) {
-        return {
-          isValid: false,
-          error: data.error?.message || `Group ${groupId} access denied (Code ${data.error?.code})`,
-        };
-      }
-
-      return {
-        isValid: true,
-        name: data.name,
-        privacy: data.privacy,
-      };
-    } catch (err: any) {
-      return {
-        isValid: false,
-        error: err.message || 'Network error checking group access',
-      };
-    }
+    return { sharePostId: data.id, shareId: data.id };
   }
 
   /**
