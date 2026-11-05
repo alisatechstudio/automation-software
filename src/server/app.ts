@@ -1,4 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import fs from 'fs';
 import path from 'path';
 import { apiRouter } from './routes/api.js';
 import { dashboardRouter } from './routes/dashboard.js';
@@ -34,8 +35,17 @@ export function createServer(): Express {
   app.use('/assets', express.static(config.ASSETS_DIR));
   app.use('/rendered', express.static(path.join(config.DATA_DIR, 'rendered')));
 
-  // Favicon handler to avoid browser 404 logs
-  app.get('/favicon.ico', (req: Request, res: Response) => res.status(204).end());
+  // Favicon handler serving the official BD News 24/7 favicon
+  app.get(['/favicon.ico', '/favicon.png'], (req: Request, res: Response) => {
+    const faviconPath = path.join(config.ASSETS_DIR, 'images', 'favicon.png');
+    if (fs.existsSync(faviconPath)) {
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      fs.createReadStream(faviconPath).pipe(res);
+    } else {
+      res.status(204).end();
+    }
+  });
 
   // Unauthenticated Health Check Endpoint (Returns 200 so Vercel/containers don't kill the service)
   app.get(['/health', '/healthz'], async (req: Request, res: Response) => {

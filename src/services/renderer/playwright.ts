@@ -24,6 +24,8 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     const notoPath = path.join(assetsDir, 'fonts', 'NotoSansBengali-Regular.ttf');
     const hindBoldPath = path.join(assetsDir, 'fonts', 'HindSiliguri-Bold.ttf');
     const fallbackPath = path.join(assetsDir, 'images', 'fallback.svg');
+    const bdLogoPath = path.join(assetsDir, 'images', 'bdnews-logo.png');
+    const faviconPath = path.join(assetsDir, 'images', 'favicon.png');
     const logoPath = path.join(assetsDir, 'images', 'logo.svg');
 
     if (fs.existsSync(notoPath)) {
@@ -35,7 +37,11 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     if (fs.existsSync(fallbackPath)) {
       this.fallbackImageBase64 = `data:image/svg+xml;base64,${fs.readFileSync(fallbackPath).toString('base64')}`;
     }
-    if (fs.existsSync(logoPath)) {
+    if (fs.existsSync(bdLogoPath)) {
+      this.logoBase64 = `data:image/png;base64,${fs.readFileSync(bdLogoPath).toString('base64')}`;
+    } else if (fs.existsSync(faviconPath)) {
+      this.logoBase64 = `data:image/png;base64,${fs.readFileSync(faviconPath).toString('base64')}`;
+    } else if (fs.existsSync(logoPath)) {
       this.logoBase64 = `data:image/svg+xml;base64,${fs.readFileSync(logoPath).toString('base64')}`;
     }
   }

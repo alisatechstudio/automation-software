@@ -8,7 +8,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>News to Facebook Automation Control Center</title>
+  <title>BD News 24/7 - Facebook Automation Control Center</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/assets/images/favicon.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>
@@ -38,10 +41,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
   <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-500/30">FB</div>
+        <img src="/assets/images/favicon.png" alt="BD News 24/7" class="w-10 h-10 rounded-full object-cover shadow-lg shadow-red-500/20 border border-red-500/40" />
         <div>
-          <span class="font-bold text-lg tracking-tight">News-to-FB Automation</span>
-          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs rounded bg-slate-800 text-slate-400 border border-slate-700">Self-Hosted</span>
+          <span class="font-bold text-lg tracking-tight">BD News 24/7</span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs rounded bg-slate-800 text-slate-400 border border-slate-700">Automation Control</span>
         </div>
       </div>
       <div class="flex items-center space-x-3">
