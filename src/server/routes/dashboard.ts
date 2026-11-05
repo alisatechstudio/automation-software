@@ -385,22 +385,38 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'settings') loadSettings();
     }
 
+    async function safeFetchJson(url, options) {
+      try {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        try {
+          return { ok: res.ok, status: res.status, data: JSON.parse(text) };
+        } catch {
+          return { ok: false, status: res.status, error: text || 'Non-JSON server response' };
+        }
+      } catch (err) {
+        return { ok: false, status: 0, error: err.message };
+      }
+    }
+
     async function loadOverview() {
       try {
-        const res = await fetch('/api/stats');
-        const data = await res.json();
-        document.getElementById('stat-pending').innerText = data.queue.pending;
-        document.getElementById('stat-published').innerText = data.successfulPosts;
-        document.getElementById('stat-sources').innerText = data.sourcesCount;
-        document.getElementById('stat-pages').innerText = data.pagesCount;
+        const res = await safeFetchJson('/api/stats');
+        if (res.ok && res.data) {
+          const data = res.data;
+          document.getElementById('stat-pending').innerText = data.queue?.pending || 0;
+          document.getElementById('stat-published').innerText = data.successfulPosts || 0;
+          document.getElementById('stat-sources').innerText = data.sourcesCount || 0;
+          document.getElementById('stat-pages').innerText = data.pagesCount || 0;
 
-        const badge = document.getElementById('dry-run-badge');
-        if (data.dryRun) {
-          badge.innerText = '🛡️ DRY RUN ACTIVE';
-          badge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
-        } else {
-          badge.innerText = '🚀 LIVE MODE';
-          badge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          const badge = document.getElementById('dry-run-badge');
+          if (data.dryRun) {
+            badge.innerText = '🛡️ DRY RUN ACTIVE';
+            badge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          } else {
+            badge.innerText = '🚀 LIVE MODE';
+            badge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          }
         }
       } catch (e) {
         console.error(e);
@@ -410,12 +426,15 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     async function triggerPollNow() {
       try {
         showToast('Polling RSS feeds now...');
-        const res = await fetch('/api/poll-now', { method: 'POST' });
-        const data = await res.json();
-        showToast('RSS polling complete! Queued new articles.');
-        loadOverview();
+        const res = await safeFetchJson('/api/poll-now', { method: 'POST' });
+        if (res.ok) {
+          showToast('RSS polling complete! Queued new articles.');
+          loadOverview();
+        } else {
+          showToast('Poll note: ' + (res.data?.error || res.error || 'Server response'), true);
+        }
       } catch (e) {
-        showToast('Failed to poll RSS', true);
+        showToast('Failed to poll RSS: ' + e.message, true);
       }
     }
 
@@ -635,21 +654,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       try {
         // Fast instant HTML compilation (5ms)
-        const res = await fetch('/api/preview/html', {
+        const res = await safeFetchJson('/api/preview/html', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const data = await res.json();
 
-        if (data.success && data.html) {
-          frame.srcdoc = data.html;
+        if (res.ok && res.data && res.data.html) {
+          frame.srcdoc = res.data.html;
           frame.classList.remove('hidden');
           img.classList.add('hidden');
           placeholder.classList.add('hidden');
-          meta.innerText = '✓ Live Interactive Template Preview Ready';
+          meta.innerText = '✓ Live Interactive Canva Template Ready';
         } else {
-          meta.innerText = 'Preview error: ' + (data.error || 'Failed to compile template');
+          meta.innerText = 'Preview notice: ' + (res.data?.error || res.error || 'Failed to compile template');
         }
       } catch (e) {
         meta.innerText = 'Error: ' + e.message;
