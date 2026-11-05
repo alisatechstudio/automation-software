@@ -47,11 +47,15 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs rounded bg-slate-800 text-slate-400 border border-slate-700">Automation Control</span>
         </div>
       </div>
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-2 sm:space-x-3">
         <span id="dry-run-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Checking Mode...</span>
         <button onclick="triggerPollNow()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Poll RSS Now
+        </button>
+        <button onclick="publishNextNow()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5 transition shadow-lg shadow-red-500/20">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          Publish Next Article
         </button>
       </div>
     </div>
@@ -453,6 +457,29 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }
       } catch (e) {
         showToast('Failed to poll RSS: ' + e.message, true);
+      }
+    }
+
+    async function publishNextNow() {
+      try {
+        showToast('Publishing next article to Facebook...');
+        const res = await safeFetchJson('/api/queue/publish-next', { method: 'POST' });
+        if (res.ok && res.data.success) {
+          const log = res.data.log;
+          if (log && log.status === 'success') {
+            showToast('✓ Successfully published: ' + (res.data.articleTitle || '').substring(0, 30) + '...');
+          } else if (log && log.errorMessage) {
+            showToast('Facebook error: ' + log.errorMessage, true);
+          } else {
+            showToast('Published to Facebook!');
+          }
+          loadOverview();
+          loadQueue();
+        } else {
+          showToast('Failed to publish: ' + (res.data?.error || res.error || 'Server error'), true);
+        }
+      } catch (e) {
+        showToast('Error publishing: ' + e.message, true);
       }
     }
 

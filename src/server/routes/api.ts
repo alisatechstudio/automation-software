@@ -463,6 +463,72 @@ apiRouter.post('/poll-now', async (req: Request, res: Response) => {
   }
 });
 
+// 7b. Manual trigger: Publish Next Available Article immediately
+apiRouter.post('/queue/publish-next', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const articlesCol = db.collection<NewsArticle>('news_articles');
+    const pagesCol = db.collection<FacebookPage>('facebook_pages');
+    const jobsCol = db.collection<Job>('jobs');
+
+    const page = await pagesCol.findOne({ isActive: true });
+    if (!page) {
+      res.status(400).json({ error: 'No active Facebook page connected' });
+      return;
+    }
+
+    // Find the latest article that hasn't been published yet, or fall back to most recent
+    let article = await articlesCol.findOne({ status: { $ne: 'published' } }, { sort: { createdAt: -1 } });
+    if (!article) {
+      article = await articlesCol.findOne({}, { sort: { createdAt: -1 } });
+    }
+
+    if (!article) {
+      res.status(404).json({ error: 'No news articles available. Please Poll RSS first.' });
+      return;
+    }
+
+    const jobId = crypto.randomUUID();
+    const jobDoc: Job = {
+      _id: jobId,
+      type: 'process_article',
+      articleId: article._id,
+      pageId: page._id,
+      payload: {
+        articleId: article._id,
+        sourceId: article.sourceId,
+        pageId: page._id,
+        templateId: 'template-canva-bdnews',
+      },
+      status: 'pending',
+      attempts: 0,
+      maxAttempts: 3,
+      runAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await jobsCol.insertOne(jobDoc as any);
+    console.log(`[PublishNext] Created immediate job ${jobId} for article "${article.title}". Executing worker...`);
+
+    await worker.processJob(jobDoc);
+
+    const logsCol = db.collection<PostLog>('post_logs');
+    const latestLog = await logsCol.findOne({ articleId: article._id }, { sort: { createdAt: -1 } });
+
+    res.json({
+      success: true,
+      articleTitle: article.title,
+      pageName: page.name,
+      pageId: page._id,
+      log: latestLog,
+    });
+  } catch (err: any) {
+    console.error('[PublishNext] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 8. Settings
 apiRouter.get('/settings', async (req: Request, res: Response) => {
   try {
