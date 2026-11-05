@@ -246,15 +246,18 @@ export class QueueWorker {
       // 8. Auto Create & Publish Facebook Reel (if enabled in settings or job payload)
       try {
         const autoReelSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
+        const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
         const shouldPostReel =
           autoReelSetting?.value === 'true' || autoReelSetting?.value === '1' || Boolean(job.payload?.postReel);
 
         if (shouldPostReel) {
-          console.log(`[QueueWorker] Generating and publishing MP4 Reel for article "${article.title}"...`);
+          const reelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'studio-red';
+          console.log(`[QueueWorker] Generating and publishing MP4 Reel (${reelTheme}) for article "${article.title}"...`);
           const reelBuffer = await this.reelRenderer.renderReel({
             headline: article.title,
             category: article.category || 'বিশেষ খবর',
             imageUrl: article.imageUrl || undefined,
+            theme: reelTheme,
             durationSeconds: 8,
             fps: 20,
           });
@@ -553,7 +556,8 @@ export class QueueWorker {
    */
   public async publishReelForArticle(
     articleId: string,
-    targetPageId?: string
+    targetPageId?: string,
+    theme?: string
   ): Promise<{ success: boolean; videoId?: string; postId?: string; error?: string }> {
     const db = getDatabase();
     const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -577,6 +581,7 @@ export class QueueWorker {
       headline: article.title,
       category: article.category || 'বিশেষ খবর',
       imageUrl: article.imageUrl || undefined,
+      theme: theme || 'studio-red',
       durationSeconds: 8,
       fps: 20,
     });

@@ -10,7 +10,7 @@ import { ReelVideoRenderer } from '../../services/renderer/reel.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
-import { AVAILABLE_TEMPLATES } from '../../config/constants.js';
+import { AVAILABLE_TEMPLATES, REEL_TEMPLATES } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export const apiRouter = Router();
@@ -495,6 +495,38 @@ apiRouter.post('/groups/:id/test-share', async (req: Request, res: Response) => 
 // ==============================================================================
 // 3.8. Facebook Reels (Create & Publish MP4 Reels)
 // ==============================================================================
+apiRouter.get('/reels/templates', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    templates: REEL_TEMPLATES,
+  });
+});
+
+apiRouter.get('/reels/preview-frame.jpg', async (req: Request, res: Response) => {
+  try {
+    const headline =
+      (req.query.headline as string) ||
+      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+    const category = (req.query.category as string) || 'বিশেষ খবর';
+    const imageUrl = req.query.imageUrl as string | undefined;
+    const theme = (req.query.theme as string) || 'studio-red';
+
+    const frameBuffer = await reelRenderer.renderStaticPreview({
+      headline,
+      category,
+      imageUrl,
+      theme,
+    });
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', frameBuffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.send(frameBuffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
   try {
     const headline =
@@ -502,11 +534,13 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
       '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
     const category = (req.query.category as string) || 'বিশেষ খবর';
     const imageUrl = req.query.imageUrl as string | undefined;
+    const theme = (req.query.theme as string) || 'studio-red';
 
     const videoBuffer = await reelRenderer.renderReel({
       headline,
       category,
       imageUrl,
+      theme,
       durationSeconds: 8,
       fps: 20,
     });
@@ -522,13 +556,14 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
 
 apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
   try {
-    const { articleId, headline, category, imageUrl, pageId } = req.body;
+    const { articleId, headline, category, imageUrl, pageId, theme } = req.body;
     const db = getDatabase();
 
     let targetHeadline = headline;
     let targetCategory = category || 'বিশেষ খবর';
     let targetImageUrl = imageUrl;
     let finalArticleId = articleId;
+    const targetTheme = theme || 'studio-red';
 
     if (articleId) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -565,12 +600,13 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`[Reels API] Rendering 1080x1080 MP4 Reel for "${targetHeadline}"...`);
+    console.log(`[Reels API] Rendering MP4 Reel (${targetTheme}) for "${targetHeadline}"...`);
     const startTime = Date.now();
     const reelBuffer = await reelRenderer.renderReel({
       headline: targetHeadline,
       category: targetCategory,
       imageUrl: targetImageUrl || undefined,
+      theme: targetTheme,
       durationSeconds: 8,
       fps: 20,
     });

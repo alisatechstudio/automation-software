@@ -867,22 +867,38 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </select>
           </div>
 
+          <!-- Reel Visual Design Theme Selector -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
+              <span>Reel Visual Design (রিল ডিজাইন টেমপ্লেট)</span>
+              <span id="reel-theme-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
+            </label>
+            <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-semibold">
+              <option value="studio-red" selected>🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
+              <option value="breaking-bold">⚡ Breaking News TV Flash (ব্রেকিং নিউজ টিভি এলার্ট - 1080x1080)</option>
+              <option value="dark-cinema">🌐 Cinematic Dark Cyber (বিবিসি / রয়টার্স স্টাইল - 1080x1080)</option>
+              <option value="viral-gradient">🔥 Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)</option>
+              <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16 মোবাইল ফুলস্ক্রিন - 1080x1920)</option>
+            </select>
+            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card</p>
+          </div>
+
           <!-- Category Badge -->
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Category Badge (ক্যাটেগরি)</label>
-            <input type="text" id="reel-category-input" value="বিশেষ খবর" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
+            <input type="text" id="reel-category-input" value="বিশেষ খবর" oninput="updateReelFramePreview()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
           </div>
 
           <!-- Bengali Headline -->
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Bengali Headline (বাংলা শিরোনাম) <span class="text-rose-400">*</span></label>
-            <textarea id="reel-headline-input" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+            <textarea id="reel-headline-input" rows="3" oninput="updateReelFramePreviewDebounced()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
           </div>
 
           <!-- Image URL -->
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Article Image URL (Optional)</label>
-            <input type="url" id="reel-image-input" placeholder="https://... (Leave empty to use studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+            <input type="url" id="reel-image-input" onchange="updateReelFramePreview()" placeholder="https://... (Leave empty to use studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
           </div>
 
           <!-- Target Facebook Page -->
@@ -918,10 +934,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">8s • 20fps • AAC</span>
           </div>
 
-          <div class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group">
+          <div id="reel-player-box" class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300">
             
             <!-- Video Element -->
             <video id="reel-video-player" controls playsinline loop class="w-full h-full object-contain bg-black hidden"></video>
+
+            <!-- Instant Static Frame Preview -->
+            <img id="reel-frame-img" class="w-full h-full object-contain bg-black hidden cursor-pointer" onclick="renderReelPreview()" title="Click to render animated motion reel" alt="Reel Snapshot Preview" />
 
             <!-- Placeholder -->
             <div id="reel-player-placeholder" class="text-center p-6 space-y-3">
@@ -929,7 +948,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 🎬
               </div>
               <p class="text-sm font-semibold text-slate-200">No Reel Generated Yet</p>
-              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a 1080x1080 broadcast MP4 reel with Bengali typography and audio.</p>
+              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a broadcast MP4 reel with Bengali typography and audio.</p>
             </div>
 
             <!-- Spinner Overlay -->
@@ -1917,6 +1936,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     // --- 7. FACEBOOK REELS STUDIO ---
     let cachedReelArticles = [];
+    const reelThemeDescriptions = {
+      'studio-red': '1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card',
+      'breaking-bold': '1080x1080 Square: High urgency TV alert, animated breaking ticker, bold red & black straps with gold accent',
+      'dark-cinema': '1080x1080 Square: Premium obsidian & neon cyan aesthetic, widescreen photo, glowing glassmorphic card',
+      'viral-gradient': '1080x1080 Square: Modern sunset violet/rose mesh gradient, floating photo, high-contrast viral card',
+      'vertical-916': '1080x1920 Fullscreen: Native smartphone vertical reel format, massive centered photo & bottom overlay headline',
+    };
+
+    let reelDebounceTimer = null;
+    function updateReelFramePreviewDebounced() {
+      clearTimeout(reelDebounceTimer);
+      reelDebounceTimer = setTimeout(updateReelFramePreview, 350);
+    }
 
     async function loadReels() {
       try {
@@ -1924,9 +1956,70 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         loadReelArticles();
         loadReelPages();
         loadReelLogs();
+        onReelThemeChanged();
       } catch (e) {
         console.error('Error loading reels tab:', e);
       }
+    }
+
+    function onReelThemeChanged() {
+      const select = document.getElementById('reel-theme-select');
+      const theme = select ? select.value : 'studio-red';
+      const descEl = document.getElementById('reel-theme-desc');
+      const badgeEl = document.getElementById('reel-theme-badge');
+      const playerBox = document.getElementById('reel-player-box');
+      const durBadge = document.getElementById('reel-duration-badge');
+
+      if (descEl) descEl.innerText = reelThemeDescriptions[theme] || '';
+
+      if (theme === 'vertical-916') {
+        if (badgeEl) {
+          badgeEl.innerText = '9:16 Vertical';
+          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+        }
+        if (playerBox) {
+          playerBox.className = 'relative w-full max-w-[280px] aspect-[9/16] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
+        }
+        if (durBadge) durBadge.innerText = '8s • 20fps • 1080x1920';
+      } else {
+        if (badgeEl) {
+          badgeEl.innerText = '1:1 Square';
+          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800';
+        }
+        if (playerBox) {
+          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
+        }
+        if (durBadge) durBadge.innerText = '8s • 20fps • 1080x1080';
+      }
+
+      updateReelFramePreview();
+    }
+
+    function updateReelFramePreview() {
+      const headline = document.getElementById('reel-headline-input')?.value.trim();
+      const category = document.getElementById('reel-category-input')?.value.trim() || 'বিশেষ খবর';
+      const imageUrl = document.getElementById('reel-image-input')?.value.trim();
+      const theme = document.getElementById('reel-theme-select')?.value || 'studio-red';
+
+      const frameImg = document.getElementById('reel-frame-img');
+      const placeholder = document.getElementById('reel-player-placeholder');
+      const video = document.getElementById('reel-video-player');
+
+      if (!frameImg) return;
+
+      const params = new URLSearchParams({
+        theme: theme,
+        category: category,
+        headline: headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি'
+      });
+      if (imageUrl) params.append('imageUrl', imageUrl);
+
+      frameImg.src = '/api/reels/preview-frame.jpg?' + params.toString();
+      frameImg.onload = () => {
+        frameImg.classList.remove('hidden');
+        if (placeholder) placeholder.classList.add('hidden');
+        if (video) video.classList.add('hidden');
+      };
     }
 
     async function loadReelSettings() {
@@ -2006,6 +2099,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (title) document.getElementById('reel-headline-input').value = title;
       if (category) document.getElementById('reel-category-input').value = category;
       if (img) document.getElementById('reel-image-input').value = img;
+      updateReelFramePreview();
     }
 
     async function loadReelPages() {
@@ -2030,6 +2124,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const headline = document.getElementById('reel-headline-input').value.trim();
       const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input').value.trim();
+      const theme = document.getElementById('reel-theme-select').value || 'studio-red';
 
       if (!headline) {
         showToast('Please enter a Bengali headline', true);
@@ -2037,6 +2132,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
 
       const video = document.getElementById('reel-video-player');
+      const frameImg = document.getElementById('reel-frame-img');
       const placeholder = document.getElementById('reel-player-placeholder');
       const spinner = document.getElementById('reel-player-spinner');
       const downloadLink = document.getElementById('reel-download-link');
@@ -2044,11 +2140,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       spinner.classList.remove('hidden');
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering 1080x1080 MP4 news reel... This takes ~10 seconds.';
+      statusEl.innerText = 'Rendering MP4 news reel (' + theme + ')... This takes ~10 seconds.';
 
       const params = new URLSearchParams({
         headline: headline,
         category: category,
+        theme: theme,
       });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
@@ -2061,12 +2158,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         video.onloadeddata = () => {
           spinner.classList.add('hidden');
           placeholder.classList.add('hidden');
+          if (frameImg) frameImg.classList.add('hidden');
           video.classList.remove('hidden');
           video.play().catch(() => {});
           downloadLink.href = streamUrl;
           downloadLink.classList.remove('hidden');
           statusEl.innerText = '✓ Reel rendered successfully! Playing in studio player.';
-          showToast('✓ 1080x1080 MP4 Reel rendered successfully!');
+          showToast('✓ MP4 Reel (' + theme + ') rendered successfully!');
         };
 
         video.onerror = () => {
@@ -2085,6 +2183,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input').value.trim();
       const pageId = document.getElementById('reel-page-select').value;
+      const theme = document.getElementById('reel-theme-select').value || 'studio-red';
 
       if (!headline) {
         showToast('Please enter a Bengali headline', true);
@@ -2100,13 +2199,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       spinner.classList.remove('hidden');
       document.getElementById('reel-spinner-text').innerText = 'Generating MP4 & publishing to Facebook Reels...';
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering MP4 and uploading to Facebook Graph API...';
+      statusEl.innerText = 'Rendering MP4 (' + theme + ') and uploading to Facebook Graph API...';
 
       try {
         const res = await safeFetchJson('/api/reels/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ headline, category, imageUrl, pageId })
+          body: JSON.stringify({ headline, category, imageUrl, pageId, theme })
         });
 
         if (res.ok && res.data && res.data.success) {
