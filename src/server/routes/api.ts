@@ -147,7 +147,33 @@ apiRouter.post('/pages', async (req: Request, res: Response) => {
   }
 
   try {
-    const tokenInfo = await FacebookTokenService.inspectToken(access_token);
+    let finalAccessToken = access_token.trim();
+    let tokenInfo = await FacebookTokenService.inspectToken(finalAccessToken);
+    let autoResolved = false;
+
+    // If user mistakenly pasted a USER access token instead of a PAGE access token,
+    // automatically attempt to resolve the actual Page Access Token via /me/accounts
+    if (tokenInfo.type === 'USER' || tokenInfo.type === 'user') {
+      try {
+        console.log(`[TokenService] User token detected for page ${id}. Resolving Page Access Token via /me/accounts...`);
+        const accountsRes = await fetch(
+          `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(finalAccessToken)}`
+        );
+        const accountsData = (await accountsRes.json()) as any;
+        if (accountsData?.data && Array.isArray(accountsData.data)) {
+          const matched = accountsData.data.find((p: any) => p.id === id.trim());
+          if (matched && matched.access_token) {
+            finalAccessToken = matched.access_token;
+            autoResolved = true;
+            tokenInfo = await FacebookTokenService.inspectToken(finalAccessToken);
+            console.log(`[TokenService] Successfully resolved Page Access Token for "${matched.name}" (${matched.id})!`);
+          }
+        }
+      } catch (e: any) {
+        console.warn('[TokenService] Auto-resolve page token failed:', e.message);
+      }
+    }
+
     const db = getDatabase();
 
     await db.collection<FacebookPage>('facebook_pages').updateOne(
@@ -155,7 +181,7 @@ apiRouter.post('/pages', async (req: Request, res: Response) => {
       {
         $set: {
           name: name.trim(),
-          accessToken: access_token.trim(),
+          accessToken: finalAccessToken,
           tokenExpiresAt: tokenInfo.expiresAt || null,
           isActive: true,
           updatedAt: new Date(),
@@ -172,8 +198,10 @@ apiRouter.post('/pages', async (req: Request, res: Response) => {
       id,
       tokenInfo: {
         isValid: tokenInfo.isValid,
+        type: tokenInfo.type,
         expiresAt: tokenInfo.expiresAt,
         scopes: tokenInfo.scopes,
+        autoResolvedPageToken: autoResolved,
       },
     });
   } catch (err: any) {

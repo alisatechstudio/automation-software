@@ -251,8 +251,23 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </form>
         </div>
 
-        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-6">
-          <h3 class="text-base font-semibold text-slate-100 mb-4">Connected Pages</h3>
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-100">Connected Pages</h3>
+            <a href="/privacy" target="_blank" class="text-xs text-red-400 hover:underline">View Privacy Policy ↗</a>
+          </div>
+          
+          <!-- Live Visibility Tips Banner -->
+          <div class="p-3.5 bg-slate-950 border border-slate-800 rounded-lg text-xs space-y-1.5 text-slate-300">
+            <div class="font-semibold text-amber-400 flex items-center gap-1.5">
+              <span>⚠️</span> Why can't visitors see posts on Facebook? Check these 2 Meta settings:
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-slate-400 pl-1">
+              <li><strong class="text-slate-200">Meta App Mode:</strong> In <a href="https://developers.facebook.com/apps/" target="_blank" class="text-blue-400 hover:underline">developers.facebook.com</a>, switch app from <strong>Development</strong> to <strong>Live</strong>. (In Dev mode, only developers/admins can see posts).</li>
+              <li><strong class="text-slate-200">Page Token:</strong> Always use a <strong>Page Access Token</strong> (selected from 'User or Page' dropdown in Graph API Explorer) so posts are authored by your Page.</li>
+            </ul>
+          </div>
+
           <div id="pages-list" class="space-y-3">
             <div class="text-sm text-slate-500">Loading pages...</div>
           </div>
@@ -485,7 +500,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <span class="px-1.5 py-0.5 rounded font-semibold \${l.status === 'success' || l.status === 'dry_run' ? 'text-emerald-400 bg-emerald-950' : 'text-red-400 bg-red-950'}">\${l.status}</span>
               </td>
               <td class="px-4 py-2.5 text-slate-300 max-w-sm truncate bn">\${l.article_title || ''}</td>
-              <td class="px-4 py-2.5 font-mono text-slate-400">\${l.fb_post_id || '-'}</td>
+              <td class="px-4 py-2.5 font-mono">
+                \${l.fb_post_id ? \`
+                  <a href="https://www.facebook.com/\${l.fb_photo_id || (l.fb_post_id.includes('_') ? l.fb_post_id.split('_')[1] : l.fb_post_id)}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline inline-flex items-center gap-1 font-semibold" title="Click to view published post on Facebook">
+                    <span>\${l.fb_post_id}</span>
+                    <svg class="w-3.5 h-3.5 inline opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                \` : '<span class="text-slate-500">-</span>'}
+              </td>
               <td class="px-4 py-2.5 text-slate-400">\${l.duration_ms ? l.duration_ms + 'ms' : '-'}</td>
               <td class="px-4 py-2.5 text-slate-500 font-mono">\${new Date(l.created_at).toLocaleString()}</td>
             </tr>
