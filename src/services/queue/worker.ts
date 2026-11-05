@@ -5,6 +5,7 @@ import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { FacebookGraphClient } from '../facebook/client.js';
+import { GroupShareService } from '../facebook/group-share.js';
 import { TelegramAlertService } from '../alert/telegram.js';
 import { config } from '../../config/env.js';
 
@@ -13,6 +14,7 @@ export class QueueWorker {
   private renderer: PlaywrightImageRenderer;
   private canvasRenderer: CanvasCardRenderer;
   private fbClient: FacebookGraphClient;
+  private groupShareService: GroupShareService;
   private alertService: TelegramAlertService;
   private isRunning: boolean = false;
   private loopTimeout: NodeJS.Timeout | null = null;
@@ -22,6 +24,7 @@ export class QueueWorker {
     this.renderer = new PlaywrightImageRenderer();
     this.canvasRenderer = new CanvasCardRenderer();
     this.fbClient = new FacebookGraphClient();
+    this.groupShareService = new GroupShareService(this.fbClient);
     this.alertService = new TelegramAlertService();
   }
 
@@ -207,6 +210,23 @@ export class QueueWorker {
         config.DRY_RUN
       );
 
+      // 5b. Auto-Share to Relevant Facebook Groups
+      let sharedGroups: any[] = [];
+      try {
+        console.log(`[QueueWorker] Checking for relevant Facebook groups to auto-share...`);
+        sharedGroups = await this.groupShareService.autoShareArticle(
+          article,
+          page,
+          postId,
+          photoId
+        );
+        if (sharedGroups.length > 0) {
+          console.log(`[QueueWorker] Group auto-share completed for ${sharedGroups.length} group(s).`);
+        }
+      } catch (groupErr: any) {
+        console.warn(`[QueueWorker] Group auto-share warning (non-fatal):`, groupErr.message);
+      }
+
       const durationMs = Date.now() - startTime;
 
       // 6. Record Post Log
@@ -221,6 +241,7 @@ export class QueueWorker {
         renderedImagePath: renderedPath || null,
         caption,
         comment: commentText,
+        sharedGroups,
         durationMs,
         status: config.DRY_RUN ? 'dry_run' : 'success',
         createdAt: new Date(),
