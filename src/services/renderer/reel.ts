@@ -166,7 +166,7 @@ export class ReelVideoRenderer {
     const height = isVertical ? 1920 : input.height || 1080;
 
     const durationSeconds = input.durationSeconds || 15;
-    const fps = input.fps || 20;
+    const fps = input.fps || (process.env.VERCEL ? 10 : 15);
     const totalFrames = durationSeconds * fps;
 
     const headline = (input.headline || '').trim();

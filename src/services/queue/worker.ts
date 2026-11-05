@@ -201,16 +201,17 @@ export class QueueWorker {
 
       if (isPosterDisabled) {
         // =========================================================================
-        // REELS-ONLY MODE: 15-Second MP4 Video Reel (Poster Disabled)
+        // REELS-ONLY MODE: 15-Second MP4 Video Reel (Ultra-Fast Parallel Distribution)
         // =========================================================================
-        console.log(`[QueueWorker] 🎬 Reels-Only Mode Active (Poster Disabled). Rendering ${reelDuration}s MP4 Reel (${targetReelTheme}) for "${article.title}"...`);
+        const reelFps = process.env.VERCEL ? 10 : 15;
+        console.log(`[QueueWorker] 🎬 Reels Mode: Rendering ${reelDuration}s MP4 Reel at ${reelFps}fps (${targetReelTheme}) for "${article.title}"...`);
         const reelBuffer = await this.reelRenderer.renderReel({
           headline: article.title,
           category: article.category || 'বিশেষ খবর',
           imageUrl: article.imageUrl || undefined,
           theme: targetReelTheme,
           durationSeconds: reelDuration,
-          fps: 20,
+          fps: reelFps,
         });
 
         // Caption: ONLY hashtags (no headline and no summary, as requested)
@@ -218,169 +219,157 @@ export class QueueWorker {
         const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
         const reelCaption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
 
-        console.log(`[QueueWorker] Publishing ${reelDuration}s Reel to Facebook Page ${page.name}...`);
-        const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
-          page._id,
-          page.accessToken,
-          reelBuffer,
-          reelCaption,
-          undefined, // No headline in video metadata
-          config.DRY_RUN
-        );
-
-        // News URL as First Comment
-        let reelCommentId: string | null = null;
-        if (article.link && reelPostId) {
-          try {
-            console.log(`[QueueWorker] Adding news link as first comment to Reel post ${reelPostId}...`);
-            const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
-            const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-            const commentText = this.fbClient.formatComment(article.link, commentTemplate);
-
-            const { commentId } = await this.fbClient.publishComment(
-              reelPostId,
-              page.accessToken,
-              commentText,
-              config.DRY_RUN
-            );
-            reelCommentId = commentId;
-            console.log(`✓ [QueueWorker] First comment with news URL posted to Reel! (Comment ID: ${commentId})`);
-          } catch (commentErr: any) {
-            console.warn(`[QueueWorker] Could not post first comment on Reel:`, commentErr.message);
-          }
-        }
-
-        const durationMs = Date.now() - startTime;
-
-        // =========================================================================
-        // STORIES: Render & Publish JPG Poster Card to Facebook Page Stories (NOT feed)
-        // =========================================================================
-        let storyPhotoId: string | null = null;
-        let storyId: string | null = null;
-        let storyStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
-
+        // Pre-render Story poster card if enabled (takes ~100ms)
         const storySetting = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
         const shouldPostStory = storySetting ? storySetting.value !== 'false' : true;
+        let posterRenderResult: any = null;
 
         if (shouldPostStory) {
           try {
-            console.log(`[QueueWorker] 📸 Rendering 1080x1080 JPG poster card for Facebook Stories (NOT feed)...`);
-            const storyStartTime = Date.now();
-            const posterRenderResult = await this.canvasRenderer.render({
+            posterRenderResult = await this.canvasRenderer.render({
               templateId: 'template-canva-bdnews',
               headline: article.title,
               category: article.category || 'বিশেষ খবর',
               imageUrl: article.imageUrl || undefined,
             });
+          } catch (e: any) {
+            console.warn('[QueueWorker] Story render note:', e.message);
+          }
+        }
 
-            const storyPublishResult = await this.fbClient.publishPhotoStory(
+        // Shared upload state
+        let reelVideoId: string | null = null;
+        let reelPostId: string | null = null;
+        let reelCommentId: string | null = null;
+        let storyPhotoId: string | null = null;
+        let storyId: string | null = null;
+        let storyStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
+        let ytVideoId: string | null = null;
+        let ytStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
+
+        const publishTasks: Promise<any>[] = [];
+
+        // TASK 1: Publish Facebook Feed Reel + First Comment
+        publishTasks.push((async () => {
+          try {
+            console.log(`[QueueWorker] 🚀 [Parallel] Publishing ${reelDuration}s Reel to Facebook Page ${page.name}...`);
+            const res = await this.fbClient.publishReel(
               page._id,
               page.accessToken,
-              posterRenderResult.imageBuffer,
+              reelBuffer,
+              reelCaption,
+              undefined,
               config.DRY_RUN
             );
+            reelVideoId = res.videoId;
+            reelPostId = res.postId;
 
-            storyPhotoId = storyPublishResult.photoId;
-            storyId = storyPublishResult.storyId;
-            storyStatus = config.DRY_RUN ? 'dry_run' : 'success';
+            if (article.link && reelPostId) {
+              try {
+                const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+                const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+                const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+                const { commentId } = await this.fbClient.publishComment(
+                  reelPostId,
+                  page.accessToken,
+                  commentText,
+                  config.DRY_RUN
+                );
+                reelCommentId = commentId;
+                console.log(`✓ [QueueWorker] First comment posted to Reel! (Comment ID: ${commentId})`);
+              } catch (ce: any) {
+                console.warn(`[QueueWorker] Reel comment note:`, ce.message);
+              }
+            }
+          } catch (re: any) {
+            console.error('[QueueWorker] Reel publish error:', re.message);
+          }
+        })());
 
-            await db.collection<StoryLog>('story_logs').insertOne({
-              _id: crypto.randomUUID(),
-              articleId: article._id,
-              articleTitle: article.title,
-              pageId: page._id,
-              pageName: page.name,
-              fbPhotoId: storyPhotoId,
-              fbStoryId: storyId,
-              renderedImagePath: posterRenderResult.outputPath || null,
-              durationMs: Date.now() - storyStartTime,
-              status: storyStatus,
-              createdAt: new Date(),
-            });
-
-            console.log(`✓ [QueueWorker] Successfully published JPG poster card to Facebook Stories! (Story ID: ${storyId})`);
-          } catch (storyErr: any) {
-            storyStatus = 'failed';
-            console.warn(`[QueueWorker] Facebook Story publish encountered an error (Feed Reel is safe):`, storyErr.message);
+        // TASK 2: Publish Facebook Page Story (1080x1080 JPG)
+        if (shouldPostStory && posterRenderResult?.imageBuffer) {
+          publishTasks.push((async () => {
             try {
+              console.log(`[QueueWorker] 📸 [Parallel] Publishing JPG poster to Facebook Page Stories...`);
+              const storyPublishResult = await this.fbClient.publishPhotoStory(
+                page._id,
+                page.accessToken,
+                posterRenderResult.imageBuffer,
+                config.DRY_RUN
+              );
+              storyPhotoId = storyPublishResult.photoId;
+              storyId = storyPublishResult.storyId;
+              storyStatus = config.DRY_RUN ? 'dry_run' : 'success';
+
               await db.collection<StoryLog>('story_logs').insertOne({
                 _id: crypto.randomUUID(),
                 articleId: article._id,
                 articleTitle: article.title,
                 pageId: page._id,
                 pageName: page.name,
-                fbPhotoId: '',
-                fbStoryId: '',
-                status: 'failed',
-                errorMessage: storyErr.message || String(storyErr),
+                fbPhotoId: storyPhotoId,
+                fbStoryId: storyId,
+                renderedImagePath: posterRenderResult.outputPath || null,
+                durationMs: 0,
+                status: storyStatus,
                 createdAt: new Date(),
               });
-            } catch (e) {}
-          }
-        }
-
-        // =========================================================================
-        // YOUTUBE SHORTS: Auto-Upload 15s MP4 Video to YouTube Channel
-        // =========================================================================
-        let ytVideoId: string | null = null;
-        let ytStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
-
-        try {
-          const isYtConfigured = await this.ytClient.initCredentials();
-          const ytAutoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
-          const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : isYtConfigured;
-
-          if (isYtConfigured && shouldPostYt) {
-            console.log(`[QueueWorker] 📺 Uploading 15s MP4 Video to YouTube Shorts for "${article.title}"...`);
-            const ytStartTime = Date.now();
-            const ytResult = await this.ytClient.uploadShort(
-              {
-                videoBuffer: reelBuffer,
-                title: article.title,
-                description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
-              },
-              config.DRY_RUN
-            );
-
-            ytVideoId = ytResult.videoId;
-            ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
-
-            // Post news link as comment on YouTube Short
-            if (article.link && ytVideoId && !config.DRY_RUN) {
-              await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+              console.log(`✓ [QueueWorker] Published to Facebook Stories! (ID: ${storyId})`);
+            } catch (storyErr: any) {
+              storyStatus = 'failed';
+              console.warn(`[QueueWorker] Facebook Story note:`, storyErr.message);
             }
-
-            await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-              _id: crypto.randomUUID(),
-              articleId: article._id,
-              articleTitle: article.title,
-              ytVideoId: ytResult.videoId,
-              ytVideoUrl: ytResult.videoUrl,
-              durationMs: Date.now() - ytStartTime,
-              status: ytStatus,
-              createdAt: new Date(),
-            });
-
-            console.log(`✓ [QueueWorker] Successfully published to YouTube Shorts! URL: ${ytResult.videoUrl}`);
-          }
-        } catch (ytErr: any) {
-          ytStatus = 'failed';
-          console.warn(`[QueueWorker] YouTube Short upload encountered an error (Facebook posts were successful):`, ytErr.message);
-          try {
-            await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-              _id: crypto.randomUUID(),
-              articleId: article._id,
-              articleTitle: article.title,
-              ytVideoId: '',
-              ytVideoUrl: '',
-              status: 'failed',
-              errorMessage: ytErr.message || String(ytErr),
-              createdAt: new Date(),
-            });
-          } catch (e) {}
+          })());
         }
 
-        // Record Post & Reel Log
+        // TASK 3: Publish YouTube Shorts
+        const isYtConfigured = await this.ytClient.initCredentials();
+        const ytAutoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
+        const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : isYtConfigured;
+
+        if (isYtConfigured && shouldPostYt) {
+          publishTasks.push((async () => {
+            try {
+              console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts...`);
+              const ytStartTime = Date.now();
+              const ytResult = await this.ytClient.uploadShort(
+                {
+                  videoBuffer: reelBuffer,
+                  title: article.title,
+                  description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
+                },
+                config.DRY_RUN
+              );
+              ytVideoId = ytResult.videoId;
+              ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
+
+              if (article.link && ytVideoId && !config.DRY_RUN) {
+                await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+              }
+
+              await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                _id: crypto.randomUUID(),
+                articleId: article._id,
+                articleTitle: article.title,
+                ytVideoId: ytResult.videoId,
+                ytVideoUrl: ytResult.videoUrl,
+                durationMs: Date.now() - ytStartTime,
+                status: ytStatus,
+                createdAt: new Date(),
+              });
+              console.log(`✓ [QueueWorker] Published to YouTube Shorts! (URL: ${ytResult.videoUrl})`);
+            } catch (ytErr: any) {
+              ytStatus = 'failed';
+              console.warn(`[QueueWorker] YouTube Short upload note:`, ytErr.message);
+            }
+          })());
+        }
+
+        // Wait for all 3 platform tasks simultaneously
+        await Promise.allSettled(publishTasks);
+        const durationMs = Date.now() - startTime;
+
+                // Record Post & Reel Log
         const logId = crypto.randomUUID();
         const logDoc: PostLog = {
           _id: logId,
@@ -409,8 +398,8 @@ export class QueueWorker {
           pageId: page._id,
           pageName: page.name,
           theme: targetReelTheme,
-          fbVideoId: reelVideoId,
-          fbPostId: reelPostId,
+          fbVideoId: reelVideoId || '',
+          fbPostId: reelPostId || '',
           durationMs,
           status: config.DRY_RUN ? 'dry_run' : 'success',
           createdAt: new Date(),
@@ -423,10 +412,12 @@ export class QueueWorker {
         console.log(`✓ [QueueWorker] Successfully published ${reelDuration}s Reel for "${article.title.substring(0, 40)}..." (Reel ID: ${reelVideoId}, Took ${durationMs}ms)`);
 
         // Auto Share Reel to Relevant Facebook Groups
-        try {
-          await this.autoShareToRelevantGroups(page, article, reelPostId);
-        } catch (groupShareErr: any) {
-          console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
+        if (reelPostId) {
+          try {
+            await this.autoShareToRelevantGroups(page, article, reelPostId);
+          } catch (groupShareErr: any) {
+            console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
+          }
         }
       } else {
         // =========================================================================

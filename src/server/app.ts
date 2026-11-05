@@ -1,6 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { waitUntil } from '@vercel/functions';
 import { apiRouter } from './routes/api.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -140,9 +141,9 @@ export function createServer(): Express {
     });
   });
 
-  // Vercel Cron Endpoint: Triggered by Vercel Cron schedule
+  // Vercel Cron Endpoint: Triggered by Vercel Cron schedule or external cron-job.org
   app.all('/api/cron', async (req: Request, res: Response) => {
-    console.log('[Vercel Cron] Triggered scheduled RSS poll & queue tick...');
+    console.log('[Cron Endpoint] Triggered scheduled RSS poll & queue tick...');
     try {
       if (!isMongoConnected()) {
         await initMongoDb();
@@ -152,19 +153,40 @@ export function createServer(): Express {
         return;
       }
 
+      // 1. Rapid RSS ingestion (1-2s)
       const pollResults = await dedupeService.pollAllActiveSources();
+
+      // 2. Fetch pending job
       const job = await queue.fetchNextJob();
+
       if (job) {
-        await worker.processJob(job);
+        console.log(`[Cron] Enqueued job ${job._id} found. Initiating background process...`);
+        const jobPromise = worker.processJob(job).catch((err) => {
+          console.error('[Cron Worker] Background processing error:', err);
+        });
+
+        // Use Vercel's waitUntil to let the background job complete while returning HTTP 200 immediately
+        if (process.env.VERCEL) {
+          try {
+            waitUntil(jobPromise);
+          } catch (e) {
+            jobPromise.catch(() => {});
+          }
+        } else {
+          // If running locally, wait for it
+          await jobPromise;
+        }
       }
 
+      // 3. Instant response: cron-job.org / Vercel receives 200 OK within 1-2s (Zero Timeout!)
       res.json({
         success: true,
+        message: job ? 'Job processing in background' : 'RSS polled, no pending jobs',
         pollResults,
         processedJobId: job ? job._id : null,
       });
     } catch (err: any) {
-      console.error('[Vercel Cron] Error during cron execution:', err);
+      console.error('[Cron] Error during cron execution:', err);
       res.status(500).json({ error: err.message });
     }
   });
