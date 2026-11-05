@@ -106,8 +106,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <span class="text-emerald-400 font-medium">Noto Sans Bengali & Hind Siliguri (Active)</span>
             </div>
             <div class="flex justify-between py-2 border-b border-slate-800">
-              <span class="text-slate-400">Storage & Migrations:</span>
-              <span class="text-slate-200">SQLite WAL (Postgres Ready)</span>
+              <span class="text-slate-400">Database Storage:</span>
+              <span class="text-emerald-400 font-medium">MongoDB (Vercel Integration)</span>
             </div>
             <div class="flex justify-between py-2">
               <span class="text-slate-400">Anti-Spam Jitter Delay:</span>

@@ -2,7 +2,7 @@
 
 A resilient, production-ready, self-hosted automation platform that continuously monitors news portal RSS feeds, deduplicates incoming articles, dynamically renders branded news cards with localized Bengali typography via headless Playwright, publishes high-resolution photo posts to Facebook Pages using the official Facebook Graph API, and automatically appends the news URL as the first comment.
 
-Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.js + TypeScript**, **SQLite with automated migrations**, **Playwright (headless Chromium)**, and **Docker**.
+Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.js + TypeScript**, **Vercel Connected MongoDB**, **Playwright (headless Chromium)**, and **Docker**.
 
 ---
 
@@ -11,7 +11,7 @@ Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.
 ```
 ┌─────────────────┐       ┌────────────────────┐       ┌──────────────────────┐
 │  RSS Feed(s)    │ ────> │ Deduplication &    │ ────> │ Persistent Queue     │
-│  (Every N mins) │       │ Age Window Filter  │       │ (SQLite FIFO + Locks)│
+│  (Every N mins) │       │ Age Window Filter  │       │ (MongoDB FIFO Queue) │
 └─────────────────┘       └────────────────────┘       └──────────┬───────────┘
                                                                   │
                                                           Rate Cap & Jitter
@@ -54,19 +54,15 @@ Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.
 │   └── images/                         # Branded vector assets
 │       ├── fallback.svg                # Fallback news placeholder
 │       └── logo.svg                    # Brand logo overlay
-├── data/                               # Persistent SQLite DB & rendered PNGs (Docker volume)
-│   ├── news_automation.db
+├── data/                               # Rendered PNG cache
 │   └── rendered/
 ├── src/
 │   ├── config/
 │   │   ├── constants.ts                # Template dimensions, aspect ratios, defaults
 │   │   └── env.ts                      # Strongly typed environment configuration
 │   ├── db/
-│   │   ├── index.ts                    # SQLite WAL connection pool (PostgreSQL upgradeable)
-│   │   ├── migrator.ts                 # Atomic SQL migration runner
-│   │   ├── schema.ts                   # TypeScript model interfaces
-│   │   └── migrations/
-│   │       └── 001_initial.sql         # Base database schema & indexes
+│   │   ├── index.ts                    # MongoDB connection pool & index provisioning
+│   │   └── schema.ts                   # TypeScript model interfaces
 │   ├── server/
 │   │   ├── app.ts                      # Express web server & health endpoint
 │   │   ├── middleware/
@@ -84,7 +80,7 @@ Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.
 │   │   ├── pipeline/
 │   │   │   └── coordinator.ts          # Scheduler + Queue orchestration
 │   │   ├── queue/
-│   │   │   ├── queue.ts                # Persistent SQLite job queue with backoff
+│   │   │   ├── queue.ts                # Persistent MongoDB job queue with backoff
 │   │   │   └── worker.ts               # Worker with anti-spam jitter & rate caps
 │   │   ├── renderer/
 │   │   │   ├── playwright.ts           # Playwright headless Chromium renderer
@@ -112,32 +108,38 @@ Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.
 
 ---
 
-## 🗄️ Database Schema
+## 🗄️ Database Schema (MongoDB)
 
-The database uses SQLite in WAL (`Write-Ahead Logging`) mode for maximum concurrency. All queries adhere to standard ANSI SQL, making it direct and simple to migrate to PostgreSQL by updating `src/db/index.ts`.
+The platform connects to MongoDB via Vercel integration (`MONGODB_URI`) or MongoDB Atlas. Indexes are automatically initialized upon startup by `initMongoDb()`.
 
-### Core Tables
+### Core Collections
 1. **`news_articles`**:
-   - `id` (TEXT PK): Unique hash or UUID.
+   - `_id`: Unique UUID.
    - `guid`, `link`: Indexed uniqueness constraints for strict deduplication.
-   - `title`, `description`, `category`, `pub_date`, `image_url`.
+   - `title`, `description`, `category`, `pubDate`, `imageUrl`.
    - `status`: `ingested` | `queued` | `published` | `failed`.
 2. **`jobs`**:
-   - `id` (TEXT PK): UUID.
+   - `_id`: UUID.
    - `type`: `process_article`.
-   - `article_id`, `page_id`: Foreign keys with cascade rules.
+   - `articleId`, `pageId`.
    - `status`: `pending` | `processing` | `completed` | `failed`.
    - `attempts`: Retry counter (0 to 3).
-   - `run_at`: Timestamp for exponential backoff scheduling.
+   - `runAt`: Timestamp for exponential backoff scheduling.
+   - Atomic worker locking via `findOneAndUpdate`.
 3. **`facebook_pages`**:
-   - `id` (TEXT PK): Facebook Page ID.
+   - `_id`: Facebook Page ID.
    - `name`: Human-readable label.
-   - `access_token`: Page Access Token.
-   - `token_expires_at`: Expiration date (NULL for never-expiring).
+   - `accessToken`: Page Access Token.
+   - `tokenExpiresAt`: Expiration date (NULL for never-expiring).
 4. **`rss_sources`**:
-   - `id` (TEXT PK): Source UUID.
+   - `_id`: Source UUID.
    - `url`: Unique RSS URL.
-   - `page_id`: Target Facebook Page.
+   - `pageId`: Target Facebook Page.
+   - `templateId`: Preferred template (`template-square-breaking`, etc.).
+5. **`post_logs`**:
+   - Records `fbPhotoId`, `fbPostId`, `fbCommentId`, `durationMs`, `caption`, `comment`, and `renderedImagePath`.
+6. **`settings`**:
+   - Dynamic key-value overrides for cron interval, caps, and delays.
    - `template_id`: Preferred template (`template-square-breaking`, etc.).
 5. **`post_logs`**:
    - Records `fb_photo_id`, `fb_post_id`, `fb_comment_id`, `duration_ms`, `caption`, `comment`, and `rendered_image_path`.

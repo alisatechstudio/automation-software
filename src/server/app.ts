@@ -23,22 +23,25 @@ export function createServer(): Express {
   app.use('/rendered', express.static(path.join(config.DATA_DIR, 'rendered')));
 
   // Unauthenticated Health Check Endpoint
-  app.get(['/health', '/healthz'], (req: Request, res: Response) => {
+  app.get(['/health', '/healthz'], async (req: Request, res: Response) => {
     try {
       const db = getDatabase();
-      db.prepare('SELECT 1').get();
+      await db.command({ ping: 1 });
+      const queueStats = await queue.getStats();
 
       res.json({
         status: 'healthy',
+        database: 'connected (MongoDB)',
         timestamp: new Date().toISOString(),
         uptimeSeconds: Math.floor(process.uptime()),
         dryRun: config.DRY_RUN,
-        queue: queue.getStats(),
+        queue: queueStats,
         memoryUsage: process.memoryUsage(),
       });
     } catch (err: any) {
       res.status(500).json({
         status: 'unhealthy',
+        database: 'disconnected',
         error: err.message,
       });
     }
@@ -53,4 +56,3 @@ export function createServer(): Express {
 
   return app;
 }
-

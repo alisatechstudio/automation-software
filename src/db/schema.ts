@@ -1,22 +1,22 @@
 export interface FacebookPage {
-  id: string; // Page ID
+  _id: string; // Facebook Page ID
   name: string;
-  access_token: string;
-  token_expires_at?: string | null;
-  is_active: number; // 1 or 0
-  created_at: string;
-  updated_at: string;
+  accessToken: string;
+  tokenExpiresAt?: Date | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface RssSource {
-  id: string;
+  _id: string; // Source ID (UUID)
   name: string;
   url: string;
-  page_id: string;
-  template_id: string;
-  is_active: number; // 1 or 0
-  created_at: string;
-  updated_at: string;
+  pageId: string;
+  templateId: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type ArticleStatus =
@@ -30,56 +30,63 @@ export type ArticleStatus =
   | 'skipped';
 
 export interface NewsArticle {
-  id: string;
-  source_id: string;
+  _id: string; // Article ID (UUID)
+  sourceId: string;
   guid: string;
   link: string;
   title: string;
-  description?: string | null;
-  category?: string | null;
-  pub_date: string;
-  image_url?: string | null;
+  description?: string;
+  category?: string;
+  pubDate: Date;
+  imageUrl?: string | null;
   status: ArticleStatus;
-  created_at: string;
+  createdAt: Date;
 }
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+export interface JobPayload {
+  articleId: string;
+  sourceId: string;
+  pageId: string;
+  templateId?: string;
+  [key: string]: any;
+}
+
 export interface Job {
-  id: string;
+  _id: string; // Job ID (UUID)
   type: string;
-  article_id?: string | null;
-  page_id?: string | null;
-  payload: string; // JSON string
+  articleId?: string | null;
+  pageId?: string | null;
+  payload: JobPayload;
   status: JobStatus;
   attempts: number;
-  max_attempts: number;
-  run_at: string;
-  last_error?: string | null;
-  created_at: string;
-  updated_at: string;
+  maxAttempts: number;
+  runAt: Date;
+  lastError?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PostLog {
-  id: string;
-  article_id: string;
-  page_id: string;
-  fb_photo_id?: string | null;
-  fb_post_id?: string | null;
-  fb_comment_id?: string | null;
-  rendered_image_path?: string | null;
+  _id: string;
+  articleId: string;
+  pageId: string;
+  fbPhotoId?: string | null;
+  fbPostId?: string | null;
+  fbCommentId?: string | null;
+  renderedImagePath?: string | null;
   caption?: string | null;
   comment?: string | null;
-  duration_ms?: number | null;
+  durationMs?: number | null;
   status: 'success' | 'failed' | 'dry_run';
-  error_message?: string | null;
-  created_at: string;
+  errorMessage?: string | null;
+  createdAt: Date;
 }
 
 export interface Setting {
-  key: string;
+  _id: string; // Setting key
   value: string;
   description?: string | null;
-  updated_at: string;
+  updatedAt: Date;
 }
-

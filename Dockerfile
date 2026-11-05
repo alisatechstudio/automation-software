@@ -1,19 +1,11 @@
 # ==============================================================================
 # Multi-stage Dockerfile for News-to-Facebook Automation Platform
-# Node.js 22 + Headless Chromium + Local Bengali typography engines
+# Node.js + MongoDB + Playwright Headless Chromium & Local Bengali Fonts
 # ==============================================================================
 
-# Stage 1: Build TypeScript source & compile native modules
+# Stage 1: Build TypeScript source
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
-
-# Install build tools required for native C++ addons (better-sqlite3)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    make \
-    g++ \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json tsconfig.json ./
 RUN npm ci
@@ -21,7 +13,7 @@ RUN npm ci
 COPY src/ ./src/
 RUN npm run build
 
-# Remove development dependencies so node_modules is lightweight and production-ready
+# Prune development dependencies so node_modules is production-ready
 RUN npm prune --production
 
 # Stage 2: Production runtime with headless Chromium dependencies
@@ -48,15 +40,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy production node_modules from builder (no compilation needed in runner)
+# Copy production node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
 COPY --from=builder /app/dist ./dist
 COPY src/templates ./dist/templates
-COPY src/db/migrations ./dist/db/migrations
 COPY assets ./assets
 
-# Create volume mount points for persistent database and rendered images
+# Create directory for rendered image caching
 RUN mkdir -p /app/data/rendered
 
 EXPOSE 3000

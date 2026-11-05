@@ -6,7 +6,8 @@ dotenv.config();
 export interface AppConfig {
   PORT: number;
   NODE_ENV: string;
-  DATABASE_PATH: string;
+  MONGODB_URI: string;
+  MONGODB_DB_NAME: string;
   ADMIN_PASSWORD: string;
   POLL_INTERVAL_CRON: string;
   MAX_ARTICLE_AGE_HOURS: number;
@@ -30,7 +31,11 @@ const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 export const config: AppConfig = {
   PORT: parseInt(process.env.PORT || '3000', 10),
   NODE_ENV: process.env.NODE_ENV || 'development',
-  DATABASE_PATH: process.env.DATABASE_PATH || path.join(dataDir, 'news_automation.db'),
+  MONGODB_URI:
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    'mongodb://127.0.0.1:27017/news_automation',
+  MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || 'news_automation',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'ChangeMeImmediately123!',
   POLL_INTERVAL_CRON: process.env.POLL_INTERVAL_CRON || '*/10 * * * *', // Every 10 minutes
   MAX_ARTICLE_AGE_HOURS: parseInt(process.env.MAX_ARTICLE_AGE_HOURS || '24', 10),
@@ -48,4 +53,3 @@ export const config: AppConfig = {
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };
-

@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getDatabase } from '../../db/index.js';
-import { NewsArticle, RssSource } from '../../db/schema.js';
+import { NewsArticle, RssSource, Job } from '../../db/schema.js';
 import { ParsedArticle, RssParserService } from './parser.js';
 import { config } from '../../config/env.js';
 
@@ -22,11 +22,14 @@ export class ArticleDedupeService {
   }
 
   /**
-   * Polls a single RSS source, filters by max age, dedupes against DB,
+   * Polls a single RSS source, filters by max age, dedupes against MongoDB,
    * inserts new articles, and schedules jobs in FIFO order (oldest first).
    */
   public async pollSource(source: RssSource): Promise<IngestionResult> {
     const db = getDatabase();
+    const articlesCol = db.collection<NewsArticle>('news_articles');
+    const jobsCol = db.collection<Job>('jobs');
+
     const fetchedItems = await this.parserService.fetchAndParse(source.url);
 
     const now = new Date();
@@ -41,22 +44,6 @@ export class ArticleDedupeService {
     let skippedTooOld = 0;
     let queuedJobs = 0;
 
-    const checkExistingStmt = db.prepare(`
-      SELECT id FROM news_articles WHERE guid = ? OR link = ? LIMIT 1
-    `);
-
-    const insertArticleStmt = db.prepare(`
-      INSERT INTO news_articles (
-        id, source_id, guid, link, title, description, category, pub_date, image_url, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued')
-    `);
-
-    const insertJobStmt = db.prepare(`
-      INSERT INTO jobs (
-        id, type, article_id, page_id, payload, status, attempts, max_attempts, run_at
-      ) VALUES (?, 'process_article', ?, ?, ?, 'pending', 0, 3, datetime('now'))
-    `);
-
     for (const item of fetchedItems) {
       // Age filter
       if (item.pubDate < cutoffTime) {
@@ -65,7 +52,10 @@ export class ArticleDedupeService {
       }
 
       // Dedupe check: check both GUID and link
-      const existing = checkExistingStmt.get(item.guid, item.link);
+      const existing = await articlesCol.findOne({
+        $or: [{ guid: item.guid }, { link: item.link }],
+      });
+
       if (existing) {
         skippedDuplicate++;
         continue;
@@ -74,42 +64,48 @@ export class ArticleDedupeService {
       const articleId = crypto.randomUUID();
       const jobId = crypto.randomUUID();
 
-      const payload = JSON.stringify({
+      const articleDoc: NewsArticle = {
+        _id: articleId,
+        sourceId: source._id,
+        guid: item.guid,
+        link: item.link,
+        title: item.title,
+        description: item.description || '',
+        category: item.category || 'সাধারণ',
+        pubDate: item.pubDate,
+        imageUrl: item.imageUrl || null,
+        status: 'queued',
+        createdAt: new Date(),
+      };
+
+      const jobDoc: Job = {
+        _id: jobId,
+        type: 'process_article',
         articleId,
-        sourceId: source.id,
-        pageId: source.page_id,
-        templateId: source.template_id,
-      });
-
-      // Insert article and job atomically
-      const tx = db.transaction(() => {
-        insertArticleStmt.run(
+        pageId: source.pageId,
+        payload: {
           articleId,
-          source.id,
-          item.guid,
-          item.link,
-          item.title,
-          item.description || '',
-          item.category || 'সাধারণ',
-          item.pubDate.toISOString(),
-          item.imageUrl || null
-        );
+          sourceId: source._id,
+          pageId: source.pageId,
+          templateId: source.templateId,
+        },
+        status: 'pending',
+        attempts: 0,
+        maxAttempts: 3,
+        runAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-        insertJobStmt.run(
-          jobId,
-          articleId,
-          source.page_id,
-          payload
-        );
-      });
+      await articlesCol.insertOne(articleDoc as any);
+      await jobsCol.insertOne(jobDoc as any);
 
-      tx();
       newArticlesIngested++;
       queuedJobs++;
     }
 
     return {
-      sourceId: source.id,
+      sourceId: source._id,
       sourceName: source.name,
       totalFetched: fetchedItems.length,
       newArticlesIngested,
@@ -120,13 +116,12 @@ export class ArticleDedupeService {
   }
 
   /**
-   * Polls all active RSS sources in the database
+   * Polls all active RSS sources in MongoDB
    */
   public async pollAllActiveSources(): Promise<IngestionResult[]> {
     const db = getDatabase();
-    const activeSources = db
-      .prepare('SELECT * FROM rss_sources WHERE is_active = 1')
-      .all() as RssSource[];
+    const sourcesCol = db.collection<RssSource>('rss_sources');
+    const activeSources = await sourcesCol.find({ isActive: true }).toArray();
 
     const results: IngestionResult[] = [];
     for (const source of activeSources) {
@@ -145,4 +140,3 @@ export class ArticleDedupeService {
     return results;
   }
 }
-

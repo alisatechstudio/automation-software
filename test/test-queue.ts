@@ -1,73 +1,98 @@
-import { getDatabase } from '../src/db/index.js';
-import { runMigrations } from '../src/db/migrator.js';
+import { initMongoDb, getDatabase, closeDatabase } from '../src/db/index.js';
 import { PersistentJobQueue } from '../src/services/queue/queue.js';
-import { Job } from '../src/db/schema.js';
+import { Job, FacebookPage, RssSource, NewsArticle } from '../src/db/schema.js';
+import { config } from '../src/config/env.js';
 
 async function testQueue() {
-  console.log('=== PHASE 4 TEST: PERSISTENT QUEUE, RETRIES & BACKOFF ===');
+  console.log('=== PHASE 4 TEST: PERSISTENT QUEUE, RETRIES & BACKOFF (MONGODB) ===');
+  console.log(`Connecting to MongoDB URI: ${config.MONGODB_URI}...`);
 
-  runMigrations();
+  try {
+    await initMongoDb();
+  } catch (err: any) {
+    console.error('\n⚠️ Could not connect to MongoDB:', err.message);
+    console.log('👉 Please set MONGODB_URI in your .env file to your Vercel/Atlas MongoDB connection string to run live DB tests.');
+    return;
+  }
+
   const db = getDatabase();
   const queue = new PersistentJobQueue();
 
-  // Insert mock page and article so foreign keys are satisfied
   const pageId = 'queue_test_page';
   const sourceId = 'queue_test_source';
   const articleId = 'queue_test_article';
 
-  db.prepare(`
-    INSERT OR REPLACE INTO facebook_pages (id, name, access_token, is_active)
-    VALUES (?, ?, ?, 1)
-  `).run(pageId, 'Queue Test Page', 'EAAB_MOCK');
+  await db.collection<FacebookPage>('facebook_pages').updateOne(
+    { _id: pageId },
+    { $set: { name: 'Queue Test Page', accessToken: 'EAAB_MOCK', isActive: true, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+    { upsert: true }
+  );
 
-  db.prepare(`
-    INSERT OR REPLACE INTO rss_sources (id, name, url, page_id, template_id, is_active)
-    VALUES (?, ?, ?, ?, 'template-square-breaking', 1)
-  `).run(sourceId, 'Queue Source', 'https://example.com/rss', pageId);
+  await db.collection<RssSource>('rss_sources').updateOne(
+    { _id: sourceId },
+    { $set: { name: 'Queue Source', url: 'https://example.com/rss_' + Date.now(), pageId, templateId: 'template-square-breaking', isActive: true, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+    { upsert: true }
+  );
 
-  db.prepare(`
-    INSERT OR REPLACE INTO news_articles (id, source_id, guid, link, title, pub_date, status)
-    VALUES (?, ?, ?, ?, ?, datetime('now'), 'queued')
-  `).run(articleId, sourceId, 'guid_' + Date.now(), 'https://example.com/news/' + Date.now(), 'Queue Test News Title');
+  await db.collection<NewsArticle>('news_articles').updateOne(
+    { _id: articleId },
+    {
+      $set: {
+        sourceId,
+        guid: 'guid_' + Date.now(),
+        link: 'https://example.com/news/' + Date.now(),
+        title: 'Queue Test News Title',
+        pubDate: new Date(),
+        status: 'queued',
+      },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true }
+  );
 
   // 1. Test Enqueue
-  console.log('1. Enqueueing test job...');
-  const jobId = queue.enqueue('process_article', { test: true }, articleId, pageId);
+  console.log('1. Enqueueing test job in MongoDB...');
+  const jobId = await queue.enqueue(
+    'process_article',
+    { articleId, sourceId, pageId },
+    articleId,
+    pageId
+  );
   console.log(`✓ Enqueued job ID: ${jobId}`);
 
   // 2. Test Atomic Fetch & Lock
-  console.log('\n2. Testing atomic fetch & lock...');
-  const fetchedJob = queue.fetchNextJob();
+  console.log('\n2. Testing atomic fetch & lock (findOneAndUpdate)...');
+  const fetchedJob = await queue.fetchNextJob();
   if (!fetchedJob) {
     throw new Error('Failed to fetch any pending job');
   }
-  console.log(`✓ Atomically fetched and locked job ${fetchedJob.id}, status is now: ${fetchedJob.status}`);
+  console.log(`✓ Atomically fetched and locked job ${fetchedJob._id}, status is now: ${fetchedJob.status}`);
 
   // 3. Test Failure and Exponential Backoff (Attempt 1 -> 2)
   console.log('\n3. Simulating failure attempt 1 (Testing exponential backoff)...');
-  const willRetry1 = queue.handleFailure(fetchedJob, 'Simulation Error 1', 10);
+  const willRetry1 = await queue.handleFailure(fetchedJob, 'Simulation Error 1', 10);
   console.log(`✓ Handled failure 1, willRetry = ${willRetry1}`);
 
-  const jobAfterFail1 = db.prepare('SELECT * FROM jobs WHERE id = ?').get(fetchedJob.id) as Job;
-  console.log(`  Attempts: ${jobAfterFail1.attempts}/${jobAfterFail1.max_attempts}`);
-  console.log(`  Next run_at: ${jobAfterFail1.run_at}`);
+  const jobAfterFail1 = (await db.collection<Job>('jobs').findOne({ _id: fetchedJob._id }))!;
+  console.log(`  Attempts: ${jobAfterFail1.attempts}/${jobAfterFail1.maxAttempts}`);
+  console.log(`  Next runAt: ${jobAfterFail1.runAt.toISOString()}`);
   console.log(`  Status: ${jobAfterFail1.status}`);
 
   // 4. Simulate Failure 2
   console.log('\n4. Simulating failure attempt 2...');
-  const willRetry2 = queue.handleFailure(jobAfterFail1, 'Simulation Error 2', 10);
+  const willRetry2 = await queue.handleFailure(jobAfterFail1, 'Simulation Error 2', 10);
   console.log(`✓ Handled failure 2, willRetry = ${willRetry2}`);
-  const jobAfterFail2 = db.prepare('SELECT * FROM jobs WHERE id = ?').get(fetchedJob.id) as Job;
-  console.log(`  Attempts: ${jobAfterFail2.attempts}/${jobAfterFail2.max_attempts}`);
+  const jobAfterFail2 = (await db.collection<Job>('jobs').findOne({ _id: fetchedJob._id }))!;
+  console.log(`  Attempts: ${jobAfterFail2.attempts}/${jobAfterFail2.maxAttempts}`);
 
   // 5. Simulate Final Failure (Attempt 3 -> Final Failed State)
   console.log('\n5. Simulating failure attempt 3 (Exhausting max retries)...');
-  const willRetry3 = queue.handleFailure(jobAfterFail2, 'Final Fatal Error', 10);
+  const willRetry3 = await queue.handleFailure(jobAfterFail2, 'Final Fatal Error', 10);
   console.log(`✓ Handled failure 3, willRetry = ${willRetry3} (Expected false for final failure)`);
 
-  const finalJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(fetchedJob.id) as Job;
+  const finalJob = (await db.collection<Job>('jobs').findOne({ _id: fetchedJob._id }))!;
   console.log(`  Final Status: ${finalJob.status}`);
-  console.log(`  Final Error: ${finalJob.last_error}`);
+  console.log(`  Final Error: ${finalJob.lastError}`);
   if (finalJob.status !== 'failed') {
     throw new Error(`Expected status 'failed', got '${finalJob.status}'`);
   }
@@ -75,14 +100,15 @@ async function testQueue() {
 
   // 6. Test Manual Retry Button
   console.log('\n6. Testing manual retry capability (Dashboard Retry Button)...');
-  const retrySuccess = queue.retryFailedJob(fetchedJob.id);
-  const retriedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(fetchedJob.id) as Job;
+  const retrySuccess = await queue.retryFailedJob(fetchedJob._id);
+  const retriedJob = (await db.collection<Job>('jobs').findOne({ _id: fetchedJob._id }))!;
   console.log(`✓ Retry result: ${retrySuccess}, new status: ${retriedJob.status}, attempts reset to: ${retriedJob.attempts}`);
 
   // 7. Test Queue Stats
-  const stats = queue.getStats();
+  const stats = await queue.getStats();
   console.log('\n7. Queue Statistics:', stats);
 
+  await closeDatabase();
   console.log('\n=== PHASE 4 COMPLETE & VERIFIED ===\n');
 }
 

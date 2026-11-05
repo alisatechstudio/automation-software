@@ -10,7 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_PATH=/app/data/news_automation.db
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/news_automation}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-news_automation}
       - DATA_DIR=/app/data
       - ASSETS_DIR=/app/assets
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-ChangeMeImmediately123!}
@@ -32,10 +33,21 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 15s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
+  # Optional local MongoDB service (only used if MONGODB_URI not set to Vercel/Atlas MongoDB)
+  mongodb:
+    image: mongo:7-jammy
+    container_name: fb-news-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongo-data:

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
@@ -15,46 +15,69 @@ const renderer = new PlaywrightImageRenderer();
 const dedupeService = new ArticleDedupeService();
 
 // 1. Dashboard Overview Stats
-apiRouter.get('/stats', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const queueStats = queue.getStats();
+apiRouter.get('/stats', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const queueStats = await queue.getStats();
 
-  const totalArticles = db
-    .prepare('SELECT COUNT(*) as count FROM news_articles')
-    .get() as { count: number };
-  const totalPages = db
-    .prepare('SELECT COUNT(*) as count FROM facebook_pages')
-    .get() as { count: number };
-  const totalSources = db
-    .prepare('SELECT COUNT(*) as count FROM rss_sources')
-    .get() as { count: number };
-  const successfulPosts = db
-    .prepare("SELECT COUNT(*) as count FROM post_logs WHERE status IN ('success', 'dry_run')")
-    .get() as { count: number };
+    const articlesCount = await db.collection('news_articles').countDocuments();
+    const pagesCount = await db.collection('facebook_pages').countDocuments();
+    const sourcesCount = await db.collection('rss_sources').countDocuments();
+    const successfulPosts = await db.collection('post_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
+    });
 
-  res.json({
-    queue: queueStats,
-    articlesCount: totalArticles.count,
-    pagesCount: totalPages.count,
-    sourcesCount: totalSources.count,
-    successfulPosts: successfulPosts.count,
-    dryRun: config.DRY_RUN,
-  });
+    res.json({
+      queue: queueStats,
+      articlesCount,
+      pagesCount,
+      sourcesCount,
+      successfulPosts,
+      dryRun: config.DRY_RUN,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 2. RSS Sources
-apiRouter.get('/sources', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const sources = db.prepare(`
-    SELECT s.*, p.name as page_name
-    FROM rss_sources s
-    LEFT JOIN facebook_pages p ON s.page_id = p.id
-    ORDER BY s.created_at DESC
-  `).all();
-  res.json(sources);
+apiRouter.get('/sources', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const sources = await db
+      .collection('rss_sources')
+      .aggregate([
+        {
+          $lookup: {
+            from: 'facebook_pages',
+            localField: 'pageId',
+            foreignField: '_id',
+            as: 'pageDoc',
+          },
+        },
+        {
+          $project: {
+            id: '$_id',
+            name: 1,
+            url: 1,
+            page_id: '$pageId',
+            template_id: '$templateId',
+            is_active: '$isActive',
+            created_at: '$createdAt',
+            page_name: { $arrayElemAt: ['$pageDoc.name', 0] },
+          },
+        },
+        { $sort: { created_at: -1 } },
+      ])
+      .toArray();
+
+    res.json(sources);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-apiRouter.post('/sources', (req: Request, res: Response) => {
+apiRouter.post('/sources', async (req: Request, res: Response) => {
   const { name, url, page_id, template_id, is_active } = req.body;
   if (!name || !url || !page_id) {
     res.status(400).json({ error: 'Name, URL, and Facebook Page are required' });
@@ -65,28 +88,55 @@ apiRouter.post('/sources', (req: Request, res: Response) => {
   const id = crypto.randomUUID();
 
   try {
-    db.prepare(`
-      INSERT INTO rss_sources (id, name, url, page_id, template_id, is_active)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, name.trim(), url.trim(), page_id, template_id || 'template-square-breaking', is_active ?? 1);
+    const doc: RssSource = {
+      _id: id,
+      name: name.trim(),
+      url: url.trim(),
+      pageId: page_id,
+      templateId: template_id || 'template-square-breaking',
+      isActive: is_active !== undefined ? Boolean(is_active) : true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
+    await db.collection<RssSource>('rss_sources').insertOne(doc as any);
     res.status(201).json({ success: true, id });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 });
 
-apiRouter.delete('/sources/:id', (req: Request, res: Response) => {
-  const db = getDatabase();
-  db.prepare('DELETE FROM rss_sources WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+apiRouter.delete('/sources/:id', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    await db.collection<RssSource>('rss_sources').deleteOne({ _id: req.params.id });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 3. Facebook Pages
-apiRouter.get('/pages', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const pages = db.prepare('SELECT id, name, is_active, token_expires_at, created_at FROM facebook_pages ORDER BY created_at DESC').all();
-  res.json(pages);
+apiRouter.get('/pages', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const pages = await db
+      .collection<FacebookPage>('facebook_pages')
+      .find({})
+      .project({
+        id: '$_id',
+        name: 1,
+        is_active: '$isActive',
+        token_expires_at: '$tokenExpiresAt',
+        created_at: '$createdAt',
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(pages);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 apiRouter.post('/pages', async (req: Request, res: Response) => {
@@ -96,14 +146,26 @@ apiRouter.post('/pages', async (req: Request, res: Response) => {
     return;
   }
 
-  const tokenInfo = await FacebookTokenService.inspectToken(access_token);
-  const db = getDatabase();
-
   try {
-    db.prepare(`
-      INSERT OR REPLACE INTO facebook_pages (id, name, access_token, token_expires_at, is_active, updated_at)
-      VALUES (?, ?, ?, ?, 1, datetime('now'))
-    `).run(id.trim(), name.trim(), access_token.trim(), tokenInfo.expiresAt ? tokenInfo.expiresAt.toISOString() : null);
+    const tokenInfo = await FacebookTokenService.inspectToken(access_token);
+    const db = getDatabase();
+
+    await db.collection<FacebookPage>('facebook_pages').updateOne(
+      { _id: id.trim() },
+      {
+        $set: {
+          name: name.trim(),
+          accessToken: access_token.trim(),
+          tokenExpiresAt: tokenInfo.expiresAt || null,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
 
     res.status(201).json({
       success: true,
@@ -130,53 +192,132 @@ apiRouter.post('/pages/test', async (req: Request, res: Response) => {
   res.json(tokenInfo);
 });
 
-apiRouter.delete('/pages/:id', (req: Request, res: Response) => {
-  const db = getDatabase();
-  db.prepare('DELETE FROM facebook_pages WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+apiRouter.delete('/pages/:id', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    await db.collection<FacebookPage>('facebook_pages').deleteOne({ _id: req.params.id });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 4. Queue & Job Management
-apiRouter.get('/queue', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const status = req.query.status as string;
-  let query = `
-    SELECT j.*, a.title as article_title, a.link as article_link, p.name as page_name
-    FROM jobs j
-    LEFT JOIN news_articles a ON j.article_id = a.id
-    LEFT JOIN facebook_pages p ON j.page_id = p.id
-  `;
+apiRouter.get('/queue', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const status = req.query.status as string;
 
-  if (status) {
-    query += ` WHERE j.status = '${status}'`;
+    const matchStage: Record<string, any> = {};
+    if (status) {
+      matchStage.status = status;
+    }
+
+    const jobs = await db
+      .collection('jobs')
+      .aggregate([
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: 'news_articles',
+            localField: 'articleId',
+            foreignField: '_id',
+            as: 'articleDoc',
+          },
+        },
+        {
+          $lookup: {
+            from: 'facebook_pages',
+            localField: 'pageId',
+            foreignField: '_id',
+            as: 'pageDoc',
+          },
+        },
+        {
+          $project: {
+            id: '$_id',
+            type: 1,
+            status: 1,
+            attempts: 1,
+            max_attempts: '$maxAttempts',
+            run_at: '$runAt',
+            created_at: '$createdAt',
+            last_error: '$lastError',
+            article_title: { $arrayElemAt: ['$articleDoc.title', 0] },
+            article_link: { $arrayElemAt: ['$articleDoc.link', 0] },
+            page_name: { $arrayElemAt: ['$pageDoc.name', 0] },
+          },
+        },
+        { $sort: { created_at: -1 } },
+        { $limit: 50 },
+      ])
+      .toArray();
+
+    res.json(jobs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-  query += ' ORDER BY j.created_at DESC LIMIT 50';
-
-  const jobs = db.prepare(query).all();
-  res.json(jobs);
 });
 
-apiRouter.post('/queue/:id/retry', (req: Request, res: Response) => {
-  const success = queue.retryFailedJob(req.params.id as string);
-  if (success) {
-    res.json({ success: true, message: 'Job rescheduled for immediate processing' });
-  } else {
-    res.status(400).json({ error: 'Job not found or not in failed state' });
+apiRouter.post('/queue/:id/retry', async (req: Request, res: Response) => {
+  try {
+    const success = await queue.retryFailedJob(req.params.id as string);
+    if (success) {
+      res.json({ success: true, message: 'Job rescheduled for immediate processing' });
+    } else {
+      res.status(400).json({ error: 'Job not found or not in failed state' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 // 5. Post Logs
-apiRouter.get('/logs', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const logs = db.prepare(`
-    SELECT l.*, a.title as article_title, a.link as article_link, p.name as page_name
-    FROM post_logs l
-    LEFT JOIN news_articles a ON l.article_id = a.id
-    LEFT JOIN facebook_pages p ON l.page_id = p.id
-    ORDER BY l.created_at DESC
-    LIMIT 50
-  `).all();
-  res.json(logs);
+apiRouter.get('/logs', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const logs = await db
+      .collection('post_logs')
+      .aggregate([
+        {
+          $lookup: {
+            from: 'news_articles',
+            localField: 'articleId',
+            foreignField: '_id',
+            as: 'articleDoc',
+          },
+        },
+        {
+          $lookup: {
+            from: 'facebook_pages',
+            localField: 'pageId',
+            foreignField: '_id',
+            as: 'pageDoc',
+          },
+        },
+        {
+          $project: {
+            id: '$_id',
+            status: 1,
+            fb_photo_id: '$fbPhotoId',
+            fb_post_id: '$fbPostId',
+            fb_comment_id: '$fbCommentId',
+            duration_ms: '$durationMs',
+            created_at: '$createdAt',
+            article_title: { $arrayElemAt: ['$articleDoc.title', 0] },
+            article_link: { $arrayElemAt: ['$articleDoc.link', 0] },
+            page_name: { $arrayElemAt: ['$pageDoc.name', 0] },
+          },
+        },
+        { $sort: { created_at: -1 } },
+        { $limit: 50 },
+      ])
+      .toArray();
+
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 6. Template Live Preview
@@ -222,46 +363,56 @@ apiRouter.post('/poll-now', async (req: Request, res: Response) => {
 });
 
 // 8. Settings
-apiRouter.get('/settings', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const rows = db.prepare('SELECT * FROM settings').all() as Setting[];
-  const settingsMap: Record<string, string> = {
-    POLL_INTERVAL_CRON: config.POLL_INTERVAL_CRON,
-    MAX_ARTICLE_AGE_HOURS: String(config.MAX_ARTICLE_AGE_HOURS),
-    MAX_POSTS_PER_HOUR: String(config.MAX_POSTS_PER_HOUR),
-    MIN_DELAY_SECONDS: String(config.MIN_DELAY_SECONDS),
-    MAX_DELAY_SECONDS: String(config.MAX_DELAY_SECONDS),
-    DRY_RUN: String(config.DRY_RUN),
-    DEFAULT_HASHTAGS: config.DEFAULT_HASHTAGS,
-    DEFAULT_CAPTION_FORMAT: config.DEFAULT_CAPTION_FORMAT,
-    DEFAULT_COMMENT_FORMAT: config.DEFAULT_COMMENT_FORMAT,
-  };
+apiRouter.get('/settings', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const rows = await db.collection<Setting>('settings').find({}).toArray();
 
-  for (const r of rows) {
-    settingsMap[r.key] = r.value;
+    const settingsMap: Record<string, string> = {
+      POLL_INTERVAL_CRON: config.POLL_INTERVAL_CRON,
+      MAX_ARTICLE_AGE_HOURS: String(config.MAX_ARTICLE_AGE_HOURS),
+      MAX_POSTS_PER_HOUR: String(config.MAX_POSTS_PER_HOUR),
+      MIN_DELAY_SECONDS: String(config.MIN_DELAY_SECONDS),
+      MAX_DELAY_SECONDS: String(config.MAX_DELAY_SECONDS),
+      DRY_RUN: String(config.DRY_RUN),
+      DEFAULT_HASHTAGS: config.DEFAULT_HASHTAGS,
+      DEFAULT_CAPTION_FORMAT: config.DEFAULT_CAPTION_FORMAT,
+      DEFAULT_COMMENT_FORMAT: config.DEFAULT_COMMENT_FORMAT,
+    };
+
+    for (const r of rows) {
+      settingsMap[r._id] = r.value;
+    }
+
+    res.json(settingsMap);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json(settingsMap);
 });
 
-apiRouter.post('/settings', (req: Request, res: Response) => {
-  const db = getDatabase();
-  const body = req.body;
+apiRouter.post('/settings', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const body = req.body;
+    const settingsCol = db.collection<Setting>('settings');
 
-  const stmt = db.prepare(`
-    INSERT INTO settings (key, value, updated_at)
-    VALUES (?, ?, datetime('now'))
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
-  `);
-
-  const tx = db.transaction(() => {
     for (const [key, value] of Object.entries(body)) {
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        stmt.run(key, String(value));
+        await settingsCol.updateOne(
+          { _id: key },
+          {
+            $set: {
+              value: String(value),
+              updatedAt: new Date(),
+            },
+          },
+          { upsert: true }
+        );
       }
     }
-  });
 
-  tx();
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });

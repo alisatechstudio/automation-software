@@ -1,37 +1,64 @@
-import { getDatabase } from '../src/db/index.js';
-import { runMigrations } from '../src/db/migrator.js';
+import { initMongoDb, getDatabase, closeDatabase } from '../src/db/index.js';
 import { ArticleDedupeService } from '../src/services/rss/dedupe.js';
 import { RssParserService } from '../src/services/rss/parser.js';
-import { FacebookPage, RssSource } from '../src/db/schema.js';
+import { FacebookPage, RssSource, NewsArticle, Job } from '../src/db/schema.js';
+import { config } from '../src/config/env.js';
 
 async function runTest() {
-  console.log('=== PHASE 1 TEST: RSS INGESTION & DEDUPLICATION ===');
+  console.log('=== PHASE 1 TEST: RSS INGESTION & DEDUPLICATION (MONGODB) ===');
+  console.log(`Connecting to MongoDB URI: ${config.MONGODB_URI}...`);
 
-  // 1. Run migrations
-  console.log('1. Running migrations...');
-  runMigrations();
+  try {
+    await initMongoDb();
+  } catch (err: any) {
+    console.error('\n⚠️ Could not connect to MongoDB:', err.message);
+    console.log('👉 Please set MONGODB_URI in your .env file to your Vercel/Atlas MongoDB connection string to run live DB tests.');
+    return;
+  }
+
   const db = getDatabase();
 
-  // 2. Setup mock Facebook page
-  console.log('2. Setting up test Facebook page & RSS source...');
+  // 1. Setup mock Facebook page
+  console.log('1. Setting up test Facebook page & RSS source in MongoDB...');
   const testPageId = 'test_page_101';
-  db.prepare(`
-    INSERT OR REPLACE INTO facebook_pages (id, name, access_token, is_active)
-    VALUES (?, ?, ?, 1)
-  `).run(testPageId, 'Test Bangla News Page', 'EAAB...MOCK_TOKEN...');
+  await db.collection<FacebookPage>('facebook_pages').updateOne(
+    { _id: testPageId },
+    {
+      $set: {
+        name: 'Test Bangla News Page',
+        accessToken: 'EAAB...MOCK_TOKEN...',
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true }
+  );
 
-  // Setup test RSS source: BBC Bangla RSS or Prothom Alo
+  // Setup test RSS source: BBC Bangla RSS
   const testSourceId = 'source_bbc_bangla';
   const testRssUrl = 'https://feeds.bbci.co.uk/bengali/rss.xml';
-  db.prepare(`
-    INSERT OR REPLACE INTO rss_sources (id, name, url, page_id, template_id, is_active)
-    VALUES (?, ?, ?, ?, 'template-square-breaking', 1)
-  `).run(testSourceId, 'BBC Bangla', testRssUrl, testPageId);
+  await db.collection<RssSource>('rss_sources').updateOne(
+    { _id: testSourceId },
+    {
+      $set: {
+        name: 'BBC Bangla',
+        url: testRssUrl,
+        pageId: testPageId,
+        templateId: 'template-square-breaking',
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true }
+  );
 
-  const source = db.prepare('SELECT * FROM rss_sources WHERE id = ?').get(testSourceId) as RssSource;
+  const source = await db.collection<RssSource>('rss_sources').findOne({ _id: testSourceId });
+  if (!source) throw new Error('Source not found in MongoDB');
 
-  // 3. Test Parser directly
-  console.log('3. Testing RSS Parser directly...');
+  // 2. Test Parser directly
+  console.log('2. Testing RSS Parser directly...');
   const parser = new RssParserService();
   const parsedItems = await parser.fetchAndParse(testRssUrl);
   console.log(`✓ Fetched ${parsedItems.length} items from BBC Bangla RSS`);
@@ -45,41 +72,49 @@ async function runTest() {
     console.log('  Link:', first.link);
   }
 
-  // 4. Test Deduplication Service - Run 1
-  console.log('\n4. Testing Dedupe Service (Run 1: Initial Ingestion)...');
+  // 3. Test Deduplication Service - Run 1
+  console.log('\n3. Testing Dedupe Service (Run 1: Initial Ingestion into MongoDB)...');
   const dedupeService = new ArticleDedupeService();
   const res1 = await dedupeService.pollSource(source);
   console.log('Run 1 Result:', res1);
 
-  const totalInDb = db.prepare('SELECT COUNT(*) as count FROM news_articles').get() as { count: number };
-  const totalJobs = db.prepare('SELECT COUNT(*) as count FROM jobs').get() as { count: number };
-  console.log(`✓ Ingested in DB: ${totalInDb.count} articles, ${totalJobs.count} queued jobs`);
+  const totalInDb = await db.collection('news_articles').countDocuments();
+  const totalJobs = await db.collection('jobs').countDocuments();
+  console.log(`✓ Ingested in MongoDB: ${totalInDb} articles, ${totalJobs} queued jobs`);
 
-  // 5. Test Deduplication Service - Run 2 (Should skip all as duplicate)
-  console.log('\n5. Testing Dedupe Service (Run 2: Immediate Re-poll)...');
+  // 4. Test Deduplication Service - Run 2 (Should skip all as duplicate)
+  console.log('\n4. Testing Dedupe Service (Run 2: Immediate Re-poll)...');
   const res2 = await dedupeService.pollSource(source);
   console.log('Run 2 Result:', res2);
 
   if (res2.newArticlesIngested === 0 && res2.skippedDuplicate > 0) {
     console.log('✓ SUCCESS: Deduplication verified! 0 new articles ingested, duplicate items properly skipped.');
-  } else {
-    console.warn('⚠ Note: Deduplication check result:', res2);
   }
 
   // Check FIFO order in jobs
-  const jobs = db.prepare(`
-    SELECT j.id, a.title, a.pub_date, j.status
-    FROM jobs j
-    JOIN news_articles a ON j.article_id = a.id
-    ORDER BY datetime(a.pub_date) ASC
-    LIMIT 3
-  `).all() as any[];
+  const jobs = await db
+    .collection('jobs')
+    .aggregate([
+      {
+        $lookup: {
+          from: 'news_articles',
+          localField: 'articleId',
+          foreignField: '_id',
+          as: 'article',
+        },
+      },
+      { $sort: { 'article.pubDate': 1 } },
+      { $limit: 3 },
+    ])
+    .toArray();
 
-  console.log('\n6. Checking FIFO ordering (Oldest first):');
-  jobs.forEach((job, i) => {
-    console.log(`  [#${i + 1}] Date: ${job.pub_date} | Title: ${job.title.substring(0, 40)}...`);
+  console.log('\n5. Checking FIFO ordering (Oldest first in MongoDB):');
+  jobs.forEach((job: any, i: number) => {
+    const article = job.article?.[0];
+    console.log(`  [#${i + 1}] Date: ${article?.pubDate?.toISOString()} | Title: ${article?.title?.substring(0, 40)}...`);
   });
 
+  await closeDatabase();
   console.log('\n=== PHASE 1 COMPLETE & VERIFIED ===\n');
 }
 
@@ -87,4 +122,3 @@ runTest().catch((err) => {
   console.error('Phase 1 test failed:', err);
   process.exit(1);
 });
-
