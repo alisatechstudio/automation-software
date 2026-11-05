@@ -1,0 +1,41 @@
+services:
+  news-automation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fb-news-automation
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/news_automation.db
+      - DATA_DIR=/app/data
+      - ASSETS_DIR=/app/assets
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-ChangeMeImmediately123!}
+      - POLL_INTERVAL_CRON=${POLL_INTERVAL_CRON:-*/10 * * * *}
+      - MAX_ARTICLE_AGE_HOURS=${MAX_ARTICLE_AGE_HOURS:-24}
+      - MAX_POSTS_PER_HOUR=${MAX_POSTS_PER_HOUR:-10}
+      - MIN_DELAY_SECONDS=${MIN_DELAY_SECONDS:-30}
+      - MAX_DELAY_SECONDS=${MAX_DELAY_SECONDS:-60}
+      - DRY_RUN=${DRY_RUN:-false}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - DEFAULT_HASHTAGS=${DEFAULT_HASHTAGS:-#BreakingNews #Bangladesh #NewsUpdate}
+      - DEFAULT_CAPTION_FORMAT=${DEFAULT_CAPTION_FORMAT:-{headline}\n\n{summary}\n\n{hashtags}}
+      - DEFAULT_COMMENT_FORMAT=${DEFAULT_COMMENT_FORMAT:-বিস্তারিত পড়ুন: {url}}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

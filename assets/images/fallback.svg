@@ -1,0 +1,14 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>
+  <defs>
+    <linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' style='stop-color:#0f172a;stop-opacity:1' />
+      <stop offset='50%' style='stop-color:#1e293b;stop-opacity:1' />
+      <stop offset='100%' style='stop-color:#334155;stop-opacity:1' />
+    </linearGradient>
+  </defs>
+  <rect width='100%' height='100%' fill='url(#grad)' />
+  <circle cx='600' cy='360' r='100' fill='#dc2626' opacity='0.9' />
+  <polygon points='565,310 655,360 565,410' fill='#ffffff' />
+  <text x='600' y='520' font-family='Noto Sans Bengali, Hind Siliguri, sans-serif' font-size='44' font-weight='bold' fill='#f8fafc' text-anchor='middle'>সংবাদ চিত্র পাওয়া যায়নি</text>
+  <text x='600' y='570' font-family='sans-serif' font-size='24' fill='#94a3b8' text-anchor='middle' letter-spacing='2'>NEWS DESK UPDATE</text>
+</svg>

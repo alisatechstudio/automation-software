@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <title>Editorial News Template</title>
+  <style>
+    @font-face {
+      font-family: 'Hind Siliguri';
+      src: url('{{{fontHindSiliguriBold}}}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Noto Sans Bengali';
+      src: url('{{{fontNotoSansBengali}}}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      background: #0f172a;
+      color: #ffffff;
+      font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      padding: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #334155;
+      padding-bottom: 20px;
+    }
+
+    .logo img {
+      height: 50px;
+    }
+
+    .meta-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .category-tag {
+      background: #2563eb;
+      color: #ffffff;
+      padding: 6px 20px;
+      border-radius: 9999px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .date-badge {
+      color: #94a3b8;
+      font-size: 20px;
+    }
+
+    /* Middle Framed Photo */
+    .photo-frame {
+      width: 100%;
+      height: 520px;
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      margin: 24px 0;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+      border: 3px solid #1e293b;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Bottom Headline Box */
+    .bottom-box {
+      height: 290px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 24px 32px;
+      border-left: 8px solid #38bdf8;
+    }
+
+    .headline-container {
+      width: 100%;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .headline-text {
+      width: 100%;
+      font-family: 'Hind Siliguri', sans-serif;
+      font-size: 48px;
+      line-height: 1.35;
+      font-weight: 700;
+      color: #f8fafc;
+      word-break: break-word;
+    }
+
+    .source-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #94a3b8;
+      font-size: 19px;
+      border-top: 1px solid #334155;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="logo">
+      <img src="{{{logoUrl}}}" alt="Logo" />
+    </div>
+    <div class="meta-box">
+      <div class="category-tag">{{category}}</div>
+      <div class="date-badge">{{dateText}}</div>
+    </div>
+  </div>
+
+  <div class="photo-frame">
+    <img src="{{{imageUrl}}}" alt="Featured Photo" onerror="this.src='{{{fallbackImage}}}';" />
+  </div>
+
+  <div class="bottom-box">
+    <div class="headline-container" id="headline-container">
+      <h1 class="headline-text" id="headline-text">{{headline}}</h1>
+    </div>
+    <div class="source-info">
+      <span>জাতীয় সংবাদ ডেস্ক</span>
+      <span>newsportal.com</span>
+    </div>
+  </div>
+
+  <script>
+    function autoFit() {
+      const container = document.getElementById('headline-container');
+      const text = document.getElementById('headline-text');
+      if (!container || !text) return;
+
+      let fontSize = 48;
+      const minFontSize = 22;
+      text.style.fontSize = fontSize + 'px';
+      text.style.lineHeight = (fontSize * 1.35) + 'px';
+
+      while (
+        (text.scrollHeight > container.clientHeight || text.scrollWidth > container.clientWidth) &&
+        fontSize > minFontSize
+      ) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        text.style.lineHeight = (fontSize * 1.35) + 'px';
+      }
+    }
+    autoFit();
+    window.addEventListener('load', autoFit);
+  </script>
+</body>
+</html>
+
