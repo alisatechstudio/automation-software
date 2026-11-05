@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import { getDatabase, isMongoConnected } from '../../db/index.js';
-import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, Setting } from '../../db/schema.js';
+import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, Setting } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { ReelVideoRenderer } from '../renderer/reel.js';
 import { FacebookGraphClient } from '../facebook/client.js';
+import { YouTubeClient } from '../youtube/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
 import { REEL_THEME_KEYS } from '../../config/constants.js';
 import { config } from '../../config/env.js';
@@ -48,6 +49,7 @@ export class QueueWorker {
   private canvasRenderer: CanvasCardRenderer;
   private reelRenderer: ReelVideoRenderer;
   private fbClient: FacebookGraphClient;
+  private ytClient: YouTubeClient;
   private alertService: TelegramAlertService;
   private isRunning: boolean = false;
   private loopTimeout: NodeJS.Timeout | null = null;
@@ -58,6 +60,7 @@ export class QueueWorker {
     this.canvasRenderer = new CanvasCardRenderer();
     this.reelRenderer = new ReelVideoRenderer();
     this.fbClient = new FacebookGraphClient();
+    this.ytClient = new YouTubeClient();
     this.alertService = new TelegramAlertService();
   }
 
@@ -316,6 +319,67 @@ export class QueueWorker {
           }
         }
 
+        // =========================================================================
+        // YOUTUBE SHORTS: Auto-Upload 15s MP4 Video to YouTube Channel
+        // =========================================================================
+        let ytVideoId: string | null = null;
+        let ytStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
+
+        try {
+          const isYtConfigured = await this.ytClient.initCredentials();
+          const ytAutoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
+          const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : isYtConfigured;
+
+          if (isYtConfigured && shouldPostYt) {
+            console.log(`[QueueWorker] 📺 Uploading 15s MP4 Video to YouTube Shorts for "${article.title}"...`);
+            const ytStartTime = Date.now();
+            const ytResult = await this.ytClient.uploadShort(
+              {
+                videoBuffer: reelBuffer,
+                title: article.title,
+                description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
+              },
+              config.DRY_RUN
+            );
+
+            ytVideoId = ytResult.videoId;
+            ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
+
+            // Post news link as comment on YouTube Short
+            if (article.link && ytVideoId && !config.DRY_RUN) {
+              await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+            }
+
+            await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+              _id: crypto.randomUUID(),
+              articleId: article._id,
+              articleTitle: article.title,
+              ytVideoId: ytResult.videoId,
+              ytVideoUrl: ytResult.videoUrl,
+              durationMs: Date.now() - ytStartTime,
+              status: ytStatus,
+              createdAt: new Date(),
+            });
+
+            console.log(`✓ [QueueWorker] Successfully published to YouTube Shorts! URL: ${ytResult.videoUrl}`);
+          }
+        } catch (ytErr: any) {
+          ytStatus = 'failed';
+          console.warn(`[QueueWorker] YouTube Short upload encountered an error (Facebook posts were successful):`, ytErr.message);
+          try {
+            await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+              _id: crypto.randomUUID(),
+              articleId: article._id,
+              articleTitle: article.title,
+              ytVideoId: '',
+              ytVideoUrl: '',
+              status: 'failed',
+              errorMessage: ytErr.message || String(ytErr),
+              createdAt: new Date(),
+            });
+          } catch (e) {}
+        }
+
         // Record Post & Reel Log
         const logId = crypto.randomUUID();
         const logDoc: PostLog = {
@@ -328,6 +392,8 @@ export class QueueWorker {
           fbVideoId: reelVideoId,
           fbStoryId: storyId,
           storyStatus: storyStatus,
+          ytVideoId,
+          ytStatus,
           caption: reelCaption,
           comment: article.link || null,
           durationMs,
@@ -907,5 +973,57 @@ export class QueueWorker {
     });
 
     return { success: true, photoId, storyId, pageName: page.name };
+  }
+
+  /**
+   * Manually upload an article's 15s MP4 reel to YouTube Shorts
+   */
+  public async uploadShortForArticle(
+    articleId: string
+  ): Promise<{ success: boolean; videoId: string; videoUrl: string }> {
+    const db = getDatabase();
+    const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
+    if (!article) {
+      throw new Error(`Article ${articleId} not found`);
+    }
+
+    const reelBuffer = await this.reelRenderer.renderReel({
+      headline: article.title,
+      category: article.category || 'বিশেষ খবর',
+      imageUrl: article.imageUrl || undefined,
+      theme: 'vertical-916', // YouTube Shorts prefers 9:16 vertical fullscreen
+      durationSeconds: 15,
+      fps: 20,
+    });
+
+    const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+    const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+
+    const ytStartTime = Date.now();
+    const result = await this.ytClient.uploadShort(
+      {
+        videoBuffer: reelBuffer,
+        title: article.title,
+        description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
+      },
+      config.DRY_RUN
+    );
+
+    if (article.link && result.videoId && !config.DRY_RUN) {
+      await this.ytClient.addComment(result.videoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+    }
+
+    await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: article._id,
+      articleTitle: article.title,
+      ytVideoId: result.videoId,
+      ytVideoUrl: result.videoUrl,
+      durationMs: Date.now() - ytStartTime,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    return { success: true, videoId: result.videoId, videoUrl: result.videoUrl };
   }
 }

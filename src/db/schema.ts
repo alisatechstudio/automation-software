@@ -79,6 +79,8 @@ export interface PostLog {
   fbVideoId?: string | null;
   fbStoryId?: string | null;
   storyStatus?: 'success' | 'failed' | 'dry_run' | 'skipped';
+  ytVideoId?: string | null;
+  ytStatus?: 'success' | 'failed' | 'dry_run' | 'skipped';
   renderedImagePath?: string | null;
   renderedVideoPath?: string | null;
   caption?: string | null;
@@ -117,6 +119,32 @@ export interface StoryLog {
   status: 'success' | 'failed' | 'dry_run';
   errorMessage?: string | null;
   createdAt: Date;
+}
+
+export interface YouTubeUploadLog {
+  _id: string;
+  articleId?: string | null;
+  articleTitle: string;
+  channelId?: string | null;
+  channelTitle?: string | null;
+  ytVideoId: string;
+  ytVideoUrl: string;
+  durationMs?: number | null;
+  status: 'success' | 'failed' | 'dry_run';
+  errorMessage?: string | null;
+  createdAt: Date;
+}
+
+export interface YouTubeChannel {
+  _id: string; // channel ID
+  title: string;
+  customUrl?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  subscriberCount?: string;
+  videoCount?: string;
+  isActive: boolean;
+  updatedAt: Date;
 }
 
 export interface Setting {

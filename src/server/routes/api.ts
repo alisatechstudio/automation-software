@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
@@ -9,6 +9,7 @@ import { CanvasCardRenderer } from '../../services/renderer/canvas.js';
 import { ReelVideoRenderer } from '../../services/renderer/reel.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
+import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES } from '../../config/constants.js';
 import { config } from '../../config/env.js';
@@ -19,6 +20,7 @@ const worker = new QueueWorker();
 const renderer = new PlaywrightImageRenderer();
 const canvasRenderer = new CanvasCardRenderer();
 const reelRenderer = new ReelVideoRenderer();
+const ytClient = new YouTubeClient();
 const dedupeService = new ArticleDedupeService();
 
 // 1. Dashboard Overview Stats
@@ -40,6 +42,9 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const storiesCount = await db.collection('story_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
+    const youtubeCount = await db.collection('youtube_upload_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
+    });
     const successfulPosts = await db.collection('post_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
@@ -53,6 +58,7 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
       groupSharesCount,
       reelsCount,
       storiesCount,
+      youtubeCount,
       successfulPosts,
       dryRun: config.DRY_RUN,
     });
@@ -1208,6 +1214,10 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DISABLE_POSTER: 'true',
       REEL_DURATION_SECONDS: '15',
       DEFAULT_REEL_THEME: 'studio-red',
+      YOUTUBE_CLIENT_ID: '998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com',
+      YOUTUBE_CLIENT_SECRET: '',
+      YOUTUBE_REFRESH_TOKEN: '',
+      AUTO_POST_YOUTUBE: 'true',
     };
 
     for (const r of rows) {
@@ -1246,3 +1256,138 @@ apiRouter.post('/settings', async (req: Request, res: Response) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ==============================================================================
+// 3.9. YouTube Shorts Integration
+// ==============================================================================
+apiRouter.get('/youtube/status', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const isConfigured = await ytClient.initCredentials();
+    const clientIdSetting = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+    const clientSecretSetting = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+    const refreshTokenSetting = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_REFRESH_TOKEN' });
+    const autoPostSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
+
+    let channel = null;
+    let error = null;
+
+    if (isConfigured) {
+      try {
+        channel = await ytClient.getChannelProfile();
+      } catch (err: any) {
+        error = err.message;
+      }
+    }
+
+    res.json({
+      success: true,
+      isConfigured,
+      autoPost: autoPostSetting ? autoPostSetting.value !== 'false' : true,
+      clientId: clientIdSetting?.value || '998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com',
+      hasClientSecret: Boolean(clientSecretSetting?.value),
+      hasRefreshToken: Boolean(refreshTokenSetting?.value),
+      channel,
+      error,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/youtube/setup', async (req: Request, res: Response) => {
+  try {
+    const { clientId, clientSecret, refreshToken, autoPost } = req.body;
+    const db = getDatabase();
+    const settingsCol = db.collection<Setting>('settings');
+
+    if (clientId !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'YOUTUBE_CLIENT_ID' },
+        { $set: { value: String(clientId).trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (clientSecret !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'YOUTUBE_CLIENT_SECRET' },
+        { $set: { value: String(clientSecret).trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (refreshToken !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'YOUTUBE_REFRESH_TOKEN' },
+        { $set: { value: String(refreshToken).trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (autoPost !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'AUTO_POST_YOUTUBE' },
+        { $set: { value: String(autoPost), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    await ytClient.initCredentials();
+
+    let channel = null;
+    let verifyError = null;
+    if (ytClient.isConfigured()) {
+      try {
+        channel = await ytClient.getChannelProfile();
+      } catch (err: any) {
+        verifyError = err.message;
+      }
+    }
+
+    res.json({
+      success: true,
+      isConfigured: ytClient.isConfigured(),
+      channel,
+      verifyError,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/youtube/upload', async (req: Request, res: Response) => {
+  try {
+    const { articleId } = req.body;
+    const db = getDatabase();
+
+    let targetArticleId = articleId;
+    if (!targetArticleId) {
+      const latestArt = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1 } });
+      if (!latestArt) {
+        return res.status(404).json({ error: 'No article found to upload' });
+      }
+      targetArticleId = latestArt._id;
+    }
+
+    const result = await worker.uploadShortForArticle(targetArticleId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/youtube/logs', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const logs = await db
+      .collection<YouTubeUploadLog>('youtube_upload_logs')
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    res.json({ success: true, logs });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+

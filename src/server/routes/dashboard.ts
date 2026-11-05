@@ -262,6 +262,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <span>🎬 Reels (রিলস)</span>
       </button>
+      <button onclick="switchTab('youtube')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        <span>📺 YouTube (ইউটিউব শর্টস)</span>
+      </button>
       <button onclick="switchTab('preview')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
         Template Preview
@@ -1025,6 +1029,178 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     </div>
 
+
+    <!-- 6.5. YOUTUBE SHORTS TAB -->
+    <div id="tab-youtube" class="tab-content hidden space-y-8">
+      
+      <!-- Header Banner -->
+      <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">Multi-Platform Distribution</span>
+              <span id="yt-connection-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <svg class="w-7 h-7 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+              YouTube Shorts Automation Pipeline
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              প্রতিটি সংবাদের ১৫ সেকেন্ডের MP4 রিল ভিডিও স্বয়ংক্রিয়ভাবে আপনার ইউটিউব চ্যানেলে Shorts হিসেবে আপলোড হবে। সংবাদ লিংক স্বয়ংক্রিয়ভাবে ভিডিওর ডেসক্রিপশন এবং ১ম কমেন্টে যুক্ত হবে।
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-xs sm:text-sm shadow-glow-red flex items-center gap-2 transition active:scale-95 border border-red-400/40">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>Upload Latest Short Now</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channel Profile & Google OAuth Setup Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Channel Profile Card -->
+        <div class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Connected YouTube Channel</h3>
+              <span id="yt-active-pill" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+            </div>
+
+            <div id="yt-channel-info" class="space-y-4">
+              <div class="flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <img id="yt-avatar" src="/assets/images/favicon.png" alt="Avatar" class="w-12 h-12 rounded-full border border-red-500/50 object-cover" />
+                <div class="overflow-hidden">
+                  <div id="yt-channel-title" class="font-bold text-white text-sm truncate">Channel Not Connected</div>
+                  <div id="yt-channel-handle" class="text-xs text-slate-400 truncate font-mono">@bdnews24</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80">
+                  <div id="yt-sub-count" class="text-lg font-bold text-white font-mono">-</div>
+                  <div class="text-[11px] text-slate-400">Subscribers</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80">
+                  <div id="yt-video-count" class="text-lg font-bold text-white font-mono">-</div>
+                  <div class="text-[11px] text-slate-400">Total Videos</div>
+                </div>
+              </div>
+
+              <div class="text-[11px] text-slate-400 bg-red-950/20 p-3 rounded-xl border border-red-900/30 space-y-1">
+                <div class="font-semibold text-red-300 flex items-center gap-1.5">
+                  <span>✓</span> 15s MP4 Ready (Vertical 9:16)
+                </div>
+                <div class="font-semibold text-red-300 flex items-center gap-1.5">
+                  <span>✓</span> Category: News & Politics (#Shorts)
+                </div>
+                <div class="font-semibold text-red-300 flex items-center gap-1.5">
+                  <span>✓</span> First Comment News Link
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+            <span class="text-slate-400">Auto-Upload on Publish:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="yt-auto-toggle" class="sr-only peer" checked onchange="saveYouTubeSettings()" />
+              <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Right: OAuth Credentials Setup -->
+        <div class="lg:col-span-2 glass-panel p-6 rounded-2xl relative space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>🔑</span> Google OAuth 2.0 Credentials (YouTube Data API v3)
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">Token Refresh Active</span>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Google OAuth Client ID</label>
+              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="998558898236-6mgfe5b3n8fm1lk11bs1h49kq7o4vssv.apps.googleusercontent.com" placeholder="xxxxx.apps.googleusercontent.com" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Client Secret (Google Cloud)</label>
+                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" placeholder="GOCSPX-xxxxxxxxxxxxxxxx" />
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">OAuth Refresh Token</label>
+                <input type="password" id="yt-refresh-token" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" placeholder="1//0gxxxxxxxxxxxxxxxxxxxx" />
+              </div>
+            </div>
+
+            <!-- Helpful OAuth Instructions Accordion -->
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-300 space-y-2">
+              <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                <span>⚡</span> Refresh Token পাওয়ার সহজ পদ্ধতি (২ মিনিট):
+              </div>
+              <ol class="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed pl-1">
+                <li>গুগল ক্লাউড কনসোলে আপনার OAuth Client এ <code class="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">https://developers.google.com/oauthplayground</code> রিডাইরেক্ট URI হিসেবে যুক্ত করুন।</li>
+                <li><a href="https://developers.google.com/oauthplayground" target="_blank" class="text-red-400 underline font-semibold">Google OAuth Playground ↗</a> ওপেন করে ডানপাশের সেটিংস গিয়ারে আপনার Client ID ও Secret বসান।</li>
+                <li>বামের লিস্ট থেকে <code class="text-emerald-300">YouTube Data API v3</code> $\rightarrow$ <code class="text-emerald-300">https://www.googleapis.com/auth/youtube.upload</code> সিলেক্ট করে সাইন ইন করুন।</li>
+                <li>"Exchange authorization code for tokens" বাটনে ক্লিক করে পাওয়া <code class="text-amber-300">Refresh token</code> কপি করে এখানে বসান।</li>
+              </ol>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+              <button onclick="saveYouTubeSettings()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition shadow-sm active:scale-95">
+                Save & Authenticate YouTube
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- YouTube Shorts Upload History Table -->
+      <div class="glass-panel rounded-2xl p-6 overflow-hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>📊</span> Recent YouTube Shorts Upload History
+            </h3>
+            <p class="text-xs text-slate-400">Log of automated and manual uploads to your YouTube channel</p>
+          </div>
+          <button onclick="loadYouTubeLogs()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase font-mono tracking-wider">
+                <th class="pb-3 pr-4">Article Title</th>
+                <th class="pb-3 pr-4">YouTube Video ID</th>
+                <th class="pb-3 pr-4">Duration</th>
+                <th class="pb-3 pr-4">Time</th>
+                <th class="pb-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="yt-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="5" class="py-6 text-center text-slate-500">Loading YouTube logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
     <!-- 7. SETTINGS TAB -->
     <div id="tab-settings" class="tab-content hidden space-y-6">
       <div class="glass-panel p-6 sm:p-8 rounded-2xl max-w-3xl">
@@ -1281,6 +1457,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
       if (tabId === 'reels') loadReels();
+      if (tabId === 'youtube') loadYouTube();
       if (tabId === 'settings') loadSettings();
     }
 
@@ -2410,6 +2587,159 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }).join('');
       } catch (e) {
         console.error('Error loading reel logs:', e);
+      }
+    }
+
+
+    // --- YOUTUBE SHORTS AUTOMATION ---
+    async function loadYouTube() {
+      try {
+        const res = await safeFetchJson('/api/youtube/status');
+        const badge = document.getElementById('yt-connection-badge');
+        const pill = document.getElementById('yt-active-pill');
+        const titleEl = document.getElementById('yt-channel-title');
+        const handleEl = document.getElementById('yt-channel-handle');
+        const subEl = document.getElementById('yt-sub-count');
+        const vidEl = document.getElementById('yt-video-count');
+        const avatarEl = document.getElementById('yt-avatar');
+        const autoToggle = document.getElementById('yt-auto-toggle');
+        const clientIdInput = document.getElementById('yt-client-id');
+        const clientSecInput = document.getElementById('yt-client-secret');
+        const refreshInput = document.getElementById('yt-refresh-token');
+
+        if (res.ok && res.data) {
+          const d = res.data;
+          if (clientIdInput && d.clientId) clientIdInput.value = d.clientId;
+          if (autoToggle) autoToggle.checked = d.autoPost !== false;
+
+          if (d.hasClientSecret && clientSecInput && !clientSecInput.value) {
+            clientSecInput.placeholder = '•••••••••••••••• (Saved)';
+          }
+          if (d.hasRefreshToken && refreshInput && !refreshInput.value) {
+            refreshInput.placeholder = '•••••••••••••••• (Saved)';
+          }
+
+          if (d.isConfigured && d.channel) {
+            badge.innerText = 'Connected: ' + d.channel.title;
+            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40';
+            pill.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-glow-emerald';
+
+            if (titleEl) titleEl.innerText = d.channel.title;
+            if (handleEl) handleEl.innerText = d.channel.customUrl || '@' + d.channel.id;
+            if (subEl) subEl.innerText = Number(d.channel.subscriberCount || 0).toLocaleString();
+            if (vidEl) vidEl.innerText = Number(d.channel.videoCount || 0).toLocaleString();
+            if (avatarEl && d.channel.thumbnailUrl) avatarEl.src = d.channel.thumbnailUrl;
+          } else if (d.error) {
+            badge.innerText = 'OAuth Error';
+            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40';
+            pill.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+            if (titleEl) titleEl.innerText = 'Auth Failed: ' + d.error;
+          } else {
+            badge.innerText = 'Not Connected';
+            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40';
+            pill.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+          }
+        }
+        loadYouTubeLogs();
+      } catch (e) {
+        console.error('Error loading YouTube status:', e);
+      }
+    }
+
+    async function saveYouTubeSettings() {
+      try {
+        const clientId = document.getElementById('yt-client-id')?.value.trim();
+        const clientSecret = document.getElementById('yt-client-secret')?.value.trim();
+        const refreshToken = document.getElementById('yt-refresh-token')?.value.trim();
+        const autoPost = document.getElementById('yt-auto-toggle')?.checked;
+
+        const payload = { autoPost };
+        if (clientId) payload.clientId = clientId;
+        if (clientSecret) payload.clientSecret = clientSecret;
+        if (refreshToken) payload.refreshToken = refreshToken;
+
+        showToast('Saving YouTube settings & verifying credentials...');
+        const res = await safeFetchJson('/api/youtube/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok && res.data) {
+          if (res.data.channel) {
+            showToast('✓ YouTube Connected: ' + res.data.channel.title);
+          } else if (res.data.verifyError) {
+            showToast('Saved, but token verify note: ' + res.data.verifyError, true);
+          } else {
+            showToast('✓ YouTube settings saved successfully.');
+          }
+          loadYouTube();
+        } else {
+          showToast('Failed to save: ' + (res.data?.error || res.error || 'Server error'), true);
+        }
+      } catch (e) {
+        showToast('Error saving YouTube settings: ' + e.message, true);
+      }
+    }
+
+    async function triggerYouTubeUploadNow() {
+      const btn = document.getElementById('yt-upload-btn');
+      if (btn) btn.disabled = true;
+      try {
+        showToast('Rendering 15s MP4 reel & uploading to YouTube Shorts...');
+        const res = await safeFetchJson('/api/youtube/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        if (res.ok && res.data) {
+          showToast('✓ YouTube Short Uploaded! URL: ' + res.data.videoUrl);
+          loadYouTubeLogs();
+        } else {
+          showToast('YouTube upload failed: ' + (res.data?.error || res.error || 'Check credentials'), true);
+        }
+      } catch (e) {
+        showToast('Upload error: ' + e.message, true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function loadYouTubeLogs() {
+      try {
+        const tbody = document.getElementById('yt-table-body');
+        if (!tbody) return;
+        const res = await safeFetchJson('/api/youtube/logs?limit=30');
+        if (!res.ok || !res.data || !res.data.logs || res.data.logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">No YouTube Shorts uploads yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = res.data.logs.map(log => {
+          const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+          const isSuccess = log.status === 'success';
+          const isDryRun = log.status === 'dry_run';
+          const statusBadge = isSuccess
+            ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
+            : (isDryRun 
+                ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
+                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>');
+
+          const videoLink = log.ytVideoId && !log.ytVideoId.startsWith('dryrun')
+            ? '<a href="https://youtube.com/shorts/' + log.ytVideoId + '" target="_blank" class="text-red-400 hover:underline flex items-center gap-1 font-mono">' + log.ytVideoId + ' ↗</a>'
+            : (log.ytVideoId || 'N/A');
+
+          return '<tr class="hover:bg-slate-900/40 transition">' +
+            '<td class="py-3 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+            '<td class="py-3 pr-4">' + videoLink + '</td>' +
+            '<td class="py-3 pr-4 text-slate-400">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
+            '<td class="py-3 pr-4 text-slate-400">' + dateStr + '</td>' +
+            '<td class="py-3">' + statusBadge + '</td>' +
+            '</tr>';
+        }).join('');
+      } catch (e) {
+        console.error('Error loading YouTube logs:', e);
       }
     }
 
