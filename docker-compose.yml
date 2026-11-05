@@ -10,22 +10,23 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/news_automation}
-      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-news_automation}
+      - "MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/news_automation}"
+      - "MONGODB_DB_NAME=${MONGODB_DB_NAME:-news_automation}"
       - DATA_DIR=/app/data
       - ASSETS_DIR=/app/assets
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-ChangeMeImmediately123!}
-      - POLL_INTERVAL_CRON=${POLL_INTERVAL_CRON:-*/10 * * * *}
-      - MAX_ARTICLE_AGE_HOURS=${MAX_ARTICLE_AGE_HOURS:-24}
-      - MAX_POSTS_PER_HOUR=${MAX_POSTS_PER_HOUR:-10}
-      - MIN_DELAY_SECONDS=${MIN_DELAY_SECONDS:-30}
-      - MAX_DELAY_SECONDS=${MAX_DELAY_SECONDS:-60}
-      - DRY_RUN=${DRY_RUN:-false}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - DEFAULT_HASHTAGS=${DEFAULT_HASHTAGS:-#BreakingNews #Bangladesh #NewsUpdate}
-      - DEFAULT_CAPTION_FORMAT=${DEFAULT_CAPTION_FORMAT:-{headline}\n\n{summary}\n\n{hashtags}}
-      - DEFAULT_COMMENT_FORMAT=${DEFAULT_COMMENT_FORMAT:-বিস্তারিত পড়ুন: {url}}
+      - "ADMIN_USERNAME=${ADMIN_USERNAME:-Admin}"
+      - "ADMIN_PASSWORD=${ADMIN_PASSWORD:-SAROmyw4}"
+      - "POLL_INTERVAL_CRON=${POLL_INTERVAL_CRON:-*/10 * * * *}"
+      - "MAX_ARTICLE_AGE_HOURS=${MAX_ARTICLE_AGE_HOURS:-24}"
+      - "MAX_POSTS_PER_HOUR=${MAX_POSTS_PER_HOUR:-10}"
+      - "MIN_DELAY_SECONDS=${MIN_DELAY_SECONDS:-30}"
+      - "MAX_DELAY_SECONDS=${MAX_DELAY_SECONDS:-60}"
+      - "DRY_RUN=${DRY_RUN:-false}"
+      - "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}"
+      - "TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}"
+      - "DEFAULT_HASHTAGS=${DEFAULT_HASHTAGS:-#BreakingNews #Bangladesh #NewsUpdate}"
+      - 'DEFAULT_CAPTION_FORMAT=${DEFAULT_CAPTION_FORMAT:-{headline}\n\n{summary}\n\n{hashtags}}'
+      - "DEFAULT_COMMENT_FORMAT=${DEFAULT_COMMENT_FORMAT:-বিস্তারিত পড়ুন: {url}}"
     volumes:
       - ./data:/app/data
     healthcheck:
