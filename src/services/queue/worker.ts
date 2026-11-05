@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import { getDatabase, isMongoConnected } from '../../db/index.js';
-import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog } from '../../db/schema.js';
+import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, Setting } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
+import { ReelVideoRenderer } from '../renderer/reel.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
 import { config } from '../../config/env.js';
@@ -12,6 +13,7 @@ export class QueueWorker {
   private queue: PersistentJobQueue;
   private renderer: PlaywrightImageRenderer;
   private canvasRenderer: CanvasCardRenderer;
+  private reelRenderer: ReelVideoRenderer;
   private fbClient: FacebookGraphClient;
   private alertService: TelegramAlertService;
   private isRunning: boolean = false;
@@ -21,6 +23,7 @@ export class QueueWorker {
     this.queue = new PersistentJobQueue();
     this.renderer = new PlaywrightImageRenderer();
     this.canvasRenderer = new CanvasCardRenderer();
+    this.reelRenderer = new ReelVideoRenderer();
     this.fbClient = new FacebookGraphClient();
     this.alertService = new TelegramAlertService();
   }
@@ -238,6 +241,49 @@ export class QueueWorker {
         await this.autoShareToRelevantGroups(page, article, postId);
       } catch (groupShareErr: any) {
         console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
+      }
+
+      // 8. Auto Create & Publish Facebook Reel (if enabled in settings or job payload)
+      try {
+        const autoReelSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
+        const shouldPostReel =
+          autoReelSetting?.value === 'true' || autoReelSetting?.value === '1' || Boolean(job.payload?.postReel);
+
+        if (shouldPostReel) {
+          console.log(`[QueueWorker] Generating and publishing MP4 Reel for article "${article.title}"...`);
+          const reelBuffer = await this.reelRenderer.renderReel({
+            headline: article.title,
+            category: article.category || 'বিশেষ খবর',
+            imageUrl: article.imageUrl || undefined,
+            durationSeconds: 8,
+            fps: 20,
+          });
+
+          const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
+            page._id,
+            page.accessToken,
+            reelBuffer,
+            caption,
+            article.title,
+            config.DRY_RUN
+          );
+
+          await db.collection<ReelLog>('reel_logs').insertOne({
+            _id: crypto.randomUUID(),
+            articleId: article._id,
+            articleTitle: article.title,
+            pageId: page._id,
+            pageName: page.name,
+            fbVideoId: reelVideoId,
+            fbPostId: reelPostId,
+            durationMs: Date.now() - startTime,
+            status: config.DRY_RUN ? 'dry_run' : 'success',
+            createdAt: new Date(),
+          });
+          console.log(`✓ [QueueWorker] MP4 Reel published successfully! Reel ID: ${reelVideoId}`);
+        }
+      } catch (reelErr: any) {
+        console.warn(`[QueueWorker] Reel generation or publish encountered an error: ${reelErr.message}`);
       }
     } catch (err: any) {
       const durationMs = Date.now() - startTime;
@@ -500,5 +546,70 @@ export class QueueWorker {
     }
 
     return false;
+  }
+
+  /**
+   * Manually triggers rendering and publishing of an MP4 Reel for a specific news article
+   */
+  public async publishReelForArticle(
+    articleId: string,
+    targetPageId?: string
+  ): Promise<{ success: boolean; videoId?: string; postId?: string; error?: string }> {
+    const db = getDatabase();
+    const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
+    if (!article) {
+      throw new Error(`Article ${articleId} not found`);
+    }
+
+    let page: FacebookPage | null = null;
+    if (targetPageId) {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: targetPageId });
+    }
+    if (!page) {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    }
+    if (!page) {
+      throw new Error('No active Facebook Page found');
+    }
+
+    const startTime = Date.now();
+    const reelBuffer = await this.reelRenderer.renderReel({
+      headline: article.title,
+      category: article.category || 'বিশেষ খবর',
+      imageUrl: article.imageUrl || undefined,
+      durationSeconds: 8,
+      fps: 20,
+    });
+
+    const caption = this.fbClient.formatCaption(
+      article.title,
+      article.description || '',
+      config.DEFAULT_HASHTAGS,
+      config.DEFAULT_CAPTION_FORMAT
+    );
+
+    const { videoId, postId } = await this.fbClient.publishReel(
+      page._id,
+      page.accessToken,
+      reelBuffer,
+      caption,
+      article.title,
+      config.DRY_RUN
+    );
+
+    await db.collection<ReelLog>('reel_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: article._id,
+      articleTitle: article.title,
+      pageId: page._id,
+      pageName: page.name,
+      fbVideoId: videoId,
+      fbPostId: postId,
+      durationMs: Date.now() - startTime,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    return { success: true, videoId, postId };
   }
 }

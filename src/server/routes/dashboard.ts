@@ -258,6 +258,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         <span>Groups (গ্রুপ শেয়ার)</span>
       </button>
+      <button onclick="switchTab('reels')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        <span>🎬 Reels (রিলস)</span>
+      </button>
       <button onclick="switchTab('preview')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
         Template Preview
@@ -783,7 +787,203 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       </div>
     </div>
 
-    <!-- 6. SETTINGS TAB -->
+    <!-- 6. REELS TAB (1080x1080 MP4 News Reels Studio) -->
+    <div id="tab-reels" class="tab-content hidden space-y-8">
+      
+      <!-- Top Banner & Quick Controls -->
+      <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-rose-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1 relative z-10">
+          <div class="flex items-center gap-2.5">
+            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-rose-950/80 text-rose-400 border border-rose-800/60 uppercase">HD 1080x1080 • 20 FPS • AAC Audio</span>
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          </div>
+          <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <span>🎬 BD News 24/7 Reels Studio</span>
+            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(টেলিভিশন স্টুডিও গ্রেড রিলস)</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+            ক্যানভা স্টাইল এইচডি মোশন ভিডিও রিল জেনারেটর — কেন বার্নস জুম ইফেক্ট, লাইভ ব্রেকিং ব্যাজ, স্পষ্ট বাংলা হেডলাইন এবং অফিশিয়াল ব্রডকাস্ট নিউজ থিম মিউজিক সহ ফেসবুক পেজে ও রিলে সরাসরি পোস্ট।
+          </p>
+        </div>
+
+        <!-- Auto-Post Reels Toggle Card -->
+        <div class="w-full md:w-auto flex-shrink-0 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
+          <div class="text-left">
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>Auto-Publish Reels</span>
+              <span id="reels-auto-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400">OFF</span>
+            </div>
+            <div class="text-[11px] text-slate-400">প্রতিটি নিউজের সাথে রিল পোস্ট</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="toggle-auto-reels" onchange="handleAutoReelsToggle(this.checked)" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-rose-400">Total Published Reels</div>
+          <div id="stat-reels-count" class="text-2xl font-black text-white mt-1">0</div>
+          <div class="text-[11px] text-slate-500 mt-1">Facebook Reels posted</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-cyan-400">Video Resolution</div>
+          <div class="text-2xl font-black text-cyan-400 mt-1">1080 × 1080</div>
+          <div class="text-[11px] text-slate-500 mt-1">1:1 Square (Feed & Reel)</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-amber-400">Audio Soundtrack</div>
+          <div class="text-2xl font-black text-amber-400 mt-1">Studio AAC</div>
+          <div class="text-[11px] text-slate-500 mt-1">TV Broadcast Theme Jingle</div>
+        </div>
+        <div class="glass-panel p-5 rounded-xl border border-slate-800">
+          <div class="text-xs font-mono uppercase text-emerald-400">Typography & Effects</div>
+          <div class="text-2xl font-black text-emerald-400 mt-1">Hind Siliguri</div>
+          <div class="text-[11px] text-slate-500 mt-1">Auto-wrap + Ken Burns Zoom</div>
+        </div>
+      </div>
+
+      <!-- 3D Interactive Reel Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Controls & Input Form -->
+        <div class="lg:col-span-6 glass-panel p-6 sm:p-7 rounded-2xl space-y-5 border border-slate-800/80">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold">🎬</div>
+              <h3 class="text-base font-bold text-white">Reel Generator & Publisher</h3>
+            </div>
+            <span class="text-xs font-mono text-slate-500">Live Meta Graph API</span>
+          </div>
+
+          <!-- Select Article from Database -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Select From Recent Articles</label>
+            <select id="reel-article-select" onchange="onReelArticleSelected()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+              <option value="">-- Choose an article or type custom below --</option>
+            </select>
+          </div>
+
+          <!-- Category Badge -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Category Badge (ক্যাটেগরি)</label>
+            <input type="text" id="reel-category-input" value="বিশেষ খবর" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
+          </div>
+
+          <!-- Bengali Headline -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Bengali Headline (বাংলা শিরোনাম) <span class="text-rose-400">*</span></label>
+            <textarea id="reel-headline-input" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+          </div>
+
+          <!-- Image URL -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Article Image URL (Optional)</label>
+            <input type="url" id="reel-image-input" placeholder="https://... (Leave empty to use studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+          </div>
+
+          <!-- Target Facebook Page -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Target Facebook Page</label>
+            <select id="reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+              <option value="all">Active Default Page (BD News 24/7)</option>
+            </select>
+          </div>
+
+          <!-- Actions -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-md">
+              <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Generate & Preview</span>
+            </button>
+            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-3 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-glow-red transition active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span>Publish Reel Now</span>
+            </button>
+          </div>
+
+          <div id="reel-action-status" class="text-xs font-mono text-slate-400 text-center hidden"></div>
+        </div>
+
+        <!-- 3D Video Player Showcase -->
+        <div class="lg:col-span-6 glass-panel p-6 sm:p-7 rounded-2xl flex flex-col items-center justify-center border border-slate-800/80">
+          <div class="flex items-center justify-between w-full mb-4">
+            <span class="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+              Studio Video Player (1080x1080)
+            </span>
+            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">8s • 20fps • AAC</span>
+          </div>
+
+          <div class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group">
+            
+            <!-- Video Element -->
+            <video id="reel-video-player" controls playsinline loop class="w-full h-full object-contain bg-black hidden"></video>
+
+            <!-- Placeholder -->
+            <div id="reel-player-placeholder" class="text-center p-6 space-y-3">
+              <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-3xl shadow-glow-red">
+                🎬
+              </div>
+              <p class="text-sm font-semibold text-slate-200">No Reel Generated Yet</p>
+              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a 1080x1080 broadcast MP4 reel with Bengali typography and audio.</p>
+            </div>
+
+            <!-- Spinner Overlay -->
+            <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
+              <div class="w-10 h-10 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 160 frames with Skia & FFmpeg...</p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between w-full max-w-[420px] text-xs font-mono text-slate-400">
+            <span>Broadcast News Theme AAC</span>
+            <a id="reel-download-link" href="#" target="_blank" class="text-rose-400 hover:text-rose-300 underline hidden">Direct MP4 Download</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Recent Reels History Table -->
+      <div class="glass-panel rounded-2xl p-6 space-y-4 border border-slate-800/80">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="text-base">📋</span>
+            <span>Recent Facebook Reels History (সর্বশেষ প্রকাশিত রিলস)</span>
+          </h3>
+          <button onclick="loadReelLogs()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh Logs
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="pb-3 font-semibold">Article Headline</th>
+                <th class="pb-3 font-semibold">Target Page</th>
+                <th class="pb-3 font-semibold">FB Reel / Video ID</th>
+                <th class="pb-3 font-semibold">Render Time</th>
+                <th class="pb-3 font-semibold">Published At</th>
+                <th class="pb-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="reels-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="6" class="py-6 text-center text-slate-500">Loading reels history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 7. SETTINGS TAB -->
     <div id="tab-settings" class="tab-content hidden space-y-6">
       <div class="glass-panel p-6 sm:p-8 rounded-2xl max-w-3xl">
         <div class="flex items-center gap-2.5 mb-6">
@@ -1038,6 +1238,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'sources') loadSources();
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
+      if (tabId === 'reels') loadReels();
       if (tabId === 'settings') loadSettings();
     }
 
@@ -1711,6 +1912,260 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Pipeline configuration saved successfully!');
       } else {
         showToast(d.error || 'Failed to save settings', true);
+      }
+    }
+
+    // --- 7. FACEBOOK REELS STUDIO ---
+    let cachedReelArticles = [];
+
+    async function loadReels() {
+      try {
+        loadReelSettings();
+        loadReelArticles();
+        loadReelPages();
+        loadReelLogs();
+      } catch (e) {
+        console.error('Error loading reels tab:', e);
+      }
+    }
+
+    async function loadReelSettings() {
+      try {
+        const res = await safeFetchJson('/api/reels/settings');
+        if (res.ok && res.data) {
+          const auto = Boolean(res.data.autoPostReels);
+          const toggle = document.getElementById('toggle-auto-reels');
+          const badge = document.getElementById('reels-auto-badge');
+          if (toggle) toggle.checked = auto;
+          if (badge) {
+            badge.innerText = auto ? 'ACTIVE' : 'OFF';
+            badge.className = auto 
+              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800' 
+              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function handleAutoReelsToggle(checked) {
+      try {
+        const res = await safeFetchJson('/api/reels/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ autoPostReels: checked })
+        });
+        if (res.ok) {
+          showToast(checked ? '✓ Auto-Reels enabled on new posts' : 'Auto-Reels disabled');
+          loadReelSettings();
+        } else {
+          showToast('Failed to update Auto-Reels setting', true);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      }
+    }
+
+    async function loadReelArticles() {
+      try {
+        const res = await safeFetchJson('/api/queue');
+        const select = document.getElementById('reel-article-select');
+        if (!select) return;
+
+        let items = [];
+        if (res.ok && res.data) {
+          items = (res.data.pendingJobs || []).concat(res.data.recentLogs || []);
+        }
+
+        cachedReelArticles = items;
+        select.innerHTML = '<option value="">-- Choose an article or type custom below --</option>';
+
+        items.slice(0, 30).forEach((item, idx) => {
+          const title = item.articleTitle || item.payload?.articleTitle || item.title || ('Article #' + (idx + 1));
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = title.length > 70 ? title.substring(0, 70) + '...' : title;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function onReelArticleSelected() {
+      const select = document.getElementById('reel-article-select');
+      const idx = select.value;
+      if (idx === '' || !cachedReelArticles[idx]) return;
+
+      const item = cachedReelArticles[idx];
+      const title = item.articleTitle || item.payload?.articleTitle || item.title || '';
+      const category = item.category || item.payload?.category || 'বিশেষ খবর';
+      const img = item.imageUrl || item.payload?.imageUrl || '';
+
+      if (title) document.getElementById('reel-headline-input').value = title;
+      if (category) document.getElementById('reel-category-input').value = category;
+      if (img) document.getElementById('reel-image-input').value = img;
+    }
+
+    async function loadReelPages() {
+      try {
+        const res = await safeFetchJson('/api/pages');
+        const select = document.getElementById('reel-page-select');
+        if (!select || !res.ok || !res.data) return;
+
+        select.innerHTML = '<option value="all">Active Default Page (BD News 24/7)</option>';
+        res.data.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p._id;
+          opt.textContent = p.name + ' (' + p._id + ')';
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function renderReelPreview() {
+      const headline = document.getElementById('reel-headline-input').value.trim();
+      const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
+      const imageUrl = document.getElementById('reel-image-input').value.trim();
+
+      if (!headline) {
+        showToast('Please enter a Bengali headline', true);
+        return;
+      }
+
+      const video = document.getElementById('reel-video-player');
+      const placeholder = document.getElementById('reel-player-placeholder');
+      const spinner = document.getElementById('reel-player-spinner');
+      const downloadLink = document.getElementById('reel-download-link');
+      const statusEl = document.getElementById('reel-action-status');
+
+      spinner.classList.remove('hidden');
+      statusEl.classList.remove('hidden');
+      statusEl.innerText = 'Rendering 1080x1080 MP4 news reel... This takes ~10 seconds.';
+
+      const params = new URLSearchParams({
+        headline: headline,
+        category: category,
+      });
+      if (imageUrl) params.append('imageUrl', imageUrl);
+
+      const streamUrl = '/api/reels/preview.mp4?' + params.toString();
+
+      try {
+        video.src = streamUrl;
+        video.load();
+
+        video.onloadeddata = () => {
+          spinner.classList.add('hidden');
+          placeholder.classList.add('hidden');
+          video.classList.remove('hidden');
+          video.play().catch(() => {});
+          downloadLink.href = streamUrl;
+          downloadLink.classList.remove('hidden');
+          statusEl.innerText = '✓ Reel rendered successfully! Playing in studio player.';
+          showToast('✓ 1080x1080 MP4 Reel rendered successfully!');
+        };
+
+        video.onerror = () => {
+          spinner.classList.add('hidden');
+          statusEl.innerText = 'Failed to load video stream.';
+          showToast('Failed to load video stream', true);
+        };
+      } catch (e) {
+        spinner.classList.add('hidden');
+        showToast('Error: ' + e.message, true);
+      }
+    }
+
+    async function publishReelNow() {
+      const headline = document.getElementById('reel-headline-input').value.trim();
+      const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
+      const imageUrl = document.getElementById('reel-image-input').value.trim();
+      const pageId = document.getElementById('reel-page-select').value;
+
+      if (!headline) {
+        showToast('Please enter a Bengali headline', true);
+        return;
+      }
+
+      const statusEl = document.getElementById('reel-action-status');
+      const spinner = document.getElementById('reel-player-spinner');
+      const btn = document.getElementById('btn-publish-reel');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      spinner.classList.remove('hidden');
+      document.getElementById('reel-spinner-text').innerText = 'Generating MP4 & publishing to Facebook Reels...';
+      statusEl.classList.remove('hidden');
+      statusEl.innerText = 'Rendering MP4 and uploading to Facebook Graph API...';
+
+      try {
+        const res = await safeFetchJson('/api/reels/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ headline, category, imageUrl, pageId })
+        });
+
+        if (res.ok && res.data && res.data.success) {
+          showToast('✓ Successfully published Reel to ' + (res.data.pageName || 'Facebook') + '!');
+          statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
+          loadReelLogs();
+        } else {
+          showToast('Publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
+          statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
+        }
+      } catch (e) {
+        showToast('Error publishing reel: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        spinner.classList.add('hidden');
+      }
+    }
+
+    async function loadReelLogs() {
+      try {
+        const res = await safeFetchJson('/api/reels/logs?limit=25');
+        const tbody = document.getElementById('reels-table-body');
+        const statCount = document.getElementById('stat-reels-count');
+        if (!tbody) return;
+
+        if (!res.ok || !res.data || res.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
+          if (statCount) statCount.innerText = '0';
+          return;
+        }
+
+        if (statCount) statCount.innerText = res.data.length;
+
+        tbody.innerHTML = res.data.map(log => {
+          const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+          const isSuccess = log.status === 'success';
+          const isDryRun = log.status === 'dry_run';
+          const statusBadge = isSuccess
+            ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
+            : (isDryRun 
+                ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
+                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>');
+
+          const videoLink = log.fbVideoId && !log.fbVideoId.startsWith('dryrun')
+            ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
+            : (log.fbVideoId || 'N/A');
+
+          return '<tr class="hover:bg-slate-900/40 transition">' +
+            '<td class="py-3 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+            '<td class="py-3 pr-4 text-slate-400">' + (log.pageName || 'BD News 24/7') + '</td>' +
+            '<td class="py-3 pr-4">' + videoLink + '</td>' +
+            '<td class="py-3 pr-4 text-slate-400">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
+            '<td class="py-3 pr-4 text-slate-400">' + dateStr + '</td>' +
+            '<td class="py-3">' + statusBadge + '</td>' +
+            '</tr>';
+        }).join('');
+      } catch (e) {
+        console.error('Error loading reel logs:', e);
       }
     }
 

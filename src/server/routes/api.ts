@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
 import { CanvasCardRenderer } from '../../services/renderer/canvas.js';
+import { ReelVideoRenderer } from '../../services/renderer/reel.js';
 import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
@@ -17,6 +18,7 @@ const queue = new PersistentJobQueue();
 const worker = new QueueWorker();
 const renderer = new PlaywrightImageRenderer();
 const canvasRenderer = new CanvasCardRenderer();
+const reelRenderer = new ReelVideoRenderer();
 const dedupeService = new ArticleDedupeService();
 
 // 1. Dashboard Overview Stats
@@ -32,6 +34,9 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const groupSharesCount = await db.collection('group_share_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
+    const reelsCount = await db.collection('reel_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
+    });
     const successfulPosts = await db.collection('post_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
@@ -43,6 +48,7 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
       sourcesCount,
       groupsCount,
       groupSharesCount,
+      reelsCount,
       successfulPosts,
       dryRun: config.DRY_RUN,
     });
@@ -483,6 +489,185 @@ apiRouter.post('/groups/:id/test-share', async (req: Request, res: Response) => 
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, classification: (err as any).classification });
+  }
+});
+
+// ==============================================================================
+// 3.8. Facebook Reels (Create & Publish MP4 Reels)
+// ==============================================================================
+apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
+  try {
+    const headline =
+      (req.query.headline as string) ||
+      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+    const category = (req.query.category as string) || 'বিশেষ খবর';
+    const imageUrl = req.query.imageUrl as string | undefined;
+
+    const videoBuffer = await reelRenderer.renderReel({
+      headline,
+      category,
+      imageUrl,
+      durationSeconds: 8,
+      fps: 20,
+    });
+
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Length', videoBuffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(videoBuffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
+  try {
+    const { articleId, headline, category, imageUrl, pageId } = req.body;
+    const db = getDatabase();
+
+    let targetHeadline = headline;
+    let targetCategory = category || 'বিশেষ খবর';
+    let targetImageUrl = imageUrl;
+    let finalArticleId = articleId;
+
+    if (articleId) {
+      const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
+      if (art) {
+        targetHeadline = targetHeadline || art.title;
+        targetCategory = targetCategory || art.category || 'বিশেষ খবর';
+        targetImageUrl = targetImageUrl || art.imageUrl;
+      }
+    } else {
+      const latestArt = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1 } });
+      if (latestArt) {
+        targetHeadline = targetHeadline || latestArt.title;
+        targetCategory = targetCategory || latestArt.category || 'বিশেষ খবর';
+        targetImageUrl = targetImageUrl || latestArt.imageUrl;
+        finalArticleId = latestArt._id;
+      }
+    }
+
+    if (!targetHeadline) {
+      res.status(400).json({ error: 'Headline is required to generate Reel' });
+      return;
+    }
+
+    // Determine target page
+    let page: FacebookPage | null = null;
+    if (pageId && pageId !== 'all') {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: pageId });
+    }
+    if (!page) {
+      page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    }
+    if (!page) {
+      res.status(400).json({ error: 'No active Facebook Page found to publish Reel to' });
+      return;
+    }
+
+    console.log(`[Reels API] Rendering 1080x1080 MP4 Reel for "${targetHeadline}"...`);
+    const startTime = Date.now();
+    const reelBuffer = await reelRenderer.renderReel({
+      headline: targetHeadline,
+      category: targetCategory,
+      imageUrl: targetImageUrl || undefined,
+      durationSeconds: 8,
+      fps: 20,
+    });
+
+    const fbClient = new FacebookGraphClient();
+    const caption = fbClient.formatCaption(
+      targetHeadline,
+      '',
+      config.DEFAULT_HASHTAGS + ' #Reels #FBReels #ViralNews #Bangladesh',
+      config.DEFAULT_CAPTION_FORMAT
+    );
+
+    console.log(`[Reels API] Publishing Reel to Facebook Page ${page.name} (${page._id})...`);
+    const { videoId, postId } = await fbClient.publishReel(
+      page._id,
+      page.accessToken,
+      reelBuffer,
+      caption,
+      targetHeadline,
+      config.DRY_RUN
+    );
+
+    const durationMs = Date.now() - startTime;
+
+    // Record log
+    await db.collection<ReelLog>('reel_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: finalArticleId || null,
+      articleTitle: targetHeadline,
+      pageId: page._id,
+      pageName: page.name,
+      fbVideoId: videoId,
+      fbPostId: postId,
+      durationMs,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      videoId,
+      postId,
+      pageName: page.name,
+      durationMs,
+      headline: targetHeadline,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/reels/logs', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const logs = await db
+      .collection<ReelLog>('reel_logs')
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const autoReel = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
+    res.json({
+      autoPostReels: autoReel?.value === 'true' || autoReel?.value === '1',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
+  try {
+    const { autoPostReels } = req.body;
+    const db = getDatabase();
+    await db.collection<Setting>('settings').updateOne(
+      { _id: 'AUTO_POST_REELS' },
+      {
+        $set: {
+          value: Boolean(autoPostReels) ? 'true' : 'false',
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+    res.json({ success: true, autoPostReels: Boolean(autoPostReels) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

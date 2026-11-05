@@ -75,9 +75,25 @@ export interface PostLog {
   fbPhotoId?: string | null;
   fbPostId?: string | null;
   fbCommentId?: string | null;
+  fbReelId?: string | null;
   renderedImagePath?: string | null;
+  renderedVideoPath?: string | null;
   caption?: string | null;
   comment?: string | null;
+  durationMs?: number | null;
+  status: 'success' | 'failed' | 'dry_run';
+  errorMessage?: string | null;
+  createdAt: Date;
+}
+
+export interface ReelLog {
+  _id: string;
+  articleId?: string | null;
+  articleTitle: string;
+  pageId: string;
+  pageName: string;
+  fbVideoId: string;
+  fbPostId: string;
   durationMs?: number | null;
   status: 'success' | 'failed' | 'dry_run';
   errorMessage?: string | null;
