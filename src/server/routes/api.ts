@@ -1410,9 +1410,15 @@ apiRouter.get('/youtube/auth/url', async (req: Request, res: Response) => {
 
 apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
   try {
+    const errorParam = req.query.error as string;
+    if (errorParam) {
+      console.warn('[YouTube OAuth Callback] Google returned error:', errorParam);
+      return res.redirect(`/?tab=youtube&auth_error=${encodeURIComponent(errorParam)}`);
+    }
+
     const code = req.query.code as string;
     if (!code) {
-      return res.status(400).send('Authorization code is missing from Google callback.');
+      return res.redirect('/?tab=youtube&auth_error=missing_code');
     }
 
     const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
@@ -1424,7 +1430,8 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
 
     res.redirect('/?tab=youtube&auth=success');
   } catch (err: any) {
-    res.status(500).send(`YouTube Authentication Failed: ${err.message}`);
+    console.error('[YouTube OAuth Callback] Exchange error:', err.message);
+    res.redirect(`/?tab=youtube&auth_error=${encodeURIComponent(err.message)}`);
   }
 });
 

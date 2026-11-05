@@ -2790,6 +2790,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (urlParams.get('auth') === 'success') {
         setTimeout(() => showToast('🎉 YouTube Channel Successfully Connected!'), 500);
       }
+      if (urlParams.get('auth_error')) {
+        setTimeout(() => showToast('Google Auth Note: ' + decodeURIComponent(urlParams.get('auth_error')), true), 500);
+      }
     }
   </script>
 </body>
