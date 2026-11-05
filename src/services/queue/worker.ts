@@ -263,8 +263,8 @@ export class QueueWorker {
    * Applies random 30-60s delay between posts to prevent anti-spam rate flags.
    */
   private async applyPostingJitter(): Promise<void> {
-    if (config.DRY_RUN || process.env.NODE_ENV === 'test') {
-      await new Promise((r) => setTimeout(r, 200));
+    if (config.DRY_RUN || process.env.NODE_ENV === 'test' || process.env.VERCEL) {
+      await new Promise((r) => setTimeout(r, 1000));
       return;
     }
 
