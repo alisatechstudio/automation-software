@@ -46,7 +46,18 @@ async function testRenderer() {
 
     console.log(`✓ Result 3 rendered: ${result3.outputPath} (${result3.width}x${result3.height}), size: ${result3.imageBuffer.length} bytes`);
 
-    console.log('\n=== PHASE 2 COMPLETE: ALL 3 TEMPLATES RENDERED PERFECTLY ===');
+    // Test 4: BD News 24/7 Canva Replica Template (1080x1080)
+    console.log('\n4. Rendering BD News 24/7 Red (Canva Replica) (1080x1080)...');
+    const result4 = await renderer.render({
+      templateId: TEMPLATES.CANVA_BDNEWS,
+      headline: '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি',
+      category: 'বিশেষ খবর',
+      imageUrl: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=1080&q=80',
+    });
+
+    console.log(`✓ Result 4 rendered: ${result4.outputPath} (${result4.width}x${result4.height}), size: ${result4.imageBuffer.length} bytes`);
+
+    console.log('\n=== PHASE 2 COMPLETE: ALL 4 TEMPLATES RENDERED PERFECTLY ===');
   } finally {
     await renderer.close();
   }

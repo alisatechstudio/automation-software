@@ -1,6 +1,7 @@
 import path from 'path';
 
 export const TEMPLATES = {
+  CANVA_BDNEWS: 'template-canva-bdnews',
   SQUARE_BREAKING: 'template-square-breaking',
   SQUARE_EDITORIAL: 'template-square-editorial',
   LANDSCAPE_STANDARD: 'template-landscape-standard',
@@ -16,6 +17,14 @@ export interface TemplateDefinition {
 }
 
 export const AVAILABLE_TEMPLATES: Record<string, TemplateDefinition> = {
+  'template-canva-bdnews': {
+    id: 'template-canva-bdnews',
+    name: 'BD News 24/7 Red (Canva Replica)',
+    description: 'Exact replica of BD News 24/7 Canva design: framed photo, circular logo, red headline card, and ribbon',
+    width: 1080,
+    height: 1080,
+    filename: 'template-canva-bdnews.html',
+  },
   'template-square-breaking': {
     id: 'template-square-breaking',
     name: 'Square Breaking News (1080x1080)',

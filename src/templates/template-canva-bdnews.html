@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <title>BD News 24/7 Canva Template</title>
+  <style>
+    @font-face {
+      font-family: 'Hind Siliguri';
+      src: url('{{{fontHindSiliguriBold}}}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Noto Sans Bengali';
+      src: url('{{{fontNotoSansBengali}}}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #7d0202 0%, #4d0000 55%, #250000 100%);
+      font-family: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 30px 45px 35px 45px;
+    }
+
+    /* Ambient smoky vignette overlay */
+    .bg-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1080px;
+      pointer-events: none;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(0,0,0,0.5) 0%, transparent 60%),
+        radial-gradient(circle at 80% 20%, rgba(0,0,0,0.4) 0%, transparent 50%),
+        linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
+      z-index: 1;
+    }
+
+    .main-container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Top Category Badge */
+    .top-badge-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .top-badge {
+      background: #ffffff;
+      color: #8b0000;
+      padding: 6px 38px;
+      border-radius: 20px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    /* News Photo Frame */
+    .photo-frame {
+      width: 990px;
+      height: 410px;
+      border: 6px solid #ffffff;
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      background: #111;
+      position: relative;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Brand Header with Logo and Bengali Channel Name */
+    .brand-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin: 12px 0;
+    }
+
+    .brand-logo-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #0f172a;
+      border: 3px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .brand-logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .brand-name {
+      color: #ffffff;
+      font-size: 44px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+    }
+
+    /* White Headline Card */
+    .headline-card {
+      width: 990px;
+      height: 290px;
+      background: #ffffff;
+      border-radius: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 44px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .headline-text {
+      width: 100%;
+      color: #a00000;
+      font-family: 'Hind Siliguri', sans-serif;
+      font-weight: 700;
+      font-size: 54px;
+      line-height: 1.35;
+      text-align: center;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* Bottom Footer Bar */
+    .footer-bar {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .follow-pill {
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 24px;
+      border-radius: 22px;
+      color: #e2e8f0;
+      font-size: 20px;
+      font-family: 'Noto Sans Bengali', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .follow-pill span.website {
+      color: #f8fafc;
+      font-weight: 600;
+      font-family: sans-serif;
+    }
+
+    /* Right Silver Ribbon */
+    .ribbon-badge {
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+      color: #0f172a;
+      padding: 10px 26px 10px 36px;
+      font-size: 22px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      clip-path: polygon(18px 0%, 100% 0%, 100% 100%, 18px 100%, 0% 50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-overlay"></div>
+
+  <div class="main-container">
+    <!-- Top Category Pill -->
+    <div class="top-badge-container">
+      <div class="top-badge">{{#if category}}{{category}}{{else}}বিশেষ খবর{{/if}}</div>
+    </div>
+
+    <!-- News Photo with thick white border -->
+    <div class="photo-frame">
+      <img src="{{{imageUrl}}}" alt="News Photo" onerror="this.src='{{{fallbackImage}}}';" />
+    </div>
+
+    <!-- Brand Header -->
+    <div class="brand-bar">
+      <div class="brand-logo-circle">
+        {{#if logoUrl}}
+          <img src="{{{logoUrl}}}" alt="Logo" />
+        {{else}}
+          <!-- Default SVG BD NEWS 24/7 Logo -->
+          <svg viewBox="0 0 100 100" width="100%" height="100%">
+            <circle cx="50" cy="50" r="48" fill="#0f172a" />
+            <circle cx="50" cy="50" r="40" fill="#1e293b" stroke="#e11d48" stroke-width="2" />
+            <path d="M50 24 L50 44 M42 32 L58 32" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+            <text x="50" y="62" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle" font-family="sans-serif">BD NEWS</text>
+            <text x="50" y="76" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle" font-family="sans-serif">24/7</text>
+          </svg>
+        {{/if}}
+      </div>
+      <div class="brand-name">বিডি নিউজ ২৪/৭</div>
+    </div>
+
+    <!-- White Headline Box with Auto-Fitting Text -->
+    <div class="headline-card" id="headline-container">
+      <h1 class="headline-text" id="headline-text">{{headline}}</h1>
+    </div>
+
+    <!-- Bottom Footer Elements -->
+    <div class="footer-bar">
+      <div class="follow-pill">
+        Follow us on : &nbsp;<span class="website">https://bdnews.site</span>
+      </div>
+      <div class="ribbon-badge">
+        বিস্তারিত কমেন্টে
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function autoFit() {
+      const container = document.getElementById('headline-container');
+      const text = document.getElementById('headline-text');
+      if (!container || !text) return;
+
+      let fontSize = 56;
+      const minFontSize = 24;
+      text.style.fontSize = fontSize + 'px';
+      text.style.lineHeight = (fontSize * 1.35) + 'px';
+
+      while (
+        (text.scrollHeight > (container.clientHeight - 20) || text.scrollWidth > (container.clientWidth - 20)) &&
+        fontSize > minFontSize
+      ) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        text.style.lineHeight = (fontSize * 1.35) + 'px';
+      }
+    }
+    autoFit();
+    window.addEventListener('load', autoFit);
+  </script>
+</body>
+</html>

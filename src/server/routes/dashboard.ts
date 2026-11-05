@@ -203,6 +203,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <div>
               <label class="block text-xs font-medium text-slate-400 mb-1">Template</label>
               <select id="source-template" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-red-500">
+                <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
                 <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
                 <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
                 <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
@@ -264,6 +265,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-1">Select Template</label>
             <select id="preview-template" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-red-500">
+              <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
               <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
               <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
               <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
