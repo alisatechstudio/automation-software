@@ -622,12 +622,11 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     });
 
     const fbClient = new FacebookGraphClient();
-    const caption = fbClient.formatCaption(
-      targetHeadline,
-      '',
-      config.DEFAULT_HASHTAGS + ' #Reels #FBReels #ViralNews #Bangladesh',
-      config.DEFAULT_CAPTION_FORMAT
-    );
+    
+    // Caption: ONLY hashtags (no headline, no summary)
+    const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+    const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+    const caption = (configuredHashtags + ' #Reels #FBReels #ViralNews #Bangladesh').trim();
 
     console.log(`[Reels API] Publishing ${durationSeconds}s Reel to Facebook Page ${page.name} (${page._id})...`);
     const { videoId, postId } = await fbClient.publishReel(
@@ -635,9 +634,29 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       page.accessToken,
       reelBuffer,
       caption,
-      targetHeadline,
+      undefined, // No title/headline in post metadata
       config.DRY_RUN
     );
+
+    // News URL in First Comment
+    let commentId: string | null = null;
+    let targetLink: string | null = null;
+    if (finalArticleId) {
+      const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: finalArticleId });
+      targetLink = art?.link || null;
+    }
+    if (targetLink && postId) {
+      try {
+        const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+        const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+        const commentText = fbClient.formatComment(targetLink, commentTemplate);
+        const commentRes = await fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
+        commentId = commentRes.commentId;
+        console.log(`✓ [Reels API] Added news link as first comment to Reel post ${postId}!`);
+      } catch (commentErr: any) {
+        console.warn(`[Reels API] Could not post first comment on Reel:`, commentErr.message);
+      }
+    }
 
     const durationMs = Date.now() - startTime;
 

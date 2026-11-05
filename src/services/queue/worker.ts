@@ -210,12 +210,10 @@ export class QueueWorker {
           fps: 20,
         });
 
-        const reelCaption = this.fbClient.formatCaption(
-          article.title,
-          article.description || '',
-          config.DEFAULT_HASHTAGS + ' #Reels #FBReels #Bangladesh #NewsUpdate',
-          config.DEFAULT_CAPTION_FORMAT
-        );
+        // Caption: ONLY hashtags (no headline and no summary, as requested)
+        const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+        const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+        const reelCaption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
 
         console.log(`[QueueWorker] Publishing ${reelDuration}s Reel to Facebook Page ${page.name}...`);
         const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
@@ -223,9 +221,31 @@ export class QueueWorker {
           page.accessToken,
           reelBuffer,
           reelCaption,
-          article.title,
+          undefined, // No headline in video metadata
           config.DRY_RUN
         );
+
+        // News URL as First Comment
+        let reelCommentId: string | null = null;
+        if (article.link && reelPostId) {
+          try {
+            console.log(`[QueueWorker] Adding news link as first comment to Reel post ${reelPostId}...`);
+            const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+            const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+            const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+
+            const { commentId } = await this.fbClient.publishComment(
+              reelPostId,
+              page.accessToken,
+              commentText,
+              config.DRY_RUN
+            );
+            reelCommentId = commentId;
+            console.log(`✓ [QueueWorker] First comment with news URL posted to Reel! (Comment ID: ${commentId})`);
+          } catch (commentErr: any) {
+            console.warn(`[QueueWorker] Could not post first comment on Reel:`, commentErr.message);
+          }
+        }
 
         const durationMs = Date.now() - startTime;
 
@@ -303,11 +323,13 @@ export class QueueWorker {
           articleId: article._id,
           pageId: page._id,
           fbPostId: reelPostId,
+          fbCommentId: reelCommentId,
           fbReelId: reelVideoId,
           fbVideoId: reelVideoId,
           fbStoryId: storyId,
           storyStatus: storyStatus,
           caption: reelCaption,
+          comment: article.link || null,
           durationMs,
           status: config.DRY_RUN ? 'dry_run' : 'success',
           createdAt: new Date(),
@@ -787,21 +809,32 @@ export class QueueWorker {
       fps: 20,
     });
 
-    const caption = this.fbClient.formatCaption(
-      article.title,
-      article.description || '',
-      config.DEFAULT_HASHTAGS,
-      config.DEFAULT_CAPTION_FORMAT
-    );
+    // Caption: ONLY hashtags (no headline, no summary)
+    const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+    const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+    const caption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
 
     const { videoId, postId } = await this.fbClient.publishReel(
       page._id,
       page.accessToken,
       reelBuffer,
       caption,
-      article.title,
+      undefined, // No title/headline in post metadata
       config.DRY_RUN
     );
+
+    // News URL in First Comment
+    if (article.link && postId) {
+      try {
+        const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+        const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+        const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+        await this.fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
+        console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${postId}!`);
+      } catch (cErr: any) {
+        console.warn(`[QueueWorker] Could not post first comment on Reel:`, cErr.message);
+      }
+    }
 
     await db.collection<ReelLog>('reel_logs').insertOne({
       _id: crypto.randomUUID(),
