@@ -44,6 +44,7 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     if (!this.browser || !this.browser.isConnected()) {
       this.browser = await chromium.launch({
         headless: true,
+        executablePath: process.env.CHROMIUM_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

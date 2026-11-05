@@ -1,11 +1,19 @@
 # ==============================================================================
 # Multi-stage Dockerfile for News-to-Facebook Automation Platform
-# Bundles Node.js, Playwright Chromium, and local Bengali typography engines
+# Node.js 22 + Headless Chromium + Local Bengali typography engines
 # ==============================================================================
 
-# Stage 1: Build TypeScript source
-FROM node:20-bookworm-slim AS builder
+# Stage 1: Build TypeScript source & compile native modules
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
+
+# Install build tools required for native C++ addons (better-sqlite3)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json tsconfig.json ./
 RUN npm ci
@@ -13,16 +21,18 @@ RUN npm ci
 COPY src/ ./src/
 RUN npm run build
 
+# Remove development dependencies so node_modules is lightweight and production-ready
+RUN npm prune --production
+
 # Stage 2: Production runtime with headless Chromium dependencies
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV CHROMIUM_PATH=/usr/bin/chromium
 
-# Install system dependencies required for headless Chromium & font rendering
+# Install Chromium and required font rendering libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-noto-core \
@@ -38,10 +48,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy production dependencies & built assets
+# Copy production node_modules from builder (no compilation needed in runner)
+COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
-RUN npm ci --only=production
-
 COPY --from=builder /app/dist ./dist
 COPY src/templates ./dist/templates
 COPY src/db/migrations ./dist/db/migrations
@@ -52,7 +61,5 @@ RUN mkdir -p /app/data/rendered
 
 EXPOSE 3000
 
-# Use dumb-init to properly handle PID 1 signals
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]
-
