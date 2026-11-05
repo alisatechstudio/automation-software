@@ -892,13 +892,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <span id="reel-theme-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
             </label>
             <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-semibold">
-              <option value="studio-red" selected>🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
+              <option value="rolling" selected>🔄 Rolling Rotation (অটো রোটেট - সব টেমপ্লেট ঘুরিয়ে ঘুরিয়ে)</option>
+              <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
               <option value="breaking-bold">⚡ Breaking News TV Flash (ব্রেকিং নিউজ টিভি এলার্ট - 1080x1080)</option>
               <option value="dark-cinema">🌐 Cinematic Dark Cyber (বিবিসি / রয়টার্স স্টাইল - 1080x1080)</option>
               <option value="viral-gradient">🔥 Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)</option>
               <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16 মোবাইল ফুলস্ক্রিন - 1080x1920)</option>
             </select>
-            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card</p>
+            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">Dynamic Round-Robin: Cycles through all 5 templates automatically on every post</p>
           </div>
 
           <!-- Category Badge -->
@@ -1003,6 +1004,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <tr class="border-b border-slate-800 text-slate-400">
                 <th class="pb-3 font-semibold">Article Headline</th>
                 <th class="pb-3 font-semibold">Target Page</th>
+                <th class="pb-3 font-semibold">Template</th>
                 <th class="pb-3 font-semibold">FB Reel / Video ID</th>
                 <th class="pb-3 font-semibold">Render Time</th>
                 <th class="pb-3 font-semibold">Published At</th>
@@ -1011,7 +1013,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </thead>
             <tbody id="reels-table-body" class="divide-y divide-slate-800/60 text-slate-300">
               <tr>
-                <td colspan="6" class="py-6 text-center text-slate-500">Loading reels history...</td>
+                <td colspan="7" class="py-6 text-center text-slate-500">Loading reels history...</td>
               </tr>
             </tbody>
           </table>
@@ -1955,6 +1957,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     // --- 7. FACEBOOK REELS STUDIO ---
     let cachedReelArticles = [];
     const reelThemeDescriptions = {
+      'rolling': 'Dynamic Round-Robin: Cycles through all 5 templates automatically on every post (studio-red → breaking-bold → dark-cinema → viral-gradient → vertical-916)',
       'studio-red': '1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card',
       'breaking-bold': '1080x1080 Square: High urgency TV alert, animated breaking ticker, bold red & black straps with gold accent',
       'dark-cinema': '1080x1080 Square: Premium obsidian & neon cyan aesthetic, widescreen photo, glowing glassmorphic card',
@@ -1982,7 +1985,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     function onReelThemeChanged() {
       const select = document.getElementById('reel-theme-select');
-      const theme = select ? select.value : 'studio-red';
+      const theme = select ? select.value : 'rolling';
       const descEl = document.getElementById('reel-theme-desc');
       const badgeEl = document.getElementById('reel-theme-badge');
       const playerBox = document.getElementById('reel-player-box');
@@ -1990,7 +1993,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       if (descEl) descEl.innerText = reelThemeDescriptions[theme] || '';
 
-      if (theme === 'vertical-916') {
+      if (theme === 'rolling') {
+        if (badgeEl) {
+          badgeEl.innerText = 'Auto Rolling';
+          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800';
+        }
+        if (playerBox) {
+          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
+        }
+        if (durBadge) durBadge.innerText = '15s • Rotating All 5 Templates';
+      } else if (theme === 'vertical-916') {
         if (badgeEl) {
           badgeEl.innerText = '9:16 Vertical';
           badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
@@ -2017,7 +2029,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const headline = document.getElementById('reel-headline-input')?.value.trim();
       const category = document.getElementById('reel-category-input')?.value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input')?.value.trim();
-      const theme = document.getElementById('reel-theme-select')?.value || 'studio-red';
+      const theme = document.getElementById('reel-theme-select')?.value || 'rolling';
 
       const frameImg = document.getElementById('reel-frame-img');
       const placeholder = document.getElementById('reel-player-placeholder');
@@ -2025,8 +2037,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       if (!frameImg) return;
 
+      const previewTheme = theme === 'rolling' ? 'studio-red' : theme;
       const params = new URLSearchParams({
-        theme: theme,
+        theme: previewTheme,
         category: category,
         headline: headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি'
       });
@@ -2295,12 +2308,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (!tbody) return;
 
         if (!res.ok || !res.data || res.data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
           if (statCount) statCount.innerText = '0';
           return;
         }
 
         if (statCount) statCount.innerText = res.data.length;
+
+        const themeLabels = {
+          'studio-red': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-300 border border-rose-800">Studio Red</span>',
+          'breaking-bold': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800">Breaking Flash</span>',
+          'dark-cinema': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">Dark Cyber</span>',
+          'viral-gradient': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-800">Viral Mesh</span>',
+          'vertical-916': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800">9:16 Vertical</span>',
+        };
 
         tbody.innerHTML = res.data.map(log => {
           const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
@@ -2316,9 +2337,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
             : (log.fbVideoId || 'N/A');
 
+          const themeBadge = log.theme && themeLabels[log.theme] ? themeLabels[log.theme] : '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-400">Standard</span>';
+
           return '<tr class="hover:bg-slate-900/40 transition">' +
             '<td class="py-3 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
             '<td class="py-3 pr-4 text-slate-400">' + (log.pageName || 'BD News 24/7') + '</td>' +
+            '<td class="py-3 pr-4">' + themeBadge + '</td>' +
             '<td class="py-3 pr-4">' + videoLink + '</td>' +
             '<td class="py-3 pr-4 text-slate-400">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
             '<td class="py-3 pr-4 text-slate-400">' + dateStr + '</td>' +

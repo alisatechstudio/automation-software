@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import { getDatabase } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
-import { QueueWorker } from '../../services/queue/worker.js';
+import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
 import { CanvasCardRenderer } from '../../services/renderer/canvas.js';
 import { ReelVideoRenderer } from '../../services/renderer/reel.js';
@@ -564,7 +564,11 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     let targetCategory = category || 'বিশেষ খবর';
     let targetImageUrl = imageUrl;
     let finalArticleId = articleId;
-    const targetTheme = theme || 'studio-red';
+    let targetTheme = theme;
+    if (!targetTheme || targetTheme === 'rolling') {
+      targetTheme = await getNextRollingReelTheme(db);
+      console.log(`[Reels API] 🔄 Rolling Rotation selected: "${targetTheme}"`);
+    }
     const durationSeconds = parseInt(duration as string, 10) || 15;
 
     if (articleId) {
@@ -640,6 +644,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       articleTitle: targetHeadline,
       pageId: page._id,
       pageName: page.name,
+      theme: targetTheme,
       fbVideoId: videoId,
       fbPostId: postId,
       durationMs,
@@ -690,7 +695,7 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
       autoPostReels: autoReel ? autoReel.value !== 'false' : true,
       disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Default to true: poster disabled
       reelDuration: parseInt(reelDuration?.value || '15', 10) || 15, // Default 15 seconds
-      reelTheme: reelTheme?.value || 'studio-red',
+      reelTheme: reelTheme?.value || 'rolling', // Default to rolling round-robin rotation
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

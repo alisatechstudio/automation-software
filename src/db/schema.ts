@@ -93,6 +93,7 @@ export interface ReelLog {
   articleTitle: string;
   pageId: string;
   pageName: string;
+  theme?: string;
   fbVideoId: string;
   fbPostId: string;
   durationMs?: number | null;

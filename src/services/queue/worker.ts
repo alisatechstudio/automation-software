@@ -7,7 +7,40 @@ import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { ReelVideoRenderer } from '../renderer/reel.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
+import { REEL_THEME_KEYS } from '../../config/constants.js';
 import { config } from '../../config/env.js';
+
+/**
+ * Resolves the next theme in the round-robin sequence across all 5 reel designs:
+ * 1. studio-red (Canva replica)
+ * 2. breaking-bold (Flash breaking yellow)
+ * 3. dark-cinema (Cyber dark obsidian)
+ * 4. viral-gradient (Sunset mesh viral)
+ * 5. vertical-916 (9:16 vertical fullscreen)
+ */
+export async function getNextRollingReelTheme(db: any): Promise<string> {
+  try {
+    const lastReel = await db.collection('reel_logs').findOne(
+      { theme: { $exists: true, $nin: [null, '', 'rolling'] } },
+      { sort: { createdAt: -1 } }
+    );
+
+    if (!lastReel || !lastReel.theme) {
+      return REEL_THEME_KEYS[0];
+    }
+
+    const lastIndex = REEL_THEME_KEYS.indexOf(lastReel.theme as any);
+    if (lastIndex === -1) {
+      return REEL_THEME_KEYS[0];
+    }
+
+    const nextIndex = (lastIndex + 1) % REEL_THEME_KEYS.length;
+    return REEL_THEME_KEYS[nextIndex];
+  } catch (err: any) {
+    console.warn('[RollingReels] Failed to determine next rolling theme:', err.message);
+    return REEL_THEME_KEYS[0];
+  }
+}
 
 export class QueueWorker {
   private queue: PersistentJobQueue;
@@ -143,8 +176,13 @@ export class QueueWorker {
       // Reel Configuration
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
       const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
-      const targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'studio-red';
+      let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'rolling';
       const reelDuration = parseInt(reelDurationSetting?.value || '15', 10) || 15;
+
+      if (!targetReelTheme || targetReelTheme === 'rolling') {
+        targetReelTheme = await getNextRollingReelTheme(db);
+        console.log(`[QueueWorker] 🔄 Rolling Rotation selected next theme: "${targetReelTheme}"`);
+      }
 
       const caption = this.fbClient.formatCaption(
         article.title,
@@ -213,6 +251,7 @@ export class QueueWorker {
           articleTitle: article.title,
           pageId: page._id,
           pageName: page.name,
+          theme: targetReelTheme,
           fbVideoId: reelVideoId,
           fbPostId: reelPostId,
           durationMs,
@@ -361,6 +400,7 @@ export class QueueWorker {
               articleTitle: article.title,
               pageId: page._id,
               pageName: page.name,
+              theme: targetReelTheme,
               fbVideoId: reelVideoId,
               fbPostId: reelPostId,
               durationMs: Date.now() - startTime,
@@ -662,12 +702,18 @@ export class QueueWorker {
       throw new Error('No active Facebook Page found');
     }
 
+    let selectedTheme = theme;
+    if (!selectedTheme || selectedTheme === 'rolling') {
+      selectedTheme = await getNextRollingReelTheme(db);
+      console.log(`[QueueWorker] 🔄 Rolling Rotation selected: "${selectedTheme}" for article: "${article.title}"`);
+    }
+
     const startTime = Date.now();
     const reelBuffer = await this.reelRenderer.renderReel({
       headline: article.title,
       category: article.category || 'বিশেষ খবর',
       imageUrl: article.imageUrl || undefined,
-      theme: theme || 'studio-red',
+      theme: selectedTheme,
       durationSeconds,
       fps: 20,
     });
@@ -694,6 +740,7 @@ export class QueueWorker {
       articleTitle: article.title,
       pageId: page._id,
       pageName: page.name,
+      theme: selectedTheme,
       fbVideoId: videoId,
       fbPostId: postId,
       durationMs: Date.now() - startTime,

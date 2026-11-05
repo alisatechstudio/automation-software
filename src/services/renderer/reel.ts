@@ -128,7 +128,8 @@ export class ReelVideoRenderer {
   public async renderStaticPreview(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const theme = (input.theme || 'studio-red') as ReelTheme;
+    const rawTheme = input.theme || 'studio-red';
+    const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
     const isVertical = theme === 'vertical-916' || input.height === 1920;
     const width = isVertical ? 1080 : input.width || 1080;
     const height = isVertical ? 1920 : input.height || 1080;
@@ -158,7 +159,8 @@ export class ReelVideoRenderer {
   public async renderReel(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const theme = (input.theme || 'studio-red') as ReelTheme;
+    const rawTheme = input.theme || 'studio-red';
+    const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
     const isVertical = theme === 'vertical-916' || input.height === 1920;
     const width = isVertical ? 1080 : input.width || 1080;
     const height = isVertical ? 1920 : input.height || 1080;

@@ -61,7 +61,24 @@ export interface ReelTemplateDefinition {
   badgeColor: string;
 }
 
+export const REEL_THEME_KEYS = [
+  'studio-red',
+  'breaking-bold',
+  'dark-cinema',
+  'viral-gradient',
+  'vertical-916',
+] as const;
+
 export const REEL_TEMPLATES: Record<string, ReelTemplateDefinition> = {
+  'rolling': {
+    id: 'rolling',
+    name: '🔄 Rolling Rotation (অটো রোটেট - সব টেমপ্লেট ঘুরিয়ে ঘুরিয়ে)',
+    description: 'Dynamic Round-Robin: Cycles through all 5 templates automatically on every post',
+    width: 1080,
+    height: 1080,
+    aspectRatio: '1:1',
+    badgeColor: '#8b5cf6',
+  },
   'studio-red': {
     id: 'studio-red',
     name: 'BD News 24/7 Red (Canva Replica Studio)',
