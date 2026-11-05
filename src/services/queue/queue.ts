@@ -152,7 +152,7 @@ export class PersistentJobQueue {
     const db = getDatabase();
     const jobsCol = db.collection<Job>('jobs');
     const res = await jobsCol.updateOne(
-      { _id: jobId, status: 'failed' },
+      { _id: jobId },
       {
         $set: {
           status: 'pending',

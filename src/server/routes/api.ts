@@ -308,9 +308,13 @@ apiRouter.post('/queue/:id/retry', async (req: Request, res: Response) => {
   try {
     const success = await queue.retryFailedJob(req.params.id as string);
     if (success) {
-      res.json({ success: true, message: 'Job rescheduled for immediate processing' });
+      const job = await queue.fetchNextJob();
+      if (job) {
+        await worker.processJob(job);
+      }
+      res.json({ success: true, message: 'Job rescheduled and processed immediately' });
     } else {
-      res.status(400).json({ error: 'Job not found or not in failed state' });
+      res.status(400).json({ error: 'Job not found' });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });

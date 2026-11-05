@@ -85,8 +85,21 @@ export class QueueWorker {
     const jobsCol = db.collection<Job>('jobs');
 
     const article = await articlesCol.findOne({ _id: articleId });
-    const page = await pagesCol.findOne({ _id: pageId });
+    let page = await pagesCol.findOne({ _id: pageId });
     const source = article ? await sourcesCol.findOne({ _id: article.sourceId }) : null;
+
+    // Robust Fallback: If pageId does not match directly, fall back to source pageId or any active page
+    if (!page) {
+      if (source?.pageId) {
+        page = await pagesCol.findOne({ _id: source.pageId });
+      }
+      if (!page) {
+        page = await pagesCol.findOne({ isActive: true });
+      }
+      if (page) {
+        console.log(`[QueueWorker] Mismatched pageId (${pageId}) resolved to active page "${page.name}" (${page._id}) for job ${job._id}`);
+      }
+    }
 
     if (!article || !page) {
       const errMsg = `Missing dependencies for job ${job._id}: article=${!!article}, page=${!!page}`;
@@ -123,7 +136,7 @@ export class QueueWorker {
       try {
         console.log(`[QueueWorker] Rendering image for article "${article.title}" with template ${templateId}...`);
         const renderResult = await this.renderer.render({
-          templateId: templateId || source?.templateId,
+          templateId: templateId || source?.templateId || 'template-canva-bdnews',
           headline: article.title,
           category: article.category || 'সাধারণ',
           dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
