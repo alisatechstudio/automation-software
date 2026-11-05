@@ -76,6 +76,7 @@ export interface PostLog {
   fbPostId?: string | null;
   fbCommentId?: string | null;
   fbReelId?: string | null;
+  fbVideoId?: string | null;
   renderedImagePath?: string | null;
   renderedVideoPath?: string | null;
   caption?: string | null;

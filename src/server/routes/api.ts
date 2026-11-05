@@ -535,13 +535,14 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
     const category = (req.query.category as string) || 'বিশেষ খবর';
     const imageUrl = req.query.imageUrl as string | undefined;
     const theme = (req.query.theme as string) || 'studio-red';
+    const durationSeconds = parseInt(req.query.duration as string, 10) || 15;
 
     const videoBuffer = await reelRenderer.renderReel({
       headline,
       category,
       imageUrl,
       theme,
-      durationSeconds: 8,
+      durationSeconds,
       fps: 20,
     });
 
@@ -556,7 +557,7 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
 
 apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
   try {
-    const { articleId, headline, category, imageUrl, pageId, theme } = req.body;
+    const { articleId, headline, category, imageUrl, pageId, theme, duration } = req.body;
     const db = getDatabase();
 
     let targetHeadline = headline;
@@ -564,6 +565,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     let targetImageUrl = imageUrl;
     let finalArticleId = articleId;
     const targetTheme = theme || 'studio-red';
+    const durationSeconds = parseInt(duration as string, 10) || 15;
 
     if (articleId) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -600,14 +602,14 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`[Reels API] Rendering MP4 Reel (${targetTheme}) for "${targetHeadline}"...`);
+    console.log(`[Reels API] Rendering ${durationSeconds}s MP4 Reel (${targetTheme}) for "${targetHeadline}"...`);
     const startTime = Date.now();
     const reelBuffer = await reelRenderer.renderReel({
       headline: targetHeadline,
       category: targetCategory,
       imageUrl: targetImageUrl || undefined,
       theme: targetTheme,
-      durationSeconds: 8,
+      durationSeconds,
       fps: 20,
     });
 
@@ -619,7 +621,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       config.DEFAULT_CAPTION_FORMAT
     );
 
-    console.log(`[Reels API] Publishing Reel to Facebook Page ${page.name} (${page._id})...`);
+    console.log(`[Reels API] Publishing ${durationSeconds}s Reel to Facebook Page ${page.name} (${page._id})...`);
     const { videoId, postId } = await fbClient.publishReel(
       page._id,
       page.accessToken,
@@ -652,6 +654,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       pageName: page.name,
       durationMs,
       headline: targetHeadline,
+      durationSeconds,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -679,8 +682,15 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const autoReel = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
+    const disablePoster = await db.collection<Setting>('settings').findOne({ _id: 'DISABLE_POSTER' });
+    const reelDuration = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
+    const reelTheme = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
+
     res.json({
-      autoPostReels: autoReel?.value === 'true' || autoReel?.value === '1',
+      autoPostReels: autoReel ? autoReel.value !== 'false' : true,
+      disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Default to true: poster disabled
+      reelDuration: parseInt(reelDuration?.value || '15', 10) || 15, // Default 15 seconds
+      reelTheme: reelTheme?.value || 'studio-red',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -689,19 +699,46 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
 
 apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
   try {
-    const { autoPostReels } = req.body;
+    const { autoPostReels, disablePoster, reelDuration, reelTheme } = req.body;
     const db = getDatabase();
-    await db.collection<Setting>('settings').updateOne(
-      { _id: 'AUTO_POST_REELS' },
-      {
-        $set: {
-          value: Boolean(autoPostReels) ? 'true' : 'false',
-          updatedAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
-    res.json({ success: true, autoPostReels: Boolean(autoPostReels) });
+    const settingsCol = db.collection<Setting>('settings');
+
+    if (autoPostReels !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'AUTO_POST_REELS' },
+        { $set: { value: Boolean(autoPostReels) ? 'true' : 'false', updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (disablePoster !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'DISABLE_POSTER' },
+        { $set: { value: Boolean(disablePoster) ? 'true' : 'false', updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (reelDuration !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'REEL_DURATION_SECONDS' },
+        { $set: { value: String(reelDuration), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (reelTheme !== undefined) {
+      await settingsCol.updateOne(
+        { _id: 'DEFAULT_REEL_THEME' },
+        { $set: { value: String(reelTheme), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      autoPostReels: autoPostReels !== undefined ? Boolean(autoPostReels) : true,
+      disablePoster: disablePoster !== undefined ? Boolean(disablePoster) : true,
+      reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 15,
+      reelTheme: reelTheme || 'studio-red',
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1018,6 +1055,9 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DEFAULT_HASHTAGS: config.DEFAULT_HASHTAGS,
       DEFAULT_CAPTION_FORMAT: config.DEFAULT_CAPTION_FORMAT,
       DEFAULT_COMMENT_FORMAT: config.DEFAULT_COMMENT_FORMAT,
+      DISABLE_POSTER: 'true',
+      REEL_DURATION_SECONDS: '15',
+      DEFAULT_REEL_THEME: 'studio-red',
     };
 
     for (const r of rows) {

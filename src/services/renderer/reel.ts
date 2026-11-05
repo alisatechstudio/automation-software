@@ -163,7 +163,7 @@ export class ReelVideoRenderer {
     const width = isVertical ? 1080 : input.width || 1080;
     const height = isVertical ? 1920 : input.height || 1080;
 
-    const durationSeconds = input.durationSeconds || 8;
+    const durationSeconds = input.durationSeconds || 15;
     const fps = input.fps || 20;
     const totalFrames = durationSeconds * fps;
 
@@ -211,7 +211,7 @@ export class ReelVideoRenderer {
     ];
 
     if (audioPath) {
-      ffmpegArgs.push('-i', audioPath);
+      ffmpegArgs.push('-stream_loop', '-1', '-i', audioPath);
     }
 
     ffmpegArgs.push(

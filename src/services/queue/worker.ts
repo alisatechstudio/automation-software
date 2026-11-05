@@ -135,51 +135,17 @@ export class QueueWorker {
       // 2. Random Jitter Delay (30-60s) to avoid spam flags
       await this.applyPostingJitter();
 
-      // 3. Render High-Quality 1080x1080 JPG News Card
-      let renderedBuffer: Buffer;
-      let renderedPath: string | undefined;
+      // Check Posting Mode: Disable Poster & Post 15s Reel Only (Default: Enabled as requested)
+      const disablePosterSetting = await db.collection<Setting>('settings').findOne({ _id: 'DISABLE_POSTER' });
+      // If setting is null or not 'false', default to true (Reels only, poster disabled for now)
+      const isPosterDisabled = disablePosterSetting ? disablePosterSetting.value !== 'false' : true;
 
-      try {
-        console.log(`[QueueWorker] Rendering 1080x1080 JPG news card for article "${article.title}"...`);
-        // Use high-performance Skia Canvas for Canva replica cards (instant 40ms serverless execution)
-        if (templateId === 'template-canva-bdnews' || !templateId || source?.templateId === 'template-canva-bdnews' || process.env.VERCEL) {
-          const renderResult = await this.canvasRenderer.render({
-            templateId: 'template-canva-bdnews',
-            headline: article.title,
-            category: article.category || 'বিশেষ খবর',
-            imageUrl: article.imageUrl || undefined,
-          });
-          renderedBuffer = renderResult.imageBuffer;
-          renderedPath = renderResult.outputPath;
-        } else {
-          const renderResult = await this.renderer.render({
-            templateId: templateId || source?.templateId || 'template-canva-bdnews',
-            headline: article.title,
-            category: article.category || 'বিশেষ খবর',
-            dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
-            imageUrl: article.imageUrl || undefined,
-          });
-          renderedBuffer = renderResult.imageBuffer;
-          renderedPath = renderResult.outputPath;
-        }
-      } catch (renderError: any) {
-        console.warn(`[QueueWorker] Primary render failed: ${renderError.message}. Using Canvas Card fallback...`);
-        try {
-          const fallbackResult = await this.canvasRenderer.render({
-            templateId: 'template-canva-bdnews',
-            headline: article.title,
-            category: article.category || 'বিশেষ খবর',
-            imageUrl: article.imageUrl || undefined,
-          });
-          renderedBuffer = fallbackResult.imageBuffer;
-          renderedPath = fallbackResult.outputPath;
-        } catch (canvasErr: any) {
-          console.warn(`[QueueWorker] Canvas render also failed: ${canvasErr.message}. Gracefully using original photo...`);
-          renderedBuffer = await this.fetchOriginalImageFallback(article.imageUrl);
-        }
-      }
+      // Reel Configuration
+      const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
+      const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
+      const targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'studio-red';
+      const reelDuration = parseInt(reelDurationSetting?.value || '15', 10) || 15;
 
-      // 4. Format Caption & First Comment
       const caption = this.fbClient.formatCaption(
         article.title,
         article.description || '',
@@ -192,101 +158,220 @@ export class QueueWorker {
         config.DEFAULT_COMMENT_FORMAT
       );
 
-      // 5. Publish to Facebook Page (or Dry-Run)
-      console.log(`[QueueWorker] Publishing photo to page ${page.name}...`);
-      const { photoId, postId } = await this.fbClient.publishPhoto(
-        page._id,
-        page.accessToken,
-        renderedBuffer,
-        caption,
-        config.DRY_RUN
-      );
+      if (isPosterDisabled) {
+        // =========================================================================
+        // REELS-ONLY MODE: 15-Second MP4 Video Reel (Poster Disabled)
+        // =========================================================================
+        console.log(`[QueueWorker] 🎬 Reels-Only Mode Active (Poster Disabled). Rendering ${reelDuration}s MP4 Reel (${targetReelTheme}) for "${article.title}"...`);
+        const reelBuffer = await this.reelRenderer.renderReel({
+          headline: article.title,
+          category: article.category || 'বিশেষ খবর',
+          imageUrl: article.imageUrl || undefined,
+          theme: targetReelTheme,
+          durationSeconds: reelDuration,
+          fps: 20,
+        });
 
-      console.log(`[QueueWorker] Adding news link as first comment to post ${postId}...`);
-      const { commentId } = await this.fbClient.publishComment(
-        postId,
-        page.accessToken,
-        commentText,
-        config.DRY_RUN
-      );
+        const reelCaption = this.fbClient.formatCaption(
+          article.title,
+          article.description || '',
+          config.DEFAULT_HASHTAGS + ' #Reels #FBReels #Bangladesh #NewsUpdate',
+          config.DEFAULT_CAPTION_FORMAT
+        );
 
-      const durationMs = Date.now() - startTime;
+        console.log(`[QueueWorker] Publishing ${reelDuration}s Reel to Facebook Page ${page.name}...`);
+        const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
+          page._id,
+          page.accessToken,
+          reelBuffer,
+          reelCaption,
+          article.title,
+          config.DRY_RUN
+        );
 
-      // 6. Record Post Log
-      const logId = crypto.randomUUID();
-      const logDoc: PostLog = {
-        _id: logId,
-        articleId: article._id,
-        pageId: page._id,
-        fbPhotoId: photoId,
-        fbPostId: postId,
-        fbCommentId: commentId,
-        renderedImagePath: renderedPath || null,
-        caption,
-        comment: commentText,
-        durationMs,
-        status: config.DRY_RUN ? 'dry_run' : 'success',
-        createdAt: new Date(),
-      };
-      await logsCol.insertOne(logDoc as any);
+        const durationMs = Date.now() - startTime;
 
-      // Update article status & mark job completed
-      await articlesCol.updateOne({ _id: article._id }, { $set: { status: 'published' } });
-      await this.queue.markCompleted(job._id);
+        // Record Post & Reel Log
+        const logId = crypto.randomUUID();
+        const logDoc: PostLog = {
+          _id: logId,
+          articleId: article._id,
+          pageId: page._id,
+          fbPostId: reelPostId,
+          fbReelId: reelVideoId,
+          fbVideoId: reelVideoId,
+          caption: reelCaption,
+          durationMs,
+          status: config.DRY_RUN ? 'dry_run' : 'success',
+          createdAt: new Date(),
+        };
+        await logsCol.insertOne(logDoc as any);
 
-      console.log(`✓ [QueueWorker] Successfully processed & published article "${article.title.substring(0, 40)}..." (Took ${durationMs}ms)`);
+        await db.collection<ReelLog>('reel_logs').insertOne({
+          _id: crypto.randomUUID(),
+          articleId: article._id,
+          articleTitle: article.title,
+          pageId: page._id,
+          pageName: page.name,
+          fbVideoId: reelVideoId,
+          fbPostId: reelPostId,
+          durationMs,
+          status: config.DRY_RUN ? 'dry_run' : 'success',
+          createdAt: new Date(),
+        });
 
-      // 7. Auto Share to Relevant Facebook Groups (Non-blocking)
-      try {
-        await this.autoShareToRelevantGroups(page, article, postId);
-      } catch (groupShareErr: any) {
-        console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
-      }
+        // Update article status & mark job completed
+        await articlesCol.updateOne({ _id: article._id }, { $set: { status: 'published' } });
+        await this.queue.markCompleted(job._id);
 
-      // 8. Auto Create & Publish Facebook Reel (if enabled in settings or job payload)
-      try {
-        const autoReelSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
-        const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
-        const shouldPostReel =
-          autoReelSetting?.value === 'true' || autoReelSetting?.value === '1' || Boolean(job.payload?.postReel);
+        console.log(`✓ [QueueWorker] Successfully published ${reelDuration}s Reel for "${article.title.substring(0, 40)}..." (Reel ID: ${reelVideoId}, Took ${durationMs}ms)`);
 
-        if (shouldPostReel) {
-          const reelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'studio-red';
-          console.log(`[QueueWorker] Generating and publishing MP4 Reel (${reelTheme}) for article "${article.title}"...`);
-          const reelBuffer = await this.reelRenderer.renderReel({
-            headline: article.title,
-            category: article.category || 'বিশেষ খবর',
-            imageUrl: article.imageUrl || undefined,
-            theme: reelTheme,
-            durationSeconds: 8,
-            fps: 20,
-          });
-
-          const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
-            page._id,
-            page.accessToken,
-            reelBuffer,
-            caption,
-            article.title,
-            config.DRY_RUN
-          );
-
-          await db.collection<ReelLog>('reel_logs').insertOne({
-            _id: crypto.randomUUID(),
-            articleId: article._id,
-            articleTitle: article.title,
-            pageId: page._id,
-            pageName: page.name,
-            fbVideoId: reelVideoId,
-            fbPostId: reelPostId,
-            durationMs: Date.now() - startTime,
-            status: config.DRY_RUN ? 'dry_run' : 'success',
-            createdAt: new Date(),
-          });
-          console.log(`✓ [QueueWorker] MP4 Reel published successfully! Reel ID: ${reelVideoId}`);
+        // Auto Share Reel to Relevant Facebook Groups
+        try {
+          await this.autoShareToRelevantGroups(page, article, reelPostId);
+        } catch (groupShareErr: any) {
+          console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
         }
-      } catch (reelErr: any) {
-        console.warn(`[QueueWorker] Reel generation or publish encountered an error: ${reelErr.message}`);
+      } else {
+        // =========================================================================
+        // STANDARD MODE: Render & Publish JPG Poster Card
+        // =========================================================================
+        let renderedBuffer: Buffer;
+        let renderedPath: string | undefined;
+
+        try {
+          console.log(`[QueueWorker] Rendering 1080x1080 JPG news card for article "${article.title}"...`);
+          if (templateId === 'template-canva-bdnews' || !templateId || source?.templateId === 'template-canva-bdnews' || process.env.VERCEL) {
+            const renderResult = await this.canvasRenderer.render({
+              templateId: 'template-canva-bdnews',
+              headline: article.title,
+              category: article.category || 'বিশেষ খবর',
+              imageUrl: article.imageUrl || undefined,
+            });
+            renderedBuffer = renderResult.imageBuffer;
+            renderedPath = renderResult.outputPath;
+          } else {
+            const renderResult = await this.renderer.render({
+              templateId: templateId || source?.templateId || 'template-canva-bdnews',
+              headline: article.title,
+              category: article.category || 'বিশেষ খবর',
+              dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
+              imageUrl: article.imageUrl || undefined,
+            });
+            renderedBuffer = renderResult.imageBuffer;
+            renderedPath = renderResult.outputPath;
+          }
+        } catch (renderError: any) {
+          console.warn(`[QueueWorker] Primary render failed: ${renderError.message}. Using Canvas Card fallback...`);
+          try {
+            const fallbackResult = await this.canvasRenderer.render({
+              templateId: 'template-canva-bdnews',
+              headline: article.title,
+              category: article.category || 'বিশেষ খবর',
+              imageUrl: article.imageUrl || undefined,
+            });
+            renderedBuffer = fallbackResult.imageBuffer;
+            renderedPath = fallbackResult.outputPath;
+          } catch (canvasErr: any) {
+            console.warn(`[QueueWorker] Canvas render also failed: ${canvasErr.message}. Gracefully using original photo...`);
+            renderedBuffer = await this.fetchOriginalImageFallback(article.imageUrl);
+          }
+        }
+
+        // Publish Photo to Facebook Page (or Dry-Run)
+        console.log(`[QueueWorker] Publishing photo to page ${page.name}...`);
+        const { photoId, postId } = await this.fbClient.publishPhoto(
+          page._id,
+          page.accessToken,
+          renderedBuffer,
+          caption,
+          config.DRY_RUN
+        );
+
+        console.log(`[QueueWorker] Adding news link as first comment to post ${postId}...`);
+        const { commentId } = await this.fbClient.publishComment(
+          postId,
+          page.accessToken,
+          commentText,
+          config.DRY_RUN
+        );
+
+        const durationMs = Date.now() - startTime;
+
+        // Record Post Log
+        const logId = crypto.randomUUID();
+        const logDoc: PostLog = {
+          _id: logId,
+          articleId: article._id,
+          pageId: page._id,
+          fbPhotoId: photoId,
+          fbPostId: postId,
+          fbCommentId: commentId,
+          renderedImagePath: renderedPath || null,
+          caption,
+          comment: commentText,
+          durationMs,
+          status: config.DRY_RUN ? 'dry_run' : 'success',
+          createdAt: new Date(),
+        };
+        await logsCol.insertOne(logDoc as any);
+
+        // Update article status & mark job completed
+        await articlesCol.updateOne({ _id: article._id }, { $set: { status: 'published' } });
+        await this.queue.markCompleted(job._id);
+
+        console.log(`✓ [QueueWorker] Successfully processed & published article "${article.title.substring(0, 40)}..." (Took ${durationMs}ms)`);
+
+        // Auto Share to Relevant Facebook Groups (Non-blocking)
+        try {
+          await this.autoShareToRelevantGroups(page, article, postId);
+        } catch (groupShareErr: any) {
+          console.warn(`[QueueWorker] Group auto-share encountered an error: ${groupShareErr.message}`);
+        }
+
+        // Auto Create & Publish Facebook Reel (if enabled in settings or job payload)
+        try {
+          const autoReelSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
+          const shouldPostReel =
+            autoReelSetting?.value === 'true' || autoReelSetting?.value === '1' || Boolean(job.payload?.postReel);
+
+          if (shouldPostReel) {
+            console.log(`[QueueWorker] Generating and publishing MP4 Reel (${targetReelTheme}) for article "${article.title}"...`);
+            const reelBuffer = await this.reelRenderer.renderReel({
+              headline: article.title,
+              category: article.category || 'বিশেষ খবর',
+              imageUrl: article.imageUrl || undefined,
+              theme: targetReelTheme,
+              durationSeconds: reelDuration,
+              fps: 20,
+            });
+
+            const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
+              page._id,
+              page.accessToken,
+              reelBuffer,
+              caption,
+              article.title,
+              config.DRY_RUN
+            );
+
+            await db.collection<ReelLog>('reel_logs').insertOne({
+              _id: crypto.randomUUID(),
+              articleId: article._id,
+              articleTitle: article.title,
+              pageId: page._id,
+              pageName: page.name,
+              fbVideoId: reelVideoId,
+              fbPostId: reelPostId,
+              durationMs: Date.now() - startTime,
+              status: config.DRY_RUN ? 'dry_run' : 'success',
+              createdAt: new Date(),
+            });
+            console.log(`✓ [QueueWorker] MP4 Reel published successfully! Reel ID: ${reelVideoId}`);
+          }
+        } catch (reelErr: any) {
+          console.warn(`[QueueWorker] Reel generation or publish encountered an error: ${reelErr.message}`);
+        }
       }
     } catch (err: any) {
       const durationMs = Date.now() - startTime;
@@ -557,7 +642,8 @@ export class QueueWorker {
   public async publishReelForArticle(
     articleId: string,
     targetPageId?: string,
-    theme?: string
+    theme?: string,
+    durationSeconds: number = 15
   ): Promise<{ success: boolean; videoId?: string; postId?: string; error?: string }> {
     const db = getDatabase();
     const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -582,7 +668,7 @@ export class QueueWorker {
       category: article.category || 'বিশেষ খবর',
       imageUrl: article.imageUrl || undefined,
       theme: theme || 'studio-red',
-      durationSeconds: 8,
+      durationSeconds,
       fps: 20,
     });
 

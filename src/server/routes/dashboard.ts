@@ -793,32 +793,50 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       <!-- Top Banner & Quick Controls -->
       <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-rose-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div class="space-y-1 relative z-10">
-          <div class="flex items-center gap-2.5">
-            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-rose-950/80 text-rose-400 border border-rose-800/60 uppercase">HD 1080x1080 • 20 FPS • AAC Audio</span>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-rose-950/80 text-rose-400 border border-rose-800/60 uppercase">15 SECONDS • 20 FPS • AAC BROADCAST AUDIO</span>
+            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 uppercase">🎬 REELS-ONLY ACTIVE (POSTER DISABLED)</span>
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
           </div>
           <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <span>🎬 BD News 24/7 Reels Studio</span>
-            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(টেলিভিশন স্টুডিও গ্রেড রিলস)</span>
+            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(১৫ সেকেন্ডের টিভি স্টুডিও রিলস)</span>
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-            ক্যানভা স্টাইল এইচডি মোশন ভিডিও রিল জেনারেটর — কেন বার্নস জুম ইফেক্ট, লাইভ ব্রেকিং ব্যাজ, স্পষ্ট বাংলা হেডলাইন এবং অফিশিয়াল ব্রডকাস্ট নিউজ থিম মিউজিক সহ ফেসবুক পেজে ও রিলে সরাসরি পোস্ট।
+            ১৫ সেকেন্ডের ফুল মোশন ভিডিও রিল — পোস্টার সাময়িকভাবে বন্ধ রেখে প্রতিটি নিউজের জন্য সরাসরি ১৫ সেকেন্ডের এইচডি ভিডিও রিল পোস্ট হবে।
           </p>
         </div>
 
-        <!-- Auto-Post Reels Toggle Card -->
-        <div class="w-full md:w-auto flex-shrink-0 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
-          <div class="text-left">
-            <div class="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>Auto-Publish Reels</span>
-              <span id="reels-auto-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400">OFF</span>
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-shrink-0">
+          <!-- Disable Poster (Reels Only) Toggle Card -->
+          <div class="w-full sm:w-auto bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
+            <div class="text-left">
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Post Reels Only</span>
+                <span id="poster-disable-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ACTIVE</span>
+              </div>
+              <div class="text-[11px] text-slate-400">পোস্টার বন্ধ রেখে শুধুমাত্র রিল</div>
             </div>
-            <div class="text-[11px] text-slate-400">প্রতিটি নিউজের সাথে রিল পোস্ট</div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggle-disable-poster" checked onchange="handleDisablePosterToggle(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="toggle-auto-reels" onchange="handleAutoReelsToggle(this.checked)" class="sr-only peer">
-            <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
-          </label>
+
+          <!-- Auto-Post Reels Toggle Card -->
+          <div class="w-full sm:w-auto bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
+            <div class="text-left">
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Auto-Publish Reels</span>
+                <span id="reels-auto-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">ACTIVE</span>
+              </div>
+              <div class="text-[11px] text-slate-400">প্রতিটি নিউজের সাথে রিল পোস্ট</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggle-auto-reels" checked onchange="handleAutoReelsToggle(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -830,19 +848,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           <div class="text-[11px] text-slate-500 mt-1">Facebook Reels posted</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-cyan-400">Video Resolution</div>
-          <div class="text-2xl font-black text-cyan-400 mt-1">1080 × 1080</div>
-          <div class="text-[11px] text-slate-500 mt-1">1:1 Square (Feed & Reel)</div>
+          <div class="text-xs font-mono uppercase text-cyan-400">Reel Duration</div>
+          <div class="text-2xl font-black text-cyan-400 mt-1">15 Seconds</div>
+          <div class="text-[11px] text-slate-500 mt-1">300 frames @ 20 FPS</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
           <div class="text-xs font-mono uppercase text-amber-400">Audio Soundtrack</div>
           <div class="text-2xl font-black text-amber-400 mt-1">Studio AAC</div>
-          <div class="text-[11px] text-slate-500 mt-1">TV Broadcast Theme Jingle</div>
+          <div class="text-[11px] text-slate-500 mt-1">Full 15s Broadcast Jingle</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-emerald-400">Typography & Effects</div>
-          <div class="text-2xl font-black text-emerald-400 mt-1">Hind Siliguri</div>
-          <div class="text-[11px] text-slate-500 mt-1">Auto-wrap + Ken Burns Zoom</div>
+          <div class="text-xs font-mono uppercase text-emerald-400">Active Mode</div>
+          <div class="text-2xl font-black text-emerald-400 mt-1">Reels Only</div>
+          <div class="text-[11px] text-slate-500 mt-1">Poster card disabled</div>
         </div>
       </div>
 
@@ -931,7 +949,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <span class="w-2 h-2 rounded-full bg-rose-500"></span>
               Studio Video Player (1080x1080)
             </span>
-            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">8s • 20fps • AAC</span>
+            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">15s • 20fps • AAC</span>
           </div>
 
           <div id="reel-player-box" class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300">
@@ -948,13 +966,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 🎬
               </div>
               <p class="text-sm font-semibold text-slate-200">No Reel Generated Yet</p>
-              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a broadcast MP4 reel with Bengali typography and audio.</p>
+              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a 15-second broadcast MP4 reel with Bengali typography and audio.</p>
             </div>
 
             <!-- Spinner Overlay -->
             <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
               <div class="w-10 h-10 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 160 frames with Skia & FFmpeg...</p>
+              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 300 frames with Skia & FFmpeg (15s)...</p>
             </div>
           </div>
 
@@ -1980,7 +1998,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[280px] aspect-[9/16] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '8s • 20fps • 1080x1920';
+        if (durBadge) durBadge.innerText = '15s • 20fps • 1080x1920';
       } else {
         if (badgeEl) {
           badgeEl.innerText = '1:1 Square';
@@ -1989,7 +2007,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '8s • 20fps • 1080x1080';
+        if (durBadge) durBadge.innerText = '15s • 20fps • 1080x1080';
       }
 
       updateReelFramePreview();
@@ -2036,9 +2054,38 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800' 
               : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
           }
+
+          const disablePoster = Boolean(res.data.disablePoster);
+          const togglePoster = document.getElementById('toggle-disable-poster');
+          const posterBadge = document.getElementById('poster-disable-badge');
+          if (togglePoster) togglePoster.checked = disablePoster;
+          if (posterBadge) {
+            posterBadge.innerText = disablePoster ? 'ACTIVE' : 'OFF';
+            posterBadge.className = disablePoster 
+              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800' 
+              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
+          }
         }
       } catch (e) {
         console.error(e);
+      }
+    }
+
+    async function handleDisablePosterToggle(checked) {
+      try {
+        const res = await safeFetchJson('/api/reels/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ disablePoster: checked })
+        });
+        if (res.ok) {
+          showToast(checked ? '✓ Poster disabled! 15s Reels-Only mode active.' : 'Poster posting enabled');
+          loadReelSettings();
+        } else {
+          showToast('Failed to update setting', true);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
       }
     }
 
@@ -2140,12 +2187,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       spinner.classList.remove('hidden');
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering MP4 news reel (' + theme + ')... This takes ~10 seconds.';
+      statusEl.innerText = 'Rendering 15s MP4 news reel (' + theme + ')... This takes ~15-20 seconds.';
 
       const params = new URLSearchParams({
         headline: headline,
         category: category,
         theme: theme,
+        duration: '15'
       });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
@@ -2163,8 +2211,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           video.play().catch(() => {});
           downloadLink.href = streamUrl;
           downloadLink.classList.remove('hidden');
-          statusEl.innerText = '✓ Reel rendered successfully! Playing in studio player.';
-          showToast('✓ MP4 Reel (' + theme + ') rendered successfully!');
+          statusEl.innerText = '✓ 15s Reel rendered successfully! Playing in studio player.';
+          showToast('✓ 15s MP4 Reel (' + theme + ') rendered successfully!');
         };
 
         video.onerror = () => {
@@ -2197,19 +2245,33 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       btn.disabled = true;
       btn.classList.add('opacity-50');
       spinner.classList.remove('hidden');
-      document.getElementById('reel-spinner-text').innerText = 'Generating MP4 & publishing to Facebook Reels...';
+      document.getElementById('reel-spinner-text').innerText = 'Generating 15s MP4 & publishing to Facebook Reels...';
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering MP4 (' + theme + ') and uploading to Facebook Graph API...';
+      statusEl.innerText = 'Rendering 15s MP4 (' + theme + ') and uploading to Facebook Graph API...';
 
       try {
         const res = await safeFetchJson('/api/reels/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ headline, category, imageUrl, pageId, theme })
+          body: JSON.stringify({ headline, category, imageUrl, pageId, theme, duration: 15 })
         });
 
         if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully published Reel to ' + (res.data.pageName || 'Facebook') + '!');
+          showToast('✓ Successfully published 15s Reel to ' + (res.data.pageName || 'Facebook') + '!');
+          statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
+          loadReelLogs();
+        } else {
+          showToast('Publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
+          statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
+        }
+      } catch (e) {
+        showToast('Error publishing reel: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        spinner.classList.add('hidden');
+      }
+    }
           statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
           loadReelLogs();
         } else {
