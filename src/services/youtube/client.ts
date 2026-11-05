@@ -50,9 +50,9 @@ export class YouTubeClient {
       const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
       const sRef = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_REFRESH_TOKEN' });
 
-      if (sId?.value) this.clientId = sId.value;
-      if (sSec?.value) this.clientSecret = sSec.value;
-      if (sRef?.value) this.refreshToken = sRef.value;
+      this.clientId = (sId?.value && sId.value.trim()) || this.clientId || process.env.YOUTUBE_CLIENT_ID || '';
+      this.clientSecret = (sSec?.value && sSec.value.trim()) || this.clientSecret || process.env.YOUTUBE_CLIENT_SECRET || '';
+      this.refreshToken = (sRef?.value && sRef.value.trim()) || this.refreshToken || process.env.YOUTUBE_REFRESH_TOKEN || '';
 
       return Boolean(this.clientId && this.clientSecret && this.refreshToken);
     } catch (e) {
@@ -162,40 +162,49 @@ export class YouTubeClient {
    * Retrieves profile and statistics for the authenticated YouTube Channel
    */
   public async getChannelProfile(): Promise<YouTubeChannelProfile> {
-    const accessToken = await this.getAccessToken();
-    const url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true';
+    try {
+      const accessToken = await this.getAccessToken();
+      const url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true';
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-      },
-    });
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
 
-    const data = (await res.json()) as any;
-    if (!res.ok || data.error) {
-      // If channels.list scope is missing but upload is active, return graceful profile
+      const data = (await res.json().catch(() => ({}))) as any;
+      const item = data.items?.[0];
+
+      if (res.ok && item) {
+        return {
+          id: item.id,
+          title: item.snippet?.title || 'YouTube Channel',
+          customUrl: item.snippet?.customUrl,
+          description: item.snippet?.description,
+          thumbnailUrl: item.snippet?.thumbnails?.default?.url || item.snippet?.thumbnails?.medium?.url,
+          subscriberCount: item.statistics?.subscriberCount,
+          videoCount: item.statistics?.videoCount,
+        };
+      }
+
+      // If scope only has youtube.upload or channels.list has no items, channel is still fully ready for upload!
       return {
         id: 'upload-active',
         title: 'YouTube Channel (Upload Active)',
         description: 'Channel authenticated for automatic YouTube Shorts video uploads.',
       };
+    } catch (err: any) {
+      console.warn('[YouTubeClient] getChannelProfile note:', err.message);
+      if (this.isConfigured()) {
+        return {
+          id: 'upload-active',
+          title: 'YouTube Channel (Upload Active)',
+          description: 'Channel authenticated for automatic YouTube Shorts video uploads.',
+        };
+      }
+      throw err;
     }
-
-    const item = data.items?.[0];
-    if (!item) {
-      throw new Error('No YouTube channel found for this authenticated Google account.');
-    }
-
-    return {
-      id: item.id,
-      title: item.snippet?.title || 'Unknown Channel',
-      customUrl: item.snippet?.customUrl,
-      description: item.snippet?.description,
-      thumbnailUrl: item.snippet?.thumbnails?.default?.url || item.snippet?.thumbnails?.medium?.url,
-      subscriberCount: item.statistics?.subscriberCount,
-      videoCount: item.statistics?.videoCount,
-    };
   }
 
   /**

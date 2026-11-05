@@ -1301,21 +1301,21 @@ apiRouter.post('/youtube/setup', async (req: Request, res: Response) => {
     const db = getDatabase();
     const settingsCol = db.collection<Setting>('settings');
 
-    if (clientId !== undefined) {
+    if (clientId !== undefined && String(clientId).trim().length > 0) {
       await settingsCol.updateOne(
         { _id: 'YOUTUBE_CLIENT_ID' },
         { $set: { value: String(clientId).trim(), updatedAt: new Date() } },
         { upsert: true }
       );
     }
-    if (clientSecret !== undefined) {
+    if (clientSecret !== undefined && String(clientSecret).trim().length > 0) {
       await settingsCol.updateOne(
         { _id: 'YOUTUBE_CLIENT_SECRET' },
         { $set: { value: String(clientSecret).trim(), updatedAt: new Date() } },
         { upsert: true }
       );
     }
-    if (refreshToken !== undefined) {
+    if (refreshToken !== undefined && String(refreshToken).trim().length > 0) {
       await settingsCol.updateOne(
         { _id: 'YOUTUBE_REFRESH_TOKEN' },
         { $set: { value: String(refreshToken).trim(), updatedAt: new Date() } },
