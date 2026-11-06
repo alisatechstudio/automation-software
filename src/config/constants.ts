@@ -62,10 +62,10 @@ export interface ReelTemplateDefinition {
 }
 
 export const REEL_THEME_KEYS = [
+  'viral-gradient',
   'studio-red',
   'breaking-bold',
   'dark-cinema',
-  'viral-gradient',
   'vertical-916',
 ] as const;
 

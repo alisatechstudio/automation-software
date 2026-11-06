@@ -128,14 +128,14 @@ export class ReelVideoRenderer {
   public async renderStaticPreview(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const rawTheme = input.theme || 'studio-red';
-    const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
-    // Reels are strictly 9:16 vertical (1080x1920) as mandated by Meta Reels Publishing API
-    const width = input.width || 1080;
-    const height = input.height || 1920;
+    const rawTheme = input.theme || 'viral-gradient';
+    const theme = (rawTheme === 'rolling' ? 'viral-gradient' : rawTheme) as ReelTheme;
+    const isVertical = theme === 'vertical-916' || input.height === 1920;
+    const width = isVertical ? 1080 : (input.width || 1080);
+    const height = isVertical ? 1920 : (input.height || 1080);
 
     const headline = (input.headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি').trim();
-    const category = (input.category || 'বিশেষ খবর').trim();
+    const category = (input.category || 'আন্তর্জাতিক').trim();
     const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let articleImg: any = null;
@@ -159,11 +159,11 @@ export class ReelVideoRenderer {
   public async renderReel(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const rawTheme = input.theme || 'studio-red';
-    const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
-    // Always enforce 9:16 vertical resolution (1080x1920) for Meta Reels compliance
-    const width = input.width || 1080;
-    const height = input.height || 1920;
+    const rawTheme = input.theme || 'viral-gradient';
+    const theme = (rawTheme === 'rolling' ? 'viral-gradient' : rawTheme) as ReelTheme;
+    const isVertical = theme === 'vertical-916' || input.height === 1920;
+    const width = isVertical ? 1080 : (input.width || 1080);
+    const height = isVertical ? 1920 : (input.height || 1080);
 
     const durationSeconds = input.durationSeconds || (process.env.VERCEL ? 8 : 10);
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
@@ -399,7 +399,7 @@ export class ReelVideoRenderer {
     category: string,
     website: string
   ): void {
-    if (height === 1920) {
+    if (height === 1920 || theme === 'vertical-916') {
       this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
       return;
     }
@@ -411,13 +411,12 @@ export class ReelVideoRenderer {
       case 'dark-cinema':
         this.renderFrameDarkCinema(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
         break;
-      case 'viral-gradient':
-        this.renderFrameViralGradient(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
-        break;
-      case 'vertical-916':
       case 'studio-red':
-      default:
         this.renderFrameStudioRed(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        break;
+      case 'viral-gradient':
+      default:
+        this.renderFrameViralGradient(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
         break;
     }
   }
@@ -957,14 +956,15 @@ export class ReelVideoRenderer {
     ctx.arc(iconCenterX, iconCenterY, iconRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🌐', iconCenterX, iconCenterY);
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(iconCenterX, iconCenterY, 5, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.font = '500 18px "Noto Sans Bengali", sans-serif';
     ctx.fillStyle = '#cbd5e1';
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.fillText('Follow us on :', iconCenterX + iconRadius + 10, iconCenterY);
 
     ctx.font = 'bold 18px sans-serif';
@@ -984,14 +984,24 @@ export class ReelVideoRenderer {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.font = '16px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('💬', ribbonX + 20, footerY + footerH / 2 + 1);
+    // Chat bubble vector icon
+    ctx.fillStyle = '#0f172a';
+    const cIconX = ribbonX + 28;
+    const cIconY = footerY + footerH / 2;
+    ctx.beginPath();
+    ctx.roundRect(cIconX - 10, cIconY - 8, 18, 13, 3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cIconX - 3, cIconY + 5);
+    ctx.lineTo(cIconX - 6, cIconY + 9);
+    ctx.lineTo(cIconX + 1, cIconY + 5);
+    ctx.fill();
 
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.fillText('বিস্তারিত কমেন্টে', ribbonX + 50, footerY + footerH / 2 + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, footerY + footerH / 2 + 1);
     ctx.restore();
   }
 
@@ -1429,16 +1439,22 @@ export class ReelVideoRenderer {
     ctx.roundRect(50, 28, 250, 48, 24);
     ctx.fill();
 
+    // Red fire dot indicator (avoids hollow emoji square)
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(78, 52, 6, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#1e1b4b';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'center';
+    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🔥 ' + category, 175, 52);
+    ctx.fillText(category, 96, 52);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px "Hind Siliguri", sans-serif';
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText('👍 লাইক ও ফলো করুন', width - 50, 52);
+    ctx.fillText('লাইক ও ফলো করুন', width - 50, 52);
     ctx.restore();
 
     // C. Floating 3D Photo Box
@@ -1557,22 +1573,46 @@ export class ReelVideoRenderer {
     ctx.beginPath();
     ctx.roundRect(50, footerY, 460, 52, 26);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🌐 ' + website, 80, footerY + 26);
-
-    ctx.fillStyle = '#ffffff';
+    // Cyan globe dot (avoids hollow emoji square)
+    ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.roundRect(width - 50 - 240, footerY, 240, 52, 26);
+    ctx.arc(80, footerY + 26, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#831843';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('👉 বিস্তারিত কমেন্টে', width - 50 - 120, footerY + 26);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((website || 'bdnews.site').toLowerCase(), 98, footerY + 26);
+
+    const rightPillW = 280;
+    const rightPillX = width - 50 - rightPillW;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(rightPillX, footerY, rightPillW, 52, 26);
+    ctx.fill();
+
+    // Clean vector chat bubble icon (avoids hollow emoji square)
+    ctx.fillStyle = '#831843';
+    const cIconX = rightPillX + 35;
+    const cIconY = footerY + 26;
+    ctx.beginPath();
+    ctx.roundRect(cIconX - 10, cIconY - 8, 18, 13, 3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cIconX - 3, cIconY + 5);
+    ctx.lineTo(cIconX - 6, cIconY + 9);
+    ctx.lineTo(cIconX + 1, cIconY + 5);
+    ctx.fill();
+
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, footerY + 26);
     ctx.restore();
   }
 
