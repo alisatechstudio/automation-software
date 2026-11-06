@@ -1758,18 +1758,59 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         list.innerHTML = '<div class="text-sm text-slate-500 font-mono">No Facebook Pages connected yet.</div>';
       } else {
         list.innerHTML = pages.map(p => \`
-          <div class="flex items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition">
-            <div>
-              <div class="font-bold text-slate-100 flex items-center gap-2">
-                <span>\${p.name}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">Verified</span>
+          <div class="p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-bold text-slate-100 flex items-center gap-2">
+                  <span>\${p.name}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">Connected</span>
+                </div>
+                <div class="text-xs text-slate-400 font-mono mt-1">Page ID: \${p.id}</div>
+                <div class="text-xs text-slate-500 mt-0.5 font-mono">Token: \${p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent (Long-Lived)'}</div>
               </div>
-              <div class="text-xs text-slate-400 font-mono mt-1">Page ID: \${p.id}</div>
-              <div class="text-xs text-slate-500 mt-1 font-mono">Token: \${p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent (Long-Lived)'}</div>
+              <div class="flex gap-2">
+                <button onclick="diagnosePageToken('\${p.id}')" class="text-xs text-amber-400 hover:text-amber-300 px-3 py-1.5 bg-amber-950/40 hover:bg-amber-900/60 rounded-lg border border-amber-800/50 transition font-mono">🔍 Diagnose Token</button>
+                <button onclick="deletePage('\${p.id}')" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition">Delete</button>
+              </div>
             </div>
-            <button onclick="deletePage('\${p.id}')" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition">Delete</button>
+            <div id="diagnose-result-\${p.id}" class="hidden text-xs p-3 rounded-lg font-mono"></div>
           </div>
         \`).join('');
+      }
+    }
+
+    async function diagnosePageToken(id) {
+      const box = document.getElementById('diagnose-result-' + id);
+      if (!box) return;
+      box.classList.remove('hidden');
+      box.className = 'text-xs p-3.5 rounded-lg font-mono bg-slate-900 border border-slate-800 text-slate-300';
+      box.innerHTML = 'Analyzing token permissions and Facebook Page capabilities...';
+
+      try {
+        const res = await safeFetchJson('/api/pages/' + id + '/diagnose');
+        if (!res.ok) {
+          box.className = 'text-xs p-3.5 rounded-lg font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
+          box.innerHTML = 'Error querying diagnosis: ' + (res.data?.error || res.status);
+          return;
+        }
+        const d = res.data || {};
+        const isOk = d.canPost && d.isPageToken;
+        box.className = isOk
+          ? 'text-xs p-3.5 rounded-lg font-mono bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 space-y-1'
+          : 'text-xs p-3.5 rounded-lg font-mono bg-amber-950/60 border border-amber-800/80 text-amber-300 space-y-1';
+
+        box.innerHTML = \`
+          <div class="font-bold text-sm mb-1">\${isOk ? '✓ Token Verified for Publishing' : '⚠️ Action Needed'}</div>
+          <div><strong>Diagnosis:</strong> \${d.diagnosis}</div>
+          <div><strong>Token Type:</strong> \${d.tokenType || 'Unknown'} \${d.isUserToken ? '<span class=\"text-red-400 font-bold\">(MUST BE PAGE TOKEN!)</span>' : ''}</div>
+          <div><strong>Token Subject:</strong> \${d.tokenSubject || 'Unknown'}</div>
+          <div><strong>Granted Permissions:</strong> \${(d.scopes || []).join(', ') || 'None'}</div>
+          \${d.missingScopes && d.missingScopes.length > 0 ? \`<div class=\"text-red-400\"><strong>Missing Permissions:</strong> \${d.missingScopes.join(', ')}</div>\` : ''}
+          \${d.tasks && d.tasks.length > 0 ? \`<div><strong>Page Tasks:</strong> \${d.tasks.join(', ')}</div>\` : ''}
+        \`;
+      } catch (err) {
+        box.className = 'text-xs p-3.5 rounded-lg font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
+        box.innerHTML = 'Diagnosis failed: ' + err.message;
       }
     }
 

@@ -272,6 +272,75 @@ apiRouter.delete('/pages/:id', async (req: Request, res: Response) => {
   }
 });
 
+apiRouter.get('/pages/:id/diagnose', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: req.params.id });
+    if (!page) {
+      res.status(404).json({ error: `Page ${req.params.id} not found in database` });
+      return;
+    }
+
+    const token = page.accessToken;
+    const tokenInfo = await FacebookTokenService.inspectToken(token);
+
+    const pageCheckRes = await fetch(
+      `https://graph.facebook.com/v21.0/${page._id}?fields=id,name,tasks,category&access_token=${encodeURIComponent(token)}`
+    );
+    const pageCheckData = (await pageCheckRes.json()) as any;
+
+    const meRes = await fetch(
+      `https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${encodeURIComponent(token)}`
+    );
+    const meData = (await meRes.json()) as any;
+
+    const isUserToken = tokenInfo.type?.toUpperCase() === 'USER';
+    const isPageToken = tokenInfo.type?.toUpperCase() === 'PAGE';
+
+    const requiredScopes = ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'];
+    const missingScopes = requiredScopes.filter((s) => !tokenInfo.scopes.includes(s));
+
+    const tasks = pageCheckData.tasks || [];
+
+    let diagnosis = 'Token is valid and has proper publishing permissions.';
+    let canPost = true;
+
+    if (!tokenInfo.isValid) {
+      diagnosis = `❌ Token is INVALID or EXPIRED: ${tokenInfo.error || 'Unknown token error'}`;
+      canPost = false;
+    } else if (isUserToken) {
+      diagnosis = `⚠️ ATTENTION: This is a USER token, NOT a Page Access Token! Facebook rejects video and photo posts when using a User Token. You must generate and enter a PAGE Access Token for "${page.name}".`;
+      canPost = false;
+    } else if (missingScopes.length > 0) {
+      diagnosis = `⚠️ Missing required permissions in token: ${missingScopes.join(', ')}. Please re-generate token with these permissions.`;
+      canPost = false;
+    } else if (pageCheckData.error) {
+      diagnosis = `⚠️ Meta Graph API error when inspecting page: ${pageCheckData.error.message} (code ${pageCheckData.error.code})`;
+      canPost = false;
+    }
+
+    res.json({
+      success: true,
+      pageId: page._id,
+      pageName: page.name,
+      tokenType: tokenInfo.type,
+      tokenSubject: meData.name ? `${meData.name} (${meData.id})` : 'Unknown',
+      isPageToken,
+      isUserToken,
+      isValid: tokenInfo.isValid,
+      expiresAt: tokenInfo.expiresAt,
+      scopes: tokenInfo.scopes,
+      missingScopes,
+      tasks,
+      canPost,
+      diagnosis,
+      pageApiCheck: pageCheckData,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==============================================================================
 // 3.5. Facebook Groups (Auto-Share to Relevant Groups)
 // ==============================================================================
