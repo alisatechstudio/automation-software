@@ -902,14 +902,32 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <span id="reel-theme-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
             </label>
             <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-semibold">
-              <option value="rolling" selected>🔄 Rolling Rotation (অটো রোটেট - সব টেমপ্লেট ঘুরিয়ে ঘুরিয়ে)</option>
-              <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
-              <option value="breaking-bold">⚡ Breaking News TV Flash (ব্রেকিং নিউজ টিভি এলার্ট - 1080x1080)</option>
-              <option value="dark-cinema">🌐 Cinematic Dark Cyber (বিবিসি / রয়টার্স স্টাইল - 1080x1080)</option>
-              <option value="viral-gradient">🔥 Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)</option>
-              <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16 মোবাইল ফুলস্ক্রিন - 1080x1920)</option>
+              <option value="auto-category" selected>⚡ Auto-Category (ক্যাটাগরি অনুযায়ী অটোমেটিক থিম ও সাউন্ড)</option>
+              <option value="rolling">🔄 Rolling Rotation (সবগুলো ঘুরিয়ে ঘুরিয়ে)</option>
+              <optgroup label="13 News Categories (ক্যাটাগরি ভিত্তিক টেমপ্লেট)">
+                <option value="cat-bangladesh">🇧🇩 বাংলাদেশ (জাতীয় সংবাদ - গাঢ় সবুজ ও লাল)</option>
+                <option value="cat-politics">🏛️ রাজনীতি (পলিটিক্স - রয়্যাল বার্গান্ডি ও গোল্ড)</option>
+                <option value="cat-economy">📈 অর্থনীতি (ব্যবসা ও বাণিজ্য - মিডনাইট ব্লু ও টিল)</option>
+                <option value="cat-international">🌐 আন্তর্জাতিক (বিশ্ব সংবাদ - সানসেট ভায়োলেট মেশ)</option>
+                <option value="cat-sports">⚽ খেলাধুলা (স্পোর্টস - স্যাফায়ার ও অরেঞ্জ)</option>
+                <option value="cat-technology">💻 তথ্যপ্রযুক্তি (টেকনোলজি - সাইবার সায়ান)</option>
+                <option value="cat-entertainment">🎬 বিনোদন (শোবিজ - গ্ল্যামার ম্যাজেন্টা)</option>
+                <option value="cat-opinion">✍️ মতামত (সম্পাদকীয় ও কলাম - স্লিক চারকোল)</option>
+                <option value="cat-religion">🕌 ধর্ম (ইসলাম ও ধর্মীয় সংবাদ - গোল্ডেন এমারেল্ড)</option>
+                <option value="cat-education">🎓 শিক্ষা (ক্যাম্পাস ও পড়াশোনা - স্কাই ব্লু)</option>
+                <option value="cat-job">💼 চাকরি (নিয়োগ ও ক্যারিয়ার - সাকসেস টিল)</option>
+                <option value="cat-lifestyle">🌿 জীবনযাপন (স্বাস্থ্য ও লাইফস্টাইল - কোরাল)</option>
+                <option value="cat-todays-match">🔥 আজকের খেলা / বিশেষ সংবাদ (হাই এলার্ট)</option>
+              </optgroup>
+              <optgroup label="Studio Classic Themes (অন্যান্য টেমপ্লেট)">
+                <option value="viral-gradient">🔥 Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)</option>
+                <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
+                <option value="breaking-bold">⚡ Breaking News TV Flash (ব্রেকিং নিউজ টিভি এলার্ট - 1080x1080)</option>
+                <option value="dark-cinema">🌐 Cinematic Dark Cyber (বিবিসি / রয়টার্স স্টাইল - 1080x1080)</option>
+                <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16 মোবাইল ফুলস্ক্রিন - 1080x1920)</option>
+              </optgroup>
             </select>
-            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">Dynamic Round-Robin: Cycles through all 5 templates automatically on every post</p>
+            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">Smart AI Matching: Automatically detects bdnews.site category and applies tailored visual theme and audio profile</p>
           </div>
 
           <!-- Category Badge -->
@@ -2221,7 +2239,21 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     // --- 7. FACEBOOK REELS STUDIO ---
     let cachedReelArticles = [];
     const reelThemeDescriptions = {
-      'rolling': 'Dynamic Round-Robin: Cycles through all 5 templates automatically on every post (studio-red → breaking-bold → dark-cinema → viral-gradient → vertical-916)',
+      'auto-category': 'Smart AI Matching: Automatically detects bdnews.site category (13 categories) and applies tailored visual theme and audio profile',
+      'rolling': 'Dynamic Round-Robin: Cycles through all templates automatically on every post',
+      'cat-bangladesh': '1080x1080 Square: Patriotic emerald & crimson theme, live badge, framed photo, bold Bengali card',
+      'cat-politics': '1080x1080 Square: Authoritative political breaking theme, golden alert badge, heavy bass broadcast fanfare',
+      'cat-economy': '1080x1080 Square: Financial markets & business theme, emerald green badge, modern crisp pulse audio',
+      'cat-international': '1080x1080 Square: Global world affairs theme, yellow badge, expansive world broadcast reverb sound',
+      'cat-sports': '1080x1080 Square: High-octane stadium sports theme, orange badge, upbeat energetic sports fanfare',
+      'cat-technology': '1080x1080 Square: Futuristic cyber innovation theme, electric cyan badge, electronic tech resonance sound',
+      'cat-entertainment': '1080x1080 Square: Celebrity & cinema theme, neon fuchsia badge, lively upbeat pop showbiz shimmer sound',
+      'cat-opinion': '1080x1080 Square: Thought-provoking editorial column theme, ochre gold badge, thoughtful orchestral sound',
+      'cat-religion': '1080x1080 Square: Dignified spiritual serene theme, radiant gold badge, peaceful acoustic sound',
+      'cat-education': '1080x1080 Square: Academic campus & students theme, cerulean badge, bright inspiring melodic audio',
+      'cat-job': '1080x1080 Square: Career opportunities theme, mint green badge, confident forward-moving beat',
+      'cat-lifestyle': '1080x1080 Square: Health & living theme, warm coral badge, light friendly lifestyle ambiance',
+      'cat-todays-match': '1080x1080 Square: Pulse-pounding match day & urgent alert theme, fiery gold badge, maximum overdrive sound',
       'studio-red': '1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card',
       'breaking-bold': '1080x1080 Square: High urgency TV alert, animated breaking ticker, bold red & black straps with gold accent',
       'dark-cinema': '1080x1080 Square: Premium obsidian & neon cyan aesthetic, widescreen photo, glowing glassmorphic card',
@@ -2249,7 +2281,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     function onReelThemeChanged() {
       const select = document.getElementById('reel-theme-select');
-      const theme = select ? select.value : 'rolling';
+      const theme = select ? select.value : 'auto-category';
       const descEl = document.getElementById('reel-theme-desc');
       const badgeEl = document.getElementById('reel-theme-badge');
       const playerBox = document.getElementById('reel-player-box');
@@ -2257,7 +2289,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       if (descEl) descEl.innerText = reelThemeDescriptions[theme] || '';
 
-      if (theme === 'rolling') {
+      if (theme === 'auto-category') {
+        if (badgeEl) {
+          badgeEl.innerText = 'Smart AI Category';
+          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-400 border border-amber-800';
+        }
+        if (playerBox) {
+          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
+        }
+        if (durBadge) durBadge.innerText = '10s • Smart AI Matching';
+      } else if (theme === 'rolling') {
         if (badgeEl) {
           badgeEl.innerText = 'Auto Rolling';
           badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800';
@@ -2265,7 +2306,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '15s • Rotating All 5 Templates';
+        if (durBadge) durBadge.innerText = '10s • Rotating Templates';
+      } else if (theme && theme.startsWith('cat-')) {
+        if (badgeEl) {
+          badgeEl.innerText = '1:1 Category';
+          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-400 border border-cyan-800';
+        }
+        if (playerBox) {
+          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
+        }
+        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1080';
       } else if (theme === 'vertical-916') {
         if (badgeEl) {
           badgeEl.innerText = '9:16 Vertical';
@@ -2274,7 +2324,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[280px] aspect-[9/16] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '15s • 20fps • 1080x1920';
+        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1920';
       } else {
         if (badgeEl) {
           badgeEl.innerText = '1:1 Square';
@@ -2283,7 +2333,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '15s • 20fps • 1080x1080';
+        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1080';
       }
 
       updateReelFramePreview();

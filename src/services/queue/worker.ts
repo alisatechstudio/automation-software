@@ -12,34 +12,30 @@ import { REEL_THEME_KEYS } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 /**
- * Resolves the next theme in the round-robin sequence across all 5 reel designs:
- * 1. studio-red (Canva replica)
- * 2. breaking-bold (Flash breaking yellow)
- * 3. dark-cinema (Cyber dark obsidian)
- * 4. viral-gradient (Sunset mesh viral)
- * 5. vertical-916 (9:16 vertical fullscreen)
+ * Resolves the next theme in the round-robin sequence across available visual themes
  */
 export async function getNextRollingReelTheme(db: any): Promise<string> {
+  const rollingCandidates = REEL_THEME_KEYS.filter((k) => k !== 'auto-category' && k !== 'rolling');
   try {
     const lastReel = await db.collection('reel_logs').findOne(
-      { theme: { $exists: true, $nin: [null, '', 'rolling'] } },
+      { theme: { $exists: true, $in: rollingCandidates as any } },
       { sort: { createdAt: -1 } }
     );
 
     if (!lastReel || !lastReel.theme) {
-      return REEL_THEME_KEYS[0];
+      return rollingCandidates[0];
     }
 
-    const lastIndex = REEL_THEME_KEYS.indexOf(lastReel.theme as any);
+    const lastIndex = rollingCandidates.indexOf(lastReel.theme as any);
     if (lastIndex === -1) {
-      return REEL_THEME_KEYS[0];
+      return rollingCandidates[0];
     }
 
-    const nextIndex = (lastIndex + 1) % REEL_THEME_KEYS.length;
-    return REEL_THEME_KEYS[nextIndex];
+    const nextIndex = (lastIndex + 1) % rollingCandidates.length;
+    return rollingCandidates[nextIndex];
   } catch (err: any) {
     console.warn('[RollingReels] Failed to determine next rolling theme:', err.message);
-    return REEL_THEME_KEYS[0];
+    return rollingCandidates[0];
   }
 }
 
@@ -178,11 +174,11 @@ export class QueueWorker {
       // Reel Configuration
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
       const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
-      let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'rolling';
+      let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'auto-category';
       const defaultDuration = process.env.VERCEL ? 8 : 10;
       const reelDuration = parseInt(reelDurationSetting?.value || String(defaultDuration), 10) || defaultDuration;
 
-      if (!targetReelTheme || targetReelTheme === 'rolling') {
+      if (targetReelTheme === 'rolling') {
         targetReelTheme = await getNextRollingReelTheme(db);
         console.log(`[QueueWorker] 🔄 Rolling Rotation selected next theme: "${targetReelTheme}"`);
       }
@@ -945,8 +941,8 @@ export class QueueWorker {
       throw new Error('No active Facebook Page found');
     }
 
-    let selectedTheme = theme;
-    if (!selectedTheme || selectedTheme === 'rolling') {
+    let selectedTheme = theme || 'auto-category';
+    if (selectedTheme === 'rolling') {
       selectedTheme = await getNextRollingReelTheme(db);
       console.log(`[QueueWorker] 🔄 Rolling Rotation selected: "${selectedTheme}" for article: "${article.title}"`);
     }

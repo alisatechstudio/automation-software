@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { spawn } from 'child_process';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
+import { resolveCategoryTheme } from '../../config/constants.js';
 
 let ffmpegPath: string = '';
 try {
@@ -15,11 +16,240 @@ try {
 }
 
 export type ReelTheme =
+  | 'auto-category'
+  | 'cat-bangladesh'
+  | 'cat-politics'
+  | 'cat-economy'
+  | 'cat-international'
+  | 'cat-sports'
+  | 'cat-technology'
+  | 'cat-entertainment'
+  | 'cat-opinion'
+  | 'cat-religion'
+  | 'cat-education'
+  | 'cat-job'
+  | 'cat-lifestyle'
+  | 'cat-todays-match'
+  | 'rolling'
   | 'studio-red'
   | 'breaking-bold'
   | 'dark-cinema'
   | 'viral-gradient'
   | 'vertical-916';
+
+export interface CategoryReelStyle {
+  id: string;
+  banglaName: string;
+  gradientStops: [string, string, string, string];
+  ambientOrbColor: string;
+  ambientOrb2Color: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeDot: string;
+  cardBorder: string;
+  cardGlow: string;
+  headlineColor: string;
+  shimmerColor: string;
+  audioFilter: string;
+}
+
+export const CATEGORY_STYLES: Record<string, CategoryReelStyle> = {
+  'cat-bangladesh': {
+    id: 'cat-bangladesh',
+    banglaName: 'বাংলাদেশ',
+    gradientStops: ['#064e3b', '#065f46', '#831843', '#1e293b'],
+    ambientOrbColor: 'rgba(16, 185, 129, 0.22)',
+    ambientOrb2Color: 'rgba(225, 29, 72, 0.18)',
+    badgeBg: '#059669',
+    badgeText: '#ffffff',
+    badgeDot: '#dc2626',
+    cardBorder: 'rgba(16, 185, 129, 0.45)',
+    cardGlow: 'rgba(16, 185, 129, 0.25)',
+    headlineColor: '#064e3b',
+    shimmerColor: '#a7f3d0',
+    audioFilter: 'bass=g=5:f=120,treble=g=3:f=3500',
+  },
+  'cat-politics': {
+    id: 'cat-politics',
+    banglaName: 'রাজনীতি',
+    gradientStops: ['#450a0a', '#7f1d1d', '#991b1b', '#1c1917'],
+    ambientOrbColor: 'rgba(239, 68, 68, 0.25)',
+    ambientOrb2Color: 'rgba(245, 158, 11, 0.18)',
+    badgeBg: '#b91c1c',
+    badgeText: '#ffffff',
+    badgeDot: '#f59e0b',
+    cardBorder: 'rgba(220, 38, 38, 0.5)',
+    cardGlow: 'rgba(220, 38, 38, 0.3)',
+    headlineColor: '#450a0a',
+    shimmerColor: '#fecaca',
+    audioFilter: 'bass=g=7:f=100,treble=g=-1,equalizer=f=250:g=4:w=1',
+  },
+  'cat-economy': {
+    id: 'cat-economy',
+    banglaName: 'অর্থনীতি',
+    gradientStops: ['#0f172a', '#1e3a8a', '#065f46', '#042f2e'],
+    ambientOrbColor: 'rgba(14, 165, 233, 0.22)',
+    ambientOrb2Color: 'rgba(16, 185, 129, 0.20)',
+    badgeBg: '#0284c7',
+    badgeText: '#ffffff',
+    badgeDot: '#10b981',
+    cardBorder: 'rgba(2, 132, 199, 0.45)',
+    cardGlow: 'rgba(2, 132, 199, 0.25)',
+    headlineColor: '#0c4a6e',
+    shimmerColor: '#bae6fd',
+    audioFilter: 'atempo=1.03,equalizer=f=1200:width_type=h:width=250:g=5,treble=g=5:f=4000,bass=g=2',
+  },
+  'cat-international': {
+    id: 'cat-international',
+    banglaName: 'আন্তর্জাতিক',
+    gradientStops: ['#312e81', '#831843', '#9f1239', '#431407'],
+    ambientOrbColor: 'rgba(251, 146, 60, 0.22)',
+    ambientOrb2Color: 'rgba(168, 85, 247, 0.20)',
+    badgeBg: '#facc15',
+    badgeText: '#1e1b4b',
+    badgeDot: '#dc2626',
+    cardBorder: 'rgba(236, 72, 153, 0.45)',
+    cardGlow: 'rgba(236, 72, 153, 0.25)',
+    headlineColor: '#4c0519',
+    shimmerColor: '#fde047',
+    audioFilter: 'aecho=0.8:0.88:350:0.28,bass=g=4:f=120,treble=g=3:f=3000',
+  },
+  'cat-sports': {
+    id: 'cat-sports',
+    banglaName: 'খেলাধুলা',
+    gradientStops: ['#030712', '#1d4ed8', '#c2410c', '#7c2d12'],
+    ambientOrbColor: 'rgba(249, 115, 22, 0.28)',
+    ambientOrb2Color: 'rgba(59, 130, 246, 0.22)',
+    badgeBg: '#ea580c',
+    badgeText: '#ffffff',
+    badgeDot: '#facc15',
+    cardBorder: 'rgba(234, 88, 12, 0.5)',
+    cardGlow: 'rgba(234, 88, 12, 0.3)',
+    headlineColor: '#1e3a8a',
+    shimmerColor: '#fed7aa',
+    audioFilter: 'asetrate=44100*1.12,aresample=48000,bass=g=6:f=90,treble=g=4:f=4500',
+  },
+  'cat-technology': {
+    id: 'cat-technology',
+    banglaName: 'তথ্যপ্রযুক্তি',
+    gradientStops: ['#030712', '#0e7490', '#1e1b4b', '#020617'],
+    ambientOrbColor: 'rgba(6, 182, 212, 0.25)',
+    ambientOrb2Color: 'rgba(99, 102, 241, 0.20)',
+    badgeBg: '#06b6d4',
+    badgeText: '#082f49',
+    badgeDot: '#38bdf8',
+    cardBorder: 'rgba(6, 182, 212, 0.5)',
+    cardGlow: 'rgba(6, 182, 212, 0.3)',
+    headlineColor: '#083344',
+    shimmerColor: '#a5f3fc',
+    audioFilter: 'asetrate=44100*1.05,aresample=48000,flanger=delay=3.5:speed=0.8:depth=2,treble=g=6:f=5000',
+  },
+  'cat-entertainment': {
+    id: 'cat-entertainment',
+    banglaName: 'বিনোদন',
+    gradientStops: ['#4a044e', '#86198f', '#be185d', '#180424'],
+    ambientOrbColor: 'rgba(236, 72, 153, 0.28)',
+    ambientOrb2Color: 'rgba(217, 70, 239, 0.22)',
+    badgeBg: '#db2777',
+    badgeText: '#ffffff',
+    badgeDot: '#fde047',
+    cardBorder: 'rgba(219, 39, 119, 0.5)',
+    cardGlow: 'rgba(219, 39, 119, 0.3)',
+    headlineColor: '#500724',
+    shimmerColor: '#fbcfe8',
+    audioFilter: 'asetrate=44100*1.08,aresample=48000,flanger=delay=2.5:speed=0.6,treble=g=5:f=4500,bass=g=3',
+  },
+  'cat-opinion': {
+    id: 'cat-opinion',
+    banglaName: 'মতামত',
+    gradientStops: ['#1e293b', '#334155', '#475569', '#0f172a'],
+    ambientOrbColor: 'rgba(217, 119, 6, 0.20)',
+    ambientOrb2Color: 'rgba(148, 163, 184, 0.18)',
+    badgeBg: '#d97706',
+    badgeText: '#ffffff',
+    badgeDot: '#f59e0b',
+    cardBorder: 'rgba(217, 119, 6, 0.45)',
+    cardGlow: 'rgba(217, 119, 6, 0.25)',
+    headlineColor: '#0f172a',
+    shimmerColor: '#fde68a',
+    audioFilter: 'atempo=0.92,lowpass=f=3800,bass=g=4:f=140',
+  },
+  'cat-religion': {
+    id: 'cat-religion',
+    banglaName: 'ধর্ম',
+    gradientStops: ['#064e3b', '#047857', '#14532d', '#022c22'],
+    ambientOrbColor: 'rgba(234, 179, 8, 0.22)',
+    ambientOrb2Color: 'rgba(16, 185, 129, 0.20)',
+    badgeBg: '#ca8a04',
+    badgeText: '#14532d',
+    badgeDot: '#15803d',
+    cardBorder: 'rgba(202, 138, 4, 0.5)',
+    cardGlow: 'rgba(202, 138, 4, 0.3)',
+    headlineColor: '#064e3b',
+    shimmerColor: '#fef08a',
+    audioFilter: 'lowpass=f=3200,aecho=0.7:0.7:550:0.25,volume=1.1',
+  },
+  'cat-education': {
+    id: 'cat-education',
+    banglaName: 'শিক্ষা',
+    gradientStops: ['#1e3a8a', '#2563eb', '#1d4ed8', '#0f172a'],
+    ambientOrbColor: 'rgba(56, 189, 248, 0.25)',
+    ambientOrb2Color: 'rgba(96, 165, 250, 0.20)',
+    badgeBg: '#2563eb',
+    badgeText: '#ffffff',
+    badgeDot: '#38bdf8',
+    cardBorder: 'rgba(37, 99, 235, 0.5)',
+    cardGlow: 'rgba(37, 99, 235, 0.3)',
+    headlineColor: '#1e3a8a',
+    shimmerColor: '#bfdbfe',
+    audioFilter: 'equalizer=f=2200:g=4:w=1,treble=g=4:f=3800,atempo=1.02',
+  },
+  'cat-job': {
+    id: 'cat-job',
+    banglaName: 'চাকরি',
+    gradientStops: ['#134e4a', '#0f766e', '#042f2e', '#0f172a'],
+    ambientOrbColor: 'rgba(52, 211, 153, 0.22)',
+    ambientOrb2Color: 'rgba(45, 212, 191, 0.20)',
+    badgeBg: '#059669',
+    badgeText: '#ffffff',
+    badgeDot: '#34d399',
+    cardBorder: 'rgba(5, 150, 105, 0.5)',
+    cardGlow: 'rgba(5, 150, 105, 0.3)',
+    headlineColor: '#134e4a',
+    shimmerColor: '#a7f3d0',
+    audioFilter: 'atempo=1.04,bass=g=4:f=130,treble=g=3:f=3200',
+  },
+  'cat-lifestyle': {
+    id: 'cat-lifestyle',
+    banglaName: 'জীবনযাপন',
+    gradientStops: ['#881337', '#9f1239', '#fb7185', '#4c0519'],
+    ambientOrbColor: 'rgba(251, 113, 133, 0.25)',
+    ambientOrb2Color: 'rgba(251, 146, 60, 0.20)',
+    badgeBg: '#f97316',
+    badgeText: '#ffffff',
+    badgeDot: '#fb7185',
+    cardBorder: 'rgba(249, 115, 22, 0.5)',
+    cardGlow: 'rgba(249, 115, 22, 0.3)',
+    headlineColor: '#4c0519',
+    shimmerColor: '#fed7aa',
+    audioFilter: 'treble=g=4:f=3500,equalizer=f=800:g=3:w=1,bass=g=2:f=150',
+  },
+  'cat-todays-match': {
+    id: 'cat-todays-match',
+    banglaName: 'আজকের খেলা',
+    gradientStops: ['#7f1d1d', '#b91c1c', '#d97706', '#450a0a'],
+    ambientOrbColor: 'rgba(239, 68, 68, 0.32)',
+    ambientOrb2Color: 'rgba(245, 158, 11, 0.28)',
+    badgeBg: '#dc2626',
+    badgeText: '#ffffff',
+    badgeDot: '#facc15',
+    cardBorder: 'rgba(220, 38, 38, 0.65)',
+    cardGlow: 'rgba(220, 38, 38, 0.45)',
+    headlineColor: '#450a0a',
+    shimmerColor: '#fef08a',
+    audioFilter: 'asetrate=44100*1.18,aresample=48000,bass=g=7:f=85,treble=g=5:f=4500',
+  },
+};
 
 export interface ReelRenderInput {
   headline: string;
@@ -128,15 +358,21 @@ export class ReelVideoRenderer {
   public async renderStaticPreview(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const rawTheme = input.theme || 'viral-gradient';
-    const theme = (rawTheme === 'rolling' ? 'viral-gradient' : rawTheme) as ReelTheme;
-    const isVertical = theme === 'vertical-916' || input.height === 1920;
-    const width = isVertical ? 1080 : (input.width || 1080);
-    const height = isVertical ? 1920 : (input.height || 1080);
-
+    const rawTheme = input.theme || 'auto-category';
     const headline = (input.headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি').trim();
     const category = (input.category || 'আন্তর্জাতিক').trim();
     const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    let theme = rawTheme;
+    if (theme === 'auto-category') {
+      theme = resolveCategoryTheme(category);
+    } else if (theme === 'rolling') {
+      theme = 'viral-gradient';
+    }
+
+    const isVertical = theme === 'vertical-916' || input.height === 1920;
+    const width = isVertical ? 1080 : (input.width || 1080);
+    const height = isVertical ? 1920 : (input.height || 1080);
 
     let articleImg: any = null;
     if (input.imageUrl) {
@@ -159,8 +395,18 @@ export class ReelVideoRenderer {
   public async renderReel(input: ReelRenderInput): Promise<Buffer> {
     this.registerFonts();
 
-    const rawTheme = input.theme || 'viral-gradient';
-    const theme = (rawTheme === 'rolling' ? 'viral-gradient' : rawTheme) as ReelTheme;
+    const rawTheme = input.theme || 'auto-category';
+    const headline = (input.headline || '').trim();
+    const category = (input.category || 'বিশেষ খবর').trim();
+    const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    let theme = rawTheme;
+    if (theme === 'auto-category') {
+      theme = resolveCategoryTheme(category);
+    } else if (theme === 'rolling') {
+      theme = 'viral-gradient';
+    }
+
     const isVertical = theme === 'vertical-916' || input.height === 1920;
     const width = isVertical ? 1080 : (input.width || 1080);
     const height = isVertical ? 1920 : (input.height || 1080);
@@ -169,10 +415,6 @@ export class ReelVideoRenderer {
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = Math.max(24, input.fps || 24);
     const totalFrames = durationSeconds * fps;
-
-    const headline = (input.headline || '').trim();
-    const category = (input.category || 'বিশেষ খবর').trim();
-    const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     // 1. Preload article image
     let articleImg: any = null;
@@ -187,13 +429,27 @@ export class ReelVideoRenderer {
     // 2. Preload channel logo
     const logoImg = await this.loadLogoImage();
 
-    // 3. Audio soundtrack check
+    // 3. Audio soundtrack check - resolve dedicated category audio or category audio filter
+    const activeCategoryStyle = CATEGORY_STYLES[theme] || CATEGORY_STYLES[resolveCategoryTheme(category)];
+    const catAudioSlug = (activeCategoryStyle?.id || theme).replace('cat-', '');
+
+    const specificAudioCandidates = [
+      path.join(config.ASSETS_DIR, 'video', `theme_${catAudioSlug}.aac`),
+      path.join(config.ASSETS_DIR, 'video', `theme_${catAudioSlug}.mp3`),
+      path.join(process.cwd(), 'assets', 'video', `theme_${catAudioSlug}.aac`),
+      path.join(process.cwd(), 'assets', 'video', `theme_${catAudioSlug}.mp3`),
+    ];
+    const specificAudioPath = specificAudioCandidates.find((p) => fs.existsSync(p));
+
     const audioCandidates = [
       path.join(config.ASSETS_DIR, 'video', 'broadcast_news_theme.aac'),
       path.join(process.cwd(), 'assets', 'video', 'broadcast_news_theme.aac'),
       path.join(__dirname, '..', '..', '..', 'assets', 'video', 'broadcast_news_theme.aac'),
     ];
-    const audioPath = audioCandidates.find((p) => fs.existsSync(p));
+    const defaultAudioPath = audioCandidates.find((p) => fs.existsSync(p));
+
+    const finalAudioPath = specificAudioPath || defaultAudioPath;
+    const useAudioFilter = !specificAudioPath && !!activeCategoryStyle?.audioFilter;
 
     // Temporary output file in /tmp or data directory
     const tempOutputDir = process.env.VERCEL ? '/tmp' : path.join(config.DATA_DIR, 'temp');
@@ -215,11 +471,11 @@ export class ReelVideoRenderer {
       '-i', '-', // Stream from stdin
     ];
 
-    if (audioPath) {
+    if (finalAudioPath) {
       ffmpegArgs.push(
         '-thread_queue_size', '1',
         '-stream_loop', '-1',
-        '-i', audioPath
+        '-i', finalAudioPath
       );
     } else {
       // Meta Reels strictly requires a stereo 48kHz audio track (generate silent stereo fallback if asset is missing)
@@ -241,6 +497,10 @@ export class ReelVideoRenderer {
       '-keyint_min', String(fps * 2),
       '-sc_threshold', '0'
     );
+
+    if (useAudioFilter && activeCategoryStyle?.audioFilter) {
+      ffmpegArgs.push('-af', activeCategoryStyle.audioFilter);
+    }
 
     ffmpegArgs.push(
       '-c:a', 'aac',
@@ -404,6 +664,13 @@ export class ReelVideoRenderer {
       return;
     }
 
+    if (theme === 'auto-category' || (typeof theme === 'string' && theme.startsWith('cat-'))) {
+      const resolvedKey = theme === 'auto-category' ? resolveCategoryTheme(category) : theme;
+      const catStyle = CATEGORY_STYLES[resolvedKey] || CATEGORY_STYLES['cat-international'];
+      this.renderCategoryReelFrame(catStyle, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      return;
+    }
+
     switch (theme) {
       case 'breaking-bold':
         this.renderFrameBreakingBold(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
@@ -416,7 +683,7 @@ export class ReelVideoRenderer {
         break;
       case 'viral-gradient':
       default:
-        this.renderFrameViralGradient(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        this.renderCategoryReelFrame(CATEGORY_STYLES['cat-international'], ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
         break;
     }
   }
@@ -1401,6 +1668,311 @@ export class ReelVideoRenderer {
   }
 
   // ============================================================================
+  // UNIVERSAL LIVELY ANIMATED CATEGORY REEL FRAME (1080x1080 - 13 CATEGORIES)
+  // ============================================================================
+  private renderCategoryReelFrame(
+    style: CategoryReelStyle,
+    ctx: any,
+    width: number,
+    height: number,
+    progress: number,
+    f: number,
+    articleImg: any,
+    logoImg: any,
+    headline: string,
+    category: string,
+    website: string
+  ): void {
+    // A. Multi-stop Category Background Gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, style.gradientStops[0]);
+    bgGrad.addColorStop(0.35, style.gradientStops[1]);
+    bgGrad.addColorStop(0.7, style.gradientStops[2]);
+    bgGrad.addColorStop(1, style.gradientStops[3]);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // B. Atmospheric Moving Glow Orbs (Subtle Studio Broadcast Ambiance)
+    const orb1X = width * 0.75 + Math.sin(progress * Math.PI * 2) * 50;
+    const orb1Y = height * 0.18 + Math.cos(progress * Math.PI * 2) * 30;
+    ctx.save();
+    ctx.fillStyle = style.ambientOrbColor;
+    ctx.beginPath();
+    ctx.arc(orb1X, orb1Y, 360, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    const orb2X = width * 0.22 + Math.cos(progress * Math.PI * 2) * 45;
+    const orb2Y = height * 0.82 + Math.sin(progress * Math.PI * 2) * 35;
+    ctx.save();
+    ctx.fillStyle = style.ambientOrb2Color;
+    ctx.beginPath();
+    ctx.arc(orb2X, orb2Y, 320, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // C. Top Category Badge with Animated Live Pulsing Beacon
+    const displayCategory = (category || style.banglaName || 'সংবাদ').trim();
+    ctx.save();
+    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    const textWidth = ctx.measureText(displayCategory).width;
+    const badgeW = Math.max(220, textWidth + 80);
+    const badgeH = 48;
+    const badgeX = 50;
+    const badgeY = 28;
+
+    // Badge Pill
+    ctx.fillStyle = style.badgeBg;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 24);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Pulsing Beacon Core Dot
+    const pulseR = 5.5 + Math.sin(f * 0.35) * 1.8;
+    const beaconX = badgeX + 26;
+    const beaconY = badgeY + badgeH / 2;
+    ctx.fillStyle = style.badgeDot;
+    ctx.shadowColor = style.badgeDot;
+    ctx.shadowBlur = 10 + Math.sin(f * 0.35) * 6;
+    ctx.beginPath();
+    ctx.arc(beaconX, beaconY, pulseR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Expanding Beacon Ripple Ring (1s period)
+    const ripplePhase = (f % 24) / 24;
+    const rippleR = 5.5 + ripplePhase * 14;
+    const rippleAlpha = Math.max(0, 0.65 * (1 - ripplePhase));
+    ctx.strokeStyle = `rgba(255, 255, 255, ${rippleAlpha})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(beaconX, beaconY, rippleR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Badge Category Text
+    ctx.fillStyle = style.badgeText;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(displayCategory, beaconX + 16, beaconY);
+
+    // Top Right Follow CTA
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('লাইক ও ফলো করুন', width - 50, beaconY);
+    ctx.restore();
+
+    // D. Floating 3D Framed Photo Box with Ken Burns Motion
+    const floatY = Math.sin(progress * Math.PI * 2) * 5;
+    const photoX = 50;
+    const photoY = 95 + floatY;
+    const photoW = 980;
+    const photoH = 410;
+    const photoRadius = 28;
+
+    // Photo Box Drop Shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 35;
+    ctx.shadowOffsetY = 15;
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
+    ctx.fill();
+    ctx.restore();
+
+    // Photo Image with Ken Burns Zoom & Subtle Pan
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
+    ctx.clip();
+
+    if (articleImg) {
+      const zoom = 1.0 + progress * 0.08;
+      const panY = Math.sin(progress * Math.PI) * 10;
+      this.drawZoomedImage(ctx, articleImg, photoX, photoY, photoW, photoH, zoom, panY);
+    } else {
+      ctx.fillStyle = '#1e1b4b';
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+    }
+    ctx.restore();
+
+    // 8px White Photo Border with Animated Specular Shimmer Sweep
+    ctx.save();
+    const gleamPos = ((f * 20) % (photoW + 400)) - 200;
+    const borderGrad = ctx.createLinearGradient(
+      photoX + gleamPos - 120,
+      photoY,
+      photoX + gleamPos + 120,
+      photoY + photoH
+    );
+    borderGrad.addColorStop(0, '#ffffff');
+    borderGrad.addColorStop(0.5, style.shimmerColor);
+    borderGrad.addColorStop(1, '#ffffff');
+    ctx.strokeStyle = borderGrad;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
+    ctx.stroke();
+    ctx.restore();
+
+    // E. Center Brand Section with Pulsing Logo Halo
+    const brandCenterY = 538;
+    const logoSize = 68;
+    ctx.save();
+    if (logoImg) {
+      // Circular Logo
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(width / 2 - 110, brandCenterY, logoSize / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(
+        logoImg,
+        width / 2 - 110 - logoSize / 2,
+        brandCenterY - logoSize / 2,
+        logoSize,
+        logoSize
+      );
+      ctx.restore();
+
+      // Pulsing Logo Halo Ring
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.45 + Math.sin(f * 0.25) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(width / 2 - 110, brandCenterY, logoSize / 2 + 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Brand Name Typography
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 42px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 12;
+    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2 - 60, brandCenterY + 2);
+    ctx.restore();
+
+    // F. Headline White Card with Smooth Slide Entrance and Organic Float
+    // Smooth ease-out entrance during first 12 frames (0.5s at 24fps)
+    const entranceFactor = Math.min(1, f / 12);
+    const easeOut = 1 - Math.pow(1 - entranceFactor, 3);
+    const entranceOffset = (1 - easeOut) * 35; // Slides up from +35px
+    const breathingOffset = Math.sin(f * 0.08) * 3; // Gentle organic hover
+    const cardX = 50;
+    const cardY = 600 + entranceOffset + breathingOffset;
+    const cardW = 980;
+    const cardH = 300;
+    const cardRadius = 32;
+
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+    ctx.shadowBlur = 35;
+    ctx.shadowOffsetY = 15;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+    ctx.fill();
+
+    // Subtle category border accent
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = style.cardBorder;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
+    // Headline Bengali Typography
+    ctx.save();
+    const maxTextWidth = cardW - 80;
+    let fontSize = 52;
+    if (headline.length > 60) fontSize = 48;
+    if (headline.length > 85) fontSize = 44;
+    if (headline.length > 115) fontSize = 40;
+    if (headline.length > 145) fontSize = 35;
+
+    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.fillStyle = style.headlineColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const lines = this.wrapText(ctx, headline, maxTextWidth);
+    const lineHeight = Math.round(fontSize * 1.38);
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = cardY + (cardH - totalTextHeight) / 2;
+
+    lines.forEach((l, i) => {
+      ctx.fillText(l, width / 2, startY + i * lineHeight);
+    });
+    ctx.restore();
+
+    // G. Footer Action Buttons with Interactive Feedback
+    ctx.save();
+    const footerY = 935;
+
+    // Website Pill (Left)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.beginPath();
+    ctx.roundRect(50, footerY, 460, 52, 26);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Cyan Globe Dot
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(80, footerY + 26, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((website || 'bdnews.site').toLowerCase(), 98, footerY + 26);
+
+    // Call-To-Action Pill "বিস্তারিত কমেন্টে" (Right) with Attention Bounce
+    const btnFloat = Math.sin(f * 0.22) * 2;
+    const rightPillW = 280;
+    const rightPillX = width - 50 - rightPillW;
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.beginPath();
+    ctx.roundRect(rightPillX, footerY + btnFloat, rightPillW, 52, 26);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Vector Chat Bubble Icon
+    ctx.fillStyle = style.gradientStops[1];
+    const cIconX = rightPillX + 35;
+    const cIconY = footerY + btnFloat + 26;
+    ctx.beginPath();
+    ctx.roundRect(cIconX - 10, cIconY - 8, 18, 13, 3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cIconX - 3, cIconY + 5);
+    ctx.lineTo(cIconX - 6, cIconY + 9);
+    ctx.lineTo(cIconX + 1, cIconY + 5);
+    ctx.fill();
+
+    ctx.fillStyle = style.gradientStops[0];
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, cIconY);
+    ctx.restore();
+  }
+
+  // ============================================================================
   // THEME 4: Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)
   // ============================================================================
   private renderFrameViralGradient(
@@ -1415,205 +1987,19 @@ export class ReelVideoRenderer {
     category: string,
     website: string
   ): void {
-    // A. Multi-stop Sunset Mesh Gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-    bgGrad.addColorStop(0, '#312e81');
-    bgGrad.addColorStop(0.35, '#831843');
-    bgGrad.addColorStop(0.7, '#9f1239');
-    bgGrad.addColorStop(1, '#431407');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Ambient floating glow
-    ctx.save();
-    ctx.fillStyle = 'rgba(251, 146, 60, 0.15)';
-    ctx.beginPath();
-    ctx.arc(width * 0.8, height * 0.2, 350, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // B. Top Badges
-    ctx.save();
-    ctx.fillStyle = '#facc15';
-    ctx.beginPath();
-    ctx.roundRect(50, 28, 250, 48, 24);
-    ctx.fill();
-
-    // Red fire dot indicator (avoids hollow emoji square)
-    ctx.fillStyle = '#dc2626';
-    ctx.beginPath();
-    ctx.arc(78, 52, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#1e1b4b';
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(category, 96, 52);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('লাইক ও ফলো করুন', width - 50, 52);
-    ctx.restore();
-
-    // C. Floating 3D Photo Box
-    const floatY = Math.sin(progress * Math.PI * 2) * 6;
-    const photoX = 50;
-    const photoY = 95 + floatY;
-    const photoW = 980;
-    const photoH = 410;
-    const photoRadius = 28;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-    ctx.shadowBlur = 35;
-    ctx.shadowOffsetY = 15;
-    ctx.fillStyle = '#1e1b4b';
-    ctx.beginPath();
-    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
-    ctx.clip();
-
-    if (articleImg) {
-      const zoom = 1.0 + progress * 0.08;
-      this.drawZoomedImage(ctx, articleImg, photoX, photoY, photoW, photoH, zoom);
-    } else {
-      ctx.fillStyle = '#1e1b4b';
-      ctx.fillRect(photoX, photoY, photoW, photoH);
-    }
-    ctx.restore();
-
-    // 8px White Border
-    ctx.save();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
-    ctx.stroke();
-    ctx.restore();
-
-    // D. Center Brand
-    const brandCenterY = 538;
-    const logoSize = 68;
-    ctx.save();
-    if (logoImg) {
-      ctx.beginPath();
-      ctx.arc(width / 2 - 110, brandCenterY, logoSize / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(logoImg, width / 2 - 110 - logoSize / 2, brandCenterY - logoSize / 2, logoSize, logoSize);
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 10;
-    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2 - 60, brandCenterY + 2);
-    ctx.restore();
-
-    // E. Headline White Card
-    const cardX = 50;
-    const cardY = 600;
-    const cardW = 980;
-    const cardH = 300;
-    const cardRadius = 32;
-
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 35;
-    ctx.shadowOffsetY = 15;
-    ctx.beginPath();
-    ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(236, 72, 153, 0.4)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.restore();
-
-    // Text in deep plum
-    ctx.save();
-    const maxTextWidth = cardW - 80;
-    let fontSize = 52;
-    if (headline.length > 60) fontSize = 48;
-    if (headline.length > 85) fontSize = 44;
-    if (headline.length > 115) fontSize = 40;
-    if (headline.length > 145) fontSize = 35;
-
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
-    ctx.fillStyle = '#4c0519';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-
-    const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.38);
-    const totalTextHeight = lines.length * lineHeight;
-    const startY = cardY + (cardH - totalTextHeight) / 2;
-
-    lines.forEach((l, i) => {
-      ctx.fillText(l, width / 2, startY + i * lineHeight);
-    });
-    ctx.restore();
-
-    // F. Footer
-    ctx.save();
-    const footerY = 935;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.beginPath();
-    ctx.roundRect(50, footerY, 460, 52, 26);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Cyan globe dot (avoids hollow emoji square)
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.arc(80, footerY + 26, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText((website || 'bdnews.site').toLowerCase(), 98, footerY + 26);
-
-    const rightPillW = 280;
-    const rightPillX = width - 50 - rightPillW;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.roundRect(rightPillX, footerY, rightPillW, 52, 26);
-    ctx.fill();
-
-    // Clean vector chat bubble icon (avoids hollow emoji square)
-    ctx.fillStyle = '#831843';
-    const cIconX = rightPillX + 35;
-    const cIconY = footerY + 26;
-    ctx.beginPath();
-    ctx.roundRect(cIconX - 10, cIconY - 8, 18, 13, 3);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cIconX - 3, cIconY + 5);
-    ctx.lineTo(cIconX - 6, cIconY + 9);
-    ctx.lineTo(cIconX + 1, cIconY + 5);
-    ctx.fill();
-
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, footerY + 26);
-    ctx.restore();
+    this.renderCategoryReelFrame(
+      CATEGORY_STYLES['cat-international'],
+      ctx,
+      width,
+      height,
+      progress,
+      f,
+      articleImg,
+      logoImg,
+      headline,
+      category,
+      website
+    );
   }
 
   // ============================================================================
