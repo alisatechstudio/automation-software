@@ -411,7 +411,7 @@ export class ReelVideoRenderer {
     const width = isVertical ? 1080 : (input.width || 1080);
     const height = isVertical ? 1920 : (input.height || 1080);
 
-    const durationSeconds = input.durationSeconds || (process.env.VERCEL ? 8 : 10);
+    const durationSeconds = input.durationSeconds || 18; // 18 seconds (optimal 15-20s duration)
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = Math.max(24, input.fps || 24);
     const totalFrames = durationSeconds * fps;

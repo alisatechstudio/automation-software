@@ -175,7 +175,7 @@ export class QueueWorker {
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
       const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
       let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'auto-category';
-      const defaultDuration = process.env.VERCEL ? 8 : 10;
+      const defaultDuration = 18; // 18s (optimal 15-20s range)
       const reelDuration = parseInt(reelDurationSetting?.value || String(defaultDuration), 10) || defaultDuration;
 
       if (targetReelTheme === 'rolling') {
@@ -922,7 +922,7 @@ export class QueueWorker {
     articleId: string,
     targetPageId?: string,
     theme?: string,
-    durationSeconds: number = 15
+    durationSeconds: number = 18
   ): Promise<{ success: boolean; videoId?: string; postId?: string; error?: string }> {
     const db = getDatabase();
     const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -1094,7 +1094,7 @@ export class QueueWorker {
       category: article.category || 'বিশেষ খবর',
       imageUrl: article.imageUrl || undefined,
       theme: 'vertical-916', // YouTube Shorts prefers 9:16 vertical fullscreen
-      durationSeconds: 15,
+      durationSeconds: 18, // 15-20s duration
       fps: 24,
     });
 

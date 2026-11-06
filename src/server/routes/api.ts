@@ -613,8 +613,8 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
       '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
     const category = (req.query.category as string) || 'বিশেষ খবর';
     const imageUrl = req.query.imageUrl as string | undefined;
-    const theme = (req.query.theme as string) || 'studio-red';
-    const durationSeconds = parseInt(req.query.duration as string, 10) || 15;
+    const theme = (req.query.theme as string) || 'auto-category';
+    const durationSeconds = parseInt(req.query.duration as string, 10) || 18;
 
     const videoBuffer = await reelRenderer.renderReel({
       headline,
@@ -622,7 +622,7 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
       imageUrl,
       theme,
       durationSeconds,
-      fps: 20,
+      fps: 24,
     });
 
     res.setHeader('Content-Type', 'video/mp4');
@@ -648,7 +648,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       targetTheme = await getNextRollingReelTheme(db);
       console.log(`[Reels API] 🔄 Rolling Rotation selected: "${targetTheme}"`);
     }
-    const durationSeconds = parseInt(duration as string, 10) || 15;
+    const durationSeconds = parseInt(duration as string, 10) || 18;
 
     if (articleId) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -794,8 +794,8 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
       autoPostReels: autoReel ? autoReel.value !== 'false' : true,
       disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Feed poster disabled, Reels-only active
       postPosterToStories: postStories ? postStories.value !== 'false' : true, // Stories poster enabled
-      reelDuration: parseInt(reelDuration?.value || '15', 10) || 15, // Default 15 seconds
-      reelTheme: reelTheme?.value || 'rolling', // Default to rolling round-robin rotation
+      reelDuration: parseInt(reelDuration?.value || '18', 10) || 18, // Default 18 seconds (15-20s range)
+      reelTheme: reelTheme?.value || 'auto-category', // Default to auto-category matching
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1337,8 +1337,8 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DEFAULT_CAPTION_FORMAT: config.DEFAULT_CAPTION_FORMAT,
       DEFAULT_COMMENT_FORMAT: config.DEFAULT_COMMENT_FORMAT,
       DISABLE_POSTER: 'true',
-      REEL_DURATION_SECONDS: '15',
-      DEFAULT_REEL_THEME: 'studio-red',
+      REEL_DURATION_SECONDS: '18',
+      DEFAULT_REEL_THEME: 'auto-category',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',

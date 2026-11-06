@@ -859,13 +859,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
           <div class="text-xs font-mono uppercase text-cyan-400">Reel Duration</div>
-          <div class="text-2xl font-black text-cyan-400 mt-1">15 Seconds</div>
-          <div class="text-[11px] text-slate-500 mt-1">300 frames @ 20 FPS</div>
+          <div class="text-2xl font-black text-cyan-400 mt-1">18 Seconds</div>
+          <div class="text-[11px] text-slate-500 mt-1">432 frames @ 24 FPS (15-20s)</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
           <div class="text-xs font-mono uppercase text-amber-400">Audio Soundtrack</div>
           <div class="text-2xl font-black text-amber-400 mt-1">Studio AAC</div>
-          <div class="text-[11px] text-slate-500 mt-1">Full 15s Broadcast Jingle</div>
+          <div class="text-[11px] text-slate-500 mt-1">13 Category Soundscapes (18s)</div>
         </div>
         <div class="glass-panel p-5 rounded-xl border border-slate-800">
           <div class="text-xs font-mono uppercase text-purple-400">Distribution Mode</div>
@@ -956,6 +956,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </select>
           </div>
 
+          <!-- Reel Video Duration -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
+              <span>Reel Duration (ভিডিও দৈর্ঘ্য)</span>
+              <span class="text-[10px] font-mono text-cyan-400">15-20s Sweet Spot</span>
+            </label>
+            <select id="reel-duration-select" onchange="onReelDurationChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-semibold">
+              <option value="18" selected>⏱️ 18 Seconds (Recommended: 15-20s Broadcast)</option>
+              <option value="15">⏱️ 15 Seconds (Standard Reel)</option>
+              <option value="20">⏱️ 20 Seconds (Extended Reel)</option>
+              <option value="16">⏱️ 16 Seconds</option>
+            </select>
+          </div>
+
           <!-- Actions -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md">
@@ -981,7 +995,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <span class="w-2 h-2 rounded-full bg-rose-500"></span>
               Studio Video Player (1080x1080)
             </span>
-            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">15s • 20fps • AAC</span>
+            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">18s • 24fps • AAC</span>
           </div>
 
           <div id="reel-player-box" class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300">
@@ -998,13 +1012,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 🎬
               </div>
               <p class="text-sm font-semibold text-slate-200">No Reel Generated Yet</p>
-              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render a 15-second broadcast MP4 reel with Bengali typography and audio.</p>
+              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render an 18-second broadcast MP4 reel with Bengali typography and category sound.</p>
             </div>
 
             <!-- Spinner Overlay -->
             <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
               <div class="w-10 h-10 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 300 frames with Skia & FFmpeg (15s)...</p>
+              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 432 frames with Canvas & FFmpeg (18s)...</p>
             </div>
           </div>
 
@@ -1071,7 +1085,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               YouTube Shorts Automation Pipeline
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              প্রতিটি সংবাদের ১৫ সেকেন্ডের MP4 রিল ভিডিও স্বয়ংক্রিয়ভাবে আপনার ইউটিউব চ্যানেলে Shorts হিসেবে আপলোড হবে। সংবাদ লিংক স্বয়ংক্রিয়ভাবে ভিডিওর ডেসক্রিপশন এবং ১ম কমেন্টে যুক্ত হবে।
+              প্রতিটি সংবাদের ১৫-২০ সেকেন্ডের MP4 রিল ভিডিও স্বয়ংক্রিয়ভাবে আপনার ইউটিউব চ্যানেলে Shorts হিসেবে আপলোড হবে। সংবাদ লিংক স্বয়ংক্রিয়ভাবে ভিডিওর ডেসক্রিপশন এবং ১ম কমেন্টে যুক্ত হবে।
             </p>
           </div>
 
@@ -1117,7 +1131,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
               <div class="text-[11px] text-slate-400 bg-red-950/20 p-3 rounded-xl border border-red-900/30 space-y-1">
                 <div class="font-semibold text-red-300 flex items-center gap-1.5">
-                  <span>✓</span> 15s MP4 Ready (Vertical 9:16)
+                  <span>✓</span> 15-20s MP4 Ready (Vertical 9:16)
                 </div>
                 <div class="font-semibold text-red-300 flex items-center gap-1.5">
                   <span>✓</span> Category: News & Politics (#Shorts)
@@ -2282,6 +2296,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     function onReelThemeChanged() {
       const select = document.getElementById('reel-theme-select');
       const theme = select ? select.value : 'auto-category';
+      const durSelect = document.getElementById('reel-duration-select');
+      const dur = durSelect ? durSelect.value : '18';
       const descEl = document.getElementById('reel-theme-desc');
       const badgeEl = document.getElementById('reel-theme-badge');
       const playerBox = document.getElementById('reel-player-box');
@@ -2297,7 +2313,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '10s • Smart AI Matching';
+        if (durBadge) durBadge.innerText = dur + 's • 24fps • Smart AI Matching';
       } else if (theme === 'rolling') {
         if (badgeEl) {
           badgeEl.innerText = 'Auto Rolling';
@@ -2306,7 +2322,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '10s • Rotating Templates';
+        if (durBadge) durBadge.innerText = dur + 's • 24fps • Rotating Templates';
       } else if (theme && theme.startsWith('cat-')) {
         if (badgeEl) {
           badgeEl.innerText = '1:1 Category';
@@ -2315,7 +2331,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1080';
+        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1080';
       } else if (theme === 'vertical-916') {
         if (badgeEl) {
           badgeEl.innerText = '9:16 Vertical';
@@ -2324,7 +2340,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[280px] aspect-[9/16] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1920';
+        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1920';
       } else {
         if (badgeEl) {
           badgeEl.innerText = '1:1 Square';
@@ -2333,10 +2349,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (playerBox) {
           playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
         }
-        if (durBadge) durBadge.innerText = '10s • 24fps • 1080x1080';
+        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1080';
       }
 
       updateReelFramePreview();
+    }
+
+    function onReelDurationChanged() {
+      onReelThemeChanged();
     }
 
     function updateReelFramePreview() {
@@ -2417,7 +2437,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           body: JSON.stringify({ disablePoster: checked })
         });
         if (res.ok) {
-          showToast(checked ? '✓ Poster disabled! 15s Reels-Only mode active.' : 'Poster posting enabled');
+          showToast(checked ? '✓ Poster disabled! 15-20s Reels-Only mode active.' : 'Poster posting enabled');
           loadReelSettings();
         } else {
           showToast('Failed to update setting', true);
@@ -2540,16 +2560,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const spinner = document.getElementById('reel-player-spinner');
       const downloadLink = document.getElementById('reel-download-link');
       const statusEl = document.getElementById('reel-action-status');
+      const dur = document.getElementById('reel-duration-select')?.value || '18';
 
       spinner.classList.remove('hidden');
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering 15s MP4 news reel (' + theme + ')... This takes ~15-20 seconds.';
+      statusEl.innerText = 'Rendering ' + dur + 's MP4 news reel (' + theme + ')... This takes ~15-20 seconds.';
 
       const params = new URLSearchParams({
         headline: headline,
         category: category,
         theme: theme,
-        duration: '15'
+        duration: dur
       });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
@@ -2567,8 +2588,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           video.play().catch(() => {});
           downloadLink.href = streamUrl;
           downloadLink.classList.remove('hidden');
-          statusEl.innerText = '✓ 15s Reel rendered successfully! Playing in studio player.';
-          showToast('✓ 15s MP4 Reel (' + theme + ') rendered successfully!');
+          statusEl.innerText = '✓ ' + dur + 's Reel rendered successfully! Playing in studio player.';
+          showToast('✓ ' + dur + 's MP4 Reel (' + theme + ') rendered successfully!');
         };
 
         video.onerror = () => {
@@ -2587,7 +2608,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input').value.trim();
       const pageId = document.getElementById('reel-page-select').value;
-      const theme = document.getElementById('reel-theme-select').value || 'studio-red';
+      const theme = document.getElementById('reel-theme-select').value || 'auto-category';
+      const dur = parseInt(document.getElementById('reel-duration-select')?.value || '18', 10) || 18;
 
       if (!headline) {
         showToast('Please enter a Bengali headline', true);
@@ -2601,19 +2623,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       btn.disabled = true;
       btn.classList.add('opacity-50');
       spinner.classList.remove('hidden');
-      document.getElementById('reel-spinner-text').innerText = 'Generating 15s MP4 & publishing to Facebook Reels...';
+      document.getElementById('reel-spinner-text').innerText = 'Generating ' + dur + 's MP4 & publishing to Facebook Reels...';
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering 15s MP4 (' + theme + ') and uploading to Facebook Graph API...';
+      statusEl.innerText = 'Rendering ' + dur + 's MP4 (' + theme + ') and uploading to Facebook Graph API...';
 
       try {
         const res = await safeFetchJson('/api/reels/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ headline, category, imageUrl, pageId, theme, duration: 15 })
+          body: JSON.stringify({ headline, category, imageUrl, pageId, theme, duration: dur })
         });
 
         if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully published 15s Reel to ' + (res.data.pageName || 'Facebook') + '!');
+          showToast('✓ Successfully published ' + dur + 's Reel to ' + (res.data.pageName || 'Facebook') + '!');
           statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
           loadReelLogs();
         } else {
@@ -2821,7 +2843,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const btn = document.getElementById('yt-upload-btn');
       if (btn) btn.disabled = true;
       try {
-        showToast('Rendering 15s MP4 reel & uploading to YouTube Shorts...');
+        showToast('Rendering 18s MP4 reel & uploading to YouTube Shorts...');
         const res = await safeFetchJson('/api/youtube/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
