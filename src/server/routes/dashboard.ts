@@ -1601,12 +1601,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     // --- QUEUE & LOGS ---
     async function loadQueue() {
       try {
-        const [queueRes, logsRes] = await Promise.all([
-          fetch('/api/queue'),
-          fetch('/api/logs')
+        const [qRes, lRes] = await Promise.all([
+          safeFetchJson('/api/queue'),
+          safeFetchJson('/api/logs')
         ]);
-        const jobs = await queueRes.json();
-        const logs = await logsRes.json();
+        const jobs = (qRes.ok && Array.isArray(qRes.data)) ? qRes.data : [];
+        const logs = (lRes.ok && Array.isArray(lRes.data)) ? lRes.data : [];
 
         const tbody = document.getElementById('queue-table-body');
         if (jobs.length === 0) {
@@ -1687,12 +1687,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     // --- RSS SOURCES ---
     async function loadSources() {
-      const [sourcesRes, pagesRes] = await Promise.all([
-        fetch('/api/sources'),
-        fetch('/api/pages')
+      const [sRes, pRes] = await Promise.all([
+        safeFetchJson('/api/sources'),
+        safeFetchJson('/api/pages')
       ]);
-      const sources = await sourcesRes.json();
-      const pages = await pagesRes.json();
+      const sources = (sRes.ok && Array.isArray(sRes.data)) ? sRes.data : [];
+      const pages = (pRes.ok && Array.isArray(pRes.data)) ? pRes.data : [];
 
       const pageSelect = document.getElementById('source-page');
       pageSelect.innerHTML = '<option value="">Select Connected Page</option>' +
@@ -1751,8 +1751,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     // --- FACEBOOK PAGES ---
     async function loadPages() {
-      const res = await fetch('/api/pages');
-      const pages = await res.json();
+      const res = await safeFetchJson('/api/pages');
+      const pages = (res.ok && Array.isArray(res.data)) ? res.data : [];
       const list = document.getElementById('pages-list');
       if (pages.length === 0) {
         list.innerHTML = '<div class="text-sm text-slate-500 font-mono">No Facebook Pages connected yet.</div>';
@@ -2139,8 +2139,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     // --- SETTINGS ---
     async function loadSettings() {
-      const res = await fetch('/api/settings');
-      const d = await res.json();
+      const res = await safeFetchJson('/api/settings');
+      const d = res.data || {};
       document.getElementById('setting-cron').value = d.POLL_INTERVAL_CRON || '*/10 * * * *';
       document.getElementById('setting-age').value = d.MAX_ARTICLE_AGE_HOURS || 24;
       document.getElementById('setting-cap').value = d.MAX_POSTS_PER_HOUR || 10;
@@ -2164,12 +2164,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         DEFAULT_COMMENT_FORMAT: document.getElementById('setting-comment-format').value,
       };
 
-      const res = await fetch('/api/settings', {
+      const res = await safeFetchJson('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const d = await res.json();
+      const d = res.data || {};
       if (d.success) {
         showToast('Pipeline configuration saved successfully!');
       } else {

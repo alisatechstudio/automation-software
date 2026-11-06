@@ -723,7 +723,7 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
 
     res.json({
       autoPostReels: autoReel ? autoReel.value !== 'false' : true,
-      disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Feed poster disabled
+      disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Feed poster disabled, Reels-only active
       postPosterToStories: postStories ? postStories.value !== 'false' : true, // Stories poster enabled
       reelDuration: parseInt(reelDuration?.value || '15', 10) || 15, // Default 15 seconds
       reelTheme: reelTheme?.value || 'rolling', // Default to rolling round-robin rotation
@@ -1489,5 +1489,14 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     console.error('[YouTube OAuth Callback] Exchange error:', err.message);
     res.redirect(`/?tab=youtube&auth_error=${encodeURIComponent(err.message)}`);
   }
+});
+
+// Emergency System Process Restart
+apiRouter.post('/system/restart', (req: Request, res: Response) => {
+  res.json({ success: true, message: 'Server process exiting to clear threads and recycle Passenger...' });
+  setTimeout(() => {
+    console.log('[System] Manual restart triggered via API. Exiting process with code 0...');
+    process.exit(0);
+  }, 500);
 });
 

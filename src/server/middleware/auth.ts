@@ -2,8 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import { config } from '../../config/env.js';
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // Allow health check and cron endpoint without basic authentication
-  if (req.path === '/health' || req.path === '/healthz' || req.path === '/api/cron') {
+  // Allow health check, cron endpoint, and emergency reset without basic authentication
+  if (
+    req.path === '/health' ||
+    req.path === '/healthz' ||
+    req.path === '/api/cron' ||
+    req.path === '/reset-server' ||
+    req.path === '/reset-server.php' ||
+    req.path === '/api/reset-server'
+  ) {
     return next();
   }
 

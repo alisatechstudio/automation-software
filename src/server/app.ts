@@ -127,18 +127,43 @@ export function createServer(): Express {
 
     res.status(200).json({
       status: mongoReady ? 'healthy' : 'degraded',
-      database: mongoReady ? 'connected (MongoDB)' : 'disconnected',
-      mongoError: mongoReady ? null : getLastMongoError(),
+      database: mongoReady ? `connected (${config.DB_TYPE === 'mysql' ? 'MySQL: ' + config.MYSQL_DATABASE : 'MongoDB'})` : 'disconnected',
+      dbError: mongoReady ? null : getLastMongoError(),
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
       dryRun: config.DRY_RUN,
       queue: queueStats,
       environment: {
+        dbType: config.DB_TYPE,
+        mysqlDatabase: config.MYSQL_DATABASE,
+        mysqlHost: config.MYSQL_HOST,
         vercel: !!process.env.VERCEL,
         nodeEnv: config.NODE_ENV,
         hasMongoUri: !!process.env.MONGODB_URI || !!process.env.MONGODB_URL,
       },
     });
+  });
+
+  // Emergency Server Reset & Process Recycling Handler (accessible directly via browser)
+  app.all(['/reset-server', '/reset-server.php', '/api/reset-server'], (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Server Resetting</title></head>
+      <body style="font-family:system-ui, -apple-system, sans-serif; background:#030712; color:#f8fafc; padding:50px 20px; text-align:center;">
+        <div style="max-width:500px; margin:0 auto; background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:32px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+          <h1 style="color:#10b981; margin-bottom:12px; font-size:24px;">✓ Reset Triggered Successfully</h1>
+          <p style="color:#94a3b8; line-height:1.6; margin-bottom:24px;">The Node.js automation process is safely terminating (code 0) to release all threads, clear CloudLinux NPROC locks, and reload fresh code via Passenger.</p>
+          <a href="/" style="display:inline-block; background:#dc2626; color:#fff; text-decoration:none; padding:10px 24px; border-radius:8px; font-weight:600; font-size:14px;">Open Dashboard</a>
+        </div>
+      </body>
+      </html>
+    `);
+    setTimeout(() => {
+      console.log('[System] Reset endpoint triggered. Gracefully exiting process (code 0) to clear locks...');
+      process.exit(0);
+    }, 600);
   });
 
   // Vercel Cron Endpoint: Triggered by Vercel Cron schedule or external cron-job.org
@@ -209,21 +234,23 @@ export function createServer(): Express {
     // If still not connected and accessing root or web UI, show helpful Setup Diagnostics
     if (!isMongoConnected()) {
       if (req.path.startsWith('/api') && req.path !== '/api/cron' && !req.path.startsWith('/api/preview')) {
+        res.setHeader('Cache-Control', 'no-transform');
         res.status(503).json({
-          error: 'MongoDB Not Connected',
-          details: getLastMongoError() || 'MONGODB_URI not configured in Vercel',
+          error: 'Database Not Connected',
+          dbType: config.DB_TYPE,
+          details: getLastMongoError() || 'Database credentials not configured in .env',
         });
         return;
       }
 
-      const maskedUri = (process.env.MONGODB_URI || config.MONGODB_URI || '').replace(/:([^@]+)@/, ':****@') || '(Not Set)';
-      const errorMsg = getLastMongoError() || 'MONGODB_URI environment variable is missing';
+      const isMySql = config.DB_TYPE === 'mysql';
+      const errorMsg = getLastMongoError() || (isMySql ? 'Could not connect to MySQL server at ' + config.MYSQL_HOST + ':' + config.MYSQL_PORT : 'MONGODB_URI environment variable is missing');
 
       const setupHtml = `<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <title>MongoDB Connection Required - News Automation</title>
+  <title>Database Setup Required - News Automation</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-6">
@@ -231,25 +258,39 @@ export function createServer(): Express {
     <div class="flex items-center gap-3 mb-6">
       <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold">⚠️</div>
       <div>
-        <h1 class="text-xl font-bold text-slate-100">MongoDB Connection Required</h1>
-        <p class="text-xs text-slate-400">Vercel Deployment Diagnostic</p>
+        <h1 class="text-xl font-bold text-slate-100">${isMySql ? 'MySQL Database Connection Required' : 'MongoDB Connection Required'}</h1>
+        <p class="text-xs text-slate-400">${isMySql ? 'cPanel / phpMyAdmin Configuration' : 'Vercel Deployment Diagnostic'}</p>
       </div>
     </div>
 
     <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono mb-6 space-y-1">
-      <div class="text-slate-400"><strong class="text-slate-200">Current URI:</strong> ${maskedUri}</div>
+      <div class="text-slate-400"><strong class="text-slate-200">${isMySql ? 'Database:' : 'Current URI:'}</strong> ${isMySql ? config.MYSQL_DATABASE + ' (Host: ' + config.MYSQL_HOST + ')' : '(MongoDB)'}</div>
       <div class="text-red-400"><strong class="text-slate-200">Error:</strong> ${errorMsg}</div>
     </div>
 
     <div class="space-y-4 text-sm text-slate-300">
-      <h2 class="font-semibold text-slate-100">How to Fix on Vercel:</h2>
+      <h2 class="font-semibold text-slate-100">${isMySql ? 'How to Configure in cPanel (.env):' : 'How to Fix on Vercel:'}</h2>
+      ${isMySql ? `
+      <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-400">
+        <li>In cPanel &rarr; <strong>MySQL Databases</strong>: Create a database user (e.g. <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">${config.MYSQL_USER}</code>).</li>
+        <li>Assign the user to database <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">${config.MYSQL_DATABASE}</code> with <strong>ALL PRIVILEGES</strong>.</li>
+        <li>Open your <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">.env</code> file in cPanel File Manager and configure:
+          <pre class="bg-slate-950 p-2 mt-2 rounded text-slate-300">DB_TYPE=mysql
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=${config.MYSQL_DATABASE}
+MYSQL_USER=your_cpanel_db_user
+MYSQL_PASSWORD=your_password</pre>
+        </li>
+        <li>Click <strong>Restart</strong> in cPanel Setup Node.js App.</li>
+      </ol>
+      ` : `
       <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-400">
         <li>Open your project on the <a href="https://vercel.com/dashboard" target="_blank" class="text-red-400 underline">Vercel Dashboard</a>.</li>
         <li>Go to <strong>Settings</strong> ➔ <strong>Environment Variables</strong>.</li>
-        <li>Add <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">MONGODB_URI</code> with your MongoDB Atlas or Vercel Storage connection string (e.g., <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">mongodb+srv://user:pass@cluster.mongodb.net/news_automation?retryWrites=true&w=majority</code>).</li>
-        <li>In MongoDB Atlas, verify <strong>Network Access</strong> allows IP <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">0.0.0.0/0</code> (Allow access from anywhere).</li>
-        <li>Redeploy or reload this page.</li>
+        <li>Add <code class="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">MONGODB_URI</code>.</li>
       </ol>
+      `}
     </div>
 
     <div class="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center">

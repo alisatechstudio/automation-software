@@ -203,9 +203,11 @@ export class ReelVideoRenderer {
     }
     const tempFile = path.join(tempOutputDir, `reel_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`);
 
-    // 4. Configure FFmpeg spawn arguments
+    // 4. Configure FFmpeg spawn arguments (strictly 1 thread to respect shared hosting/CloudLinux limits)
     const ffmpegArgs = [
       '-y',
+      '-threads', '1',
+      '-thread_queue_size', '1',
       '-f', 'image2pipe',
       '-vcodec', 'mjpeg',
       '-r', String(fps),
@@ -213,18 +215,25 @@ export class ReelVideoRenderer {
     ];
 
     if (audioPath) {
-      ffmpegArgs.push('-stream_loop', '-1', '-i', audioPath);
+      ffmpegArgs.push(
+        '-thread_queue_size', '1',
+        '-stream_loop', '-1',
+        '-i', audioPath
+      );
     }
 
     ffmpegArgs.push(
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
-      '-crf', '22',
+      '-tune', 'zerolatency',
+      '-threads', '1',
+      '-x264opts', 'threads=1:sliced-threads=0:lookahead_threads=0',
+      '-crf', '26',
       '-pix_fmt', 'yuv420p'
     );
 
     if (audioPath) {
-      ffmpegArgs.push('-c:a', 'aac', '-b:a', '192k', '-shortest');
+      ffmpegArgs.push('-c:a', 'aac', '-b:a', '96k', '-threads', '1', '-shortest');
     }
 
     ffmpegArgs.push(tempFile);
@@ -232,47 +241,114 @@ export class ReelVideoRenderer {
     const ffmpegProcess = spawn(ffmpegPath || 'ffmpeg', ffmpegArgs);
 
     let ffmpegErr = '';
-    ffmpegProcess.stderr.on('data', (d) => {
-      ffmpegErr += d.toString();
+    let spawnError: any = null;
+    let isTerminated = false;
+
+    ffmpegProcess.on('error', (err: any) => {
+      spawnError = err;
+      isTerminated = true;
     });
+
+    if (ffmpegProcess.stderr) {
+      ffmpegProcess.stderr.on('data', (d) => {
+        ffmpegErr += d.toString();
+      });
+    }
+
+    // CRITICAL: Prevent unhandled EPIPE exception if FFmpeg exits early
+    if (ffmpegProcess.stdin) {
+      ffmpegProcess.stdin.on('error', () => {
+        isTerminated = true;
+      });
+    }
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
     // 5. Render frames loop
     for (let f = 0; f < totalFrames; f++) {
+      if (isTerminated || spawnError || !ffmpegProcess.stdin || !ffmpegProcess.stdin.writable) {
+        break;
+      }
+
       const progress = f / totalFrames; // 0.0 -> 1.0
 
       ctx.clearRect(0, 0, width, height);
       this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
 
-      // Write frame to ffmpeg stdin
-      const frameBuffer = canvas.toBuffer('image/jpeg', 85);
-      ffmpegProcess.stdin.write(frameBuffer);
+      // Write frame to ffmpeg stdin safely with flow control
+      const frameBuffer = canvas.toBuffer('image/jpeg', 80);
+      try {
+        if (!isTerminated && ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
+          const ok = ffmpegProcess.stdin.write(frameBuffer, (wErr) => {
+            if (wErr) isTerminated = true;
+          });
+          if (!ok && !isTerminated) {
+            await new Promise<void>((res) => {
+              ffmpegProcess.stdin.once('drain', res);
+              setTimeout(res, 250);
+            });
+          }
+        } else {
+          break;
+        }
+      } catch {
+        isTerminated = true;
+        break;
+      }
     }
 
-    ffmpegProcess.stdin.end();
-
-    // Wait for ffmpeg to complete
-    await new Promise<void>((resolve, reject) => {
-      ffmpegProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`FFmpeg exited with code ${code}: ${ffmpegErr}`));
-        }
-      });
-      ffmpegProcess.on('error', reject);
-    });
-
-    const videoBuffer = fs.readFileSync(tempFile);
-
-    // Clean up temporary file
     try {
-      fs.unlinkSync(tempFile);
-    } catch (e) {}
+      if (ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
+        ffmpegProcess.stdin.end();
+      }
+    } catch {}
 
-    return videoBuffer;
+    // 30-second watchdog timer to guarantee FFmpeg process is ALWAYS killed and never leaks
+    const killWatchdog = setTimeout(() => {
+      try {
+        if (!ffmpegProcess.killed) {
+          console.warn('[ReelVideoRenderer] Watchdog: FFmpeg exceeded 30s timeout, terminating process...');
+          ffmpegProcess.kill('SIGKILL');
+        }
+      } catch {}
+    }, 30000);
+
+    try {
+      // Wait for ffmpeg to complete
+      await new Promise<void>((resolve, reject) => {
+        if (spawnError) {
+          return reject(spawnError);
+        }
+        ffmpegProcess.on('close', (code) => {
+          clearTimeout(killWatchdog);
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`FFmpeg exited with code ${code}: ${ffmpegErr}`));
+          }
+        });
+        ffmpegProcess.on('error', (err) => {
+          clearTimeout(killWatchdog);
+          reject(err);
+        });
+      });
+
+      const videoBuffer = fs.readFileSync(tempFile);
+      return videoBuffer;
+    } finally {
+      clearTimeout(killWatchdog);
+      try {
+        if (!ffmpegProcess.killed) {
+          ffmpegProcess.kill('SIGKILL');
+        }
+      } catch {}
+      try {
+        if (fs.existsSync(tempFile)) {
+          fs.unlinkSync(tempFile);
+        }
+      } catch {}
+    }
   }
 
   private async loadLogoImage(): Promise<any> {

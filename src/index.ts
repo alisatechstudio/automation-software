@@ -7,16 +7,21 @@ async function bootstrap() {
   console.log('====================================================');
   console.log('🚀 NEWS-TO-FACEBOOK AUTOMATION PLATFORM STARTING');
   console.log(`🌍 Environment: ${config.NODE_ENV} | Port: ${config.PORT}`);
-  console.log(`🍃 Database: MongoDB (Vercel Integration)`);
+  console.log(`🍃 Database: ${config.DB_TYPE === 'mysql' ? `MySQL (${config.MYSQL_DATABASE} @ ${config.MYSQL_HOST}:${config.MYSQL_PORT})` : 'MongoDB'}`);
   console.log(`🛡️  Dry Run Mode: ${config.DRY_RUN ? 'ENABLED (Safe Simulated Publishing)' : 'DISABLED (Live Graph API)'}`);
   console.log(`⏱️  Poll Interval: "${config.POLL_INTERVAL_CRON}"`);
   console.log('====================================================');
 
-  // 1. Start HTTP server FIRST so Vercel & healthchecks get an instant response
+  // 1. Start HTTP server FIRST so cPanel/Passenger & healthchecks get an instant response
   const app = createServer();
-  const server = app.listen(config.PORT, '0.0.0.0', () => {
-    console.log(`✓ [Server] Admin Dashboard listening at http://0.0.0.0:${config.PORT}`);
-    console.log(`✓ [Server] Health check available at http://0.0.0.0:${config.PORT}/health`);
+  const port = process.env.PORT || config.PORT || 3000;
+  const server = app.listen(port, () => {
+    console.log(`✓ [Server] Admin Dashboard listening on port/socket: ${port}`);
+    console.log(`✓ [Server] Health check available at /health`);
+  });
+
+  server.on('error', (err: any) => {
+    console.error(`[Server] Critical HTTP server error: ${err.message || err}`);
   });
 
   // 2. Connect to MongoDB asynchronously (non-blocking for HTTP server)
@@ -46,5 +51,5 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
   console.error('[Bootstrap] Fatal startup error:', err);
-  process.exit(1);
+  // Do NOT process.exit(1) on cPanel / Passenger, otherwise Passenger kills the process with 503
 });

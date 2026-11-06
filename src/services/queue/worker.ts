@@ -171,10 +171,9 @@ export class QueueWorker {
       // 2. Random Jitter Delay (30-60s) to avoid spam flags
       await this.applyPostingJitter();
 
-      // Check Posting Mode: Disable Poster & Post 15s Reel Only (Default: Enabled as requested)
+      // Check Posting Mode: Reels-only mode (video reels must be true)
       const disablePosterSetting = await db.collection<Setting>('settings').findOne({ _id: 'DISABLE_POSTER' });
-      // If setting is null or not 'false', default to true (Reels only, poster disabled for now)
-      const isPosterDisabled = disablePosterSetting ? disablePosterSetting.value !== 'false' : true;
+      let isPosterDisabled = disablePosterSetting ? disablePosterSetting.value !== 'false' : true;
 
       // Reel Configuration
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
@@ -199,21 +198,30 @@ export class QueueWorker {
         config.DEFAULT_COMMENT_FORMAT
       );
 
+      let reelBuffer: Buffer | null = null;
       if (isPosterDisabled) {
         // =========================================================================
         // REELS-ONLY MODE: 15-Second MP4 Video Reel (Ultra-Fast Parallel Distribution)
         // =========================================================================
         const reelFps = process.env.VERCEL ? 10 : 15;
         console.log(`[QueueWorker] 🎬 Reels Mode: Rendering ${reelDuration}s MP4 Reel at ${reelFps}fps (${targetReelTheme}) for "${article.title}"...`);
-        const reelBuffer = await this.reelRenderer.renderReel({
-          headline: article.title,
-          category: article.category || 'বিশেষ খবর',
-          imageUrl: article.imageUrl || undefined,
-          theme: targetReelTheme,
-          durationSeconds: reelDuration,
-          fps: reelFps,
-        });
+        try {
+          reelBuffer = await this.reelRenderer.renderReel({
+            headline: article.title,
+            category: article.category || 'বিশেষ খবর',
+            imageUrl: article.imageUrl || undefined,
+            theme: targetReelTheme,
+            durationSeconds: reelDuration,
+            fps: reelFps,
+          });
+        } catch (reelErr: any) {
+          console.warn(`[QueueWorker] ⚠️ MP4 Reel video rendering failed (${reelErr.message}). Gracefully falling back to 1080x1080 JPG News Card...`);
+          reelBuffer = null;
+          isPosterDisabled = false;
+        }
+      }
 
+      if (isPosterDisabled && reelBuffer) {
         // Caption: ONLY hashtags (no headline and no summary, as requested)
         const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
         const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
@@ -548,42 +556,49 @@ export class QueueWorker {
         try {
           const autoReelSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_REELS' });
           const shouldPostReel =
-            autoReelSetting?.value === 'true' || autoReelSetting?.value === '1' || Boolean(job.payload?.postReel);
+            autoReelSetting ? autoReelSetting.value !== 'false' : true;
 
           if (shouldPostReel) {
             console.log(`[QueueWorker] Generating and publishing MP4 Reel (${targetReelTheme}) for article "${article.title}"...`);
-            const reelBuffer = await this.reelRenderer.renderReel({
-              headline: article.title,
-              category: article.category || 'বিশেষ খবর',
-              imageUrl: article.imageUrl || undefined,
-              theme: targetReelTheme,
-              durationSeconds: reelDuration,
-              fps: 20,
-            });
+            let reelBuffer: Buffer | null = null;
+            try {
+              reelBuffer = await this.reelRenderer.renderReel({
+                headline: article.title,
+                category: article.category || 'বিশেষ খবর',
+                imageUrl: article.imageUrl || undefined,
+                theme: targetReelTheme,
+                durationSeconds: reelDuration,
+                fps: 15,
+              });
+            } catch (rErr: any) {
+              console.warn(`[QueueWorker] Reel render failed on shared host (${rErr.message}). Skipping reel for this article.`);
+            }
 
-            const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
-              page._id,
-              page.accessToken,
-              reelBuffer,
-              caption,
-              article.title,
-              config.DRY_RUN
-            );
+            if (reelBuffer) {
+              const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
+                page._id,
+                page.accessToken,
+                reelBuffer,
+                caption,
+                article.title,
+                config.DRY_RUN
+              );
 
-            await db.collection<ReelLog>('reel_logs').insertOne({
-              _id: crypto.randomUUID(),
-              articleId: article._id,
-              articleTitle: article.title,
-              pageId: page._id,
-              pageName: page.name,
-              theme: targetReelTheme,
-              fbVideoId: reelVideoId,
-              fbPostId: reelPostId,
-              durationMs: Date.now() - startTime,
-              status: config.DRY_RUN ? 'dry_run' : 'success',
-              createdAt: new Date(),
-            });
-            console.log(`✓ [QueueWorker] MP4 Reel published successfully! Reel ID: ${reelVideoId}`);
+              await db.collection<ReelLog>('reel_logs').insertOne({
+                _id: crypto.randomUUID(),
+                articleId: article._id,
+                articleTitle: article.title,
+                pageId: page._id,
+                pageName: page.name,
+                theme: targetReelTheme,
+                fbVideoId: reelVideoId,
+                fbPostId: reelPostId,
+                durationMs: Date.now() - startTime,
+                status: config.DRY_RUN ? 'dry_run' : 'success',
+                createdAt: new Date(),
+              });
+              console.log(`✓ [QueueWorker] MP4 Reel published successfully! Reel ID: ${reelVideoId}`);
+            }
           }
         } catch (reelErr: any) {
           console.warn(`[QueueWorker] Reel generation or publish encountered an error: ${reelErr.message}`);
@@ -891,7 +906,7 @@ export class QueueWorker {
       imageUrl: article.imageUrl || undefined,
       theme: selectedTheme,
       durationSeconds,
-      fps: 20,
+      fps: 15,
     });
 
     // Caption: ONLY hashtags (no headline, no summary)

@@ -4,5 +4,8 @@ data/*.db*
 data/rendered/*.png
 .env
 npm-debug.log*
+startup-debug.log
+*.log
+.vscode/
 .DS_Store
 

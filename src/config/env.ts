@@ -6,6 +6,12 @@ dotenv.config();
 export interface AppConfig {
   PORT: number;
   NODE_ENV: string;
+  DB_TYPE: 'mysql' | 'mongodb';
+  MYSQL_HOST: string;
+  MYSQL_PORT: number;
+  MYSQL_USER: string;
+  MYSQL_PASSWORD?: string;
+  MYSQL_DATABASE: string;
   MONGODB_URI: string;
   MONGODB_DB_NAME: string;
   ADMIN_USERNAME: string;
@@ -21,6 +27,7 @@ export interface AppConfig {
   DEFAULT_HASHTAGS: string;
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
+  ENABLE_VIDEO_REELS: boolean;
   DATA_DIR: string;
   ASSETS_DIR: string;
 }
@@ -31,8 +38,14 @@ const dataDir = process.env.DATA_DIR || (isVercel ? '/tmp/data' : path.join(root
 const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 
 export const config: AppConfig = {
-  PORT: parseInt(process.env.PORT || '3000', 10),
+  PORT: process.env.PORT && !isNaN(Number(process.env.PORT)) ? parseInt(process.env.PORT, 10) : 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
+  DB_TYPE: (process.env.DB_TYPE === 'mongodb' ? 'mongodb' : (process.env.MYSQL_DATABASE || process.env.DB_TYPE === 'mysql' ? 'mysql' : (process.env.MONGODB_URI ? 'mongodb' : 'mysql'))),
+  MYSQL_HOST: process.env.MYSQL_HOST || '127.0.0.1',
+  MYSQL_PORT: parseInt(process.env.MYSQL_PORT || '3306', 10),
+  MYSQL_USER: process.env.MYSQL_USER || 'alisatec_automation',
+  MYSQL_PASSWORD: process.env.MYSQL_PASSWORD || '',
+  MYSQL_DATABASE: process.env.MYSQL_DATABASE || 'alisatec_automation',
   MONGODB_URI:
     process.env.MONGODB_URI ||
     process.env.MONGODB_URL ||
@@ -53,6 +66,7 @@ export const config: AppConfig = {
     process.env.DEFAULT_CAPTION_FORMAT || '{headline}\n\n{summary}\n\n{hashtags}',
   DEFAULT_COMMENT_FORMAT:
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
+  ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };
