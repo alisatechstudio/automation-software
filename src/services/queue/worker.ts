@@ -331,9 +331,9 @@ export class QueueWorker {
 
         if (isYtConfigured && shouldPostYt) {
           publishTasks.push((async () => {
+            const ytStartTime = Date.now();
             try {
               console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts...`);
-              const ytStartTime = Date.now();
               const ytResult = await this.ytClient.uploadShort(
                 {
                   videoBuffer: reelBuffer,
@@ -362,9 +362,24 @@ export class QueueWorker {
               console.log(`✓ [QueueWorker] Published to YouTube Shorts! (URL: ${ytResult.videoUrl})`);
             } catch (ytErr: any) {
               ytStatus = 'failed';
-              console.warn(`[QueueWorker] YouTube Short upload note:`, ytErr.message);
+              const ytErrMsg = ytErr.message || String(ytErr);
+              console.error(`❌ [QueueWorker] YouTube Short upload failed: ${ytErrMsg}`);
+
+              await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                _id: crypto.randomUUID(),
+                articleId: article._id,
+                articleTitle: article.title,
+                ytVideoId: '',
+                ytVideoUrl: '',
+                durationMs: Date.now() - ytStartTime,
+                status: 'failed',
+                errorMessage: ytErrMsg,
+                createdAt: new Date(),
+              });
             }
           })());
+        } else {
+          console.log(`[QueueWorker] ℹ️ YouTube Shorts skipped: isConfigured=${isYtConfigured}, shouldPost=${shouldPostYt}`);
         }
 
         // Wait for all 3 platform tasks simultaneously
@@ -1023,30 +1038,46 @@ export class QueueWorker {
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
 
     const ytStartTime = Date.now();
-    const result = await this.ytClient.uploadShort(
-      {
-        videoBuffer: reelBuffer,
-        title: article.title,
-        description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
-      },
-      config.DRY_RUN
-    );
+    try {
+      const result = await this.ytClient.uploadShort(
+        {
+          videoBuffer: reelBuffer,
+          title: article.title,
+          description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
+        },
+        config.DRY_RUN
+      );
 
-    if (article.link && result.videoId && !config.DRY_RUN) {
-      await this.ytClient.addComment(result.videoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+      if (article.link && result.videoId && !config.DRY_RUN) {
+        await this.ytClient.addComment(result.videoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+      }
+
+      await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+        _id: crypto.randomUUID(),
+        articleId: article._id,
+        articleTitle: article.title,
+        ytVideoId: result.videoId,
+        ytVideoUrl: result.videoUrl,
+        durationMs: Date.now() - ytStartTime,
+        status: config.DRY_RUN ? 'dry_run' : 'success',
+        createdAt: new Date(),
+      });
+
+      return { success: true, videoId: result.videoId, videoUrl: result.videoUrl };
+    } catch (ytErr: any) {
+      const ytErrMsg = ytErr.message || String(ytErr);
+      await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+        _id: crypto.randomUUID(),
+        articleId: article._id,
+        articleTitle: article.title,
+        ytVideoId: '',
+        ytVideoUrl: '',
+        durationMs: Date.now() - ytStartTime,
+        status: 'failed',
+        errorMessage: ytErrMsg,
+        createdAt: new Date(),
+      });
+      throw ytErr;
     }
-
-    await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-      _id: crypto.randomUUID(),
-      articleId: article._id,
-      articleTitle: article.title,
-      ytVideoId: result.videoId,
-      ytVideoUrl: result.videoUrl,
-      durationMs: Date.now() - ytStartTime,
-      status: config.DRY_RUN ? 'dry_run' : 'success',
-      createdAt: new Date(),
-    });
-
-    return { success: true, videoId: result.videoId, videoUrl: result.videoUrl };
   }
 }

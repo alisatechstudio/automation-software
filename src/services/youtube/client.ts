@@ -54,6 +54,15 @@ export class YouTubeClient {
       this.clientSecret = (sSec?.value && sSec.value.trim()) || this.clientSecret || process.env.YOUTUBE_CLIENT_SECRET || '';
       this.refreshToken = (sRef?.value && sRef.value.trim()) || this.refreshToken || process.env.YOUTUBE_REFRESH_TOKEN || '';
 
+      // Auto-sync refresh token to DB if present in env but not in DB
+      if (!sRef?.value && this.refreshToken) {
+        await db.collection<Setting>('settings').updateOne(
+          { _id: 'YOUTUBE_REFRESH_TOKEN' },
+          { $set: { value: this.refreshToken, updatedAt: new Date() } },
+          { upsert: true }
+        );
+      }
+
       return Boolean(this.clientId && this.clientSecret && this.refreshToken);
     } catch (e) {
       return Boolean(this.clientId && this.clientSecret && this.refreshToken);
@@ -162,8 +171,11 @@ export class YouTubeClient {
    * Retrieves profile and statistics for the authenticated YouTube Channel
    */
   public async getChannelProfile(): Promise<YouTubeChannelProfile> {
+    // 1. Get access token first - propagate error if credentials or token refresh fails
+    const accessToken = await this.getAccessToken();
+
+    // 2. Query channel details (swallow 403 scope error if upload-only scope is granted)
     try {
-      const accessToken = await this.getAccessToken();
       const url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true';
 
       const res = await fetch(url, {
@@ -196,14 +208,11 @@ export class YouTubeClient {
       };
     } catch (err: any) {
       console.warn('[YouTubeClient] getChannelProfile note:', err.message);
-      if (this.isConfigured()) {
-        return {
-          id: 'upload-active',
-          title: 'YouTube Channel (Upload Active)',
-          description: 'Channel authenticated for automatic YouTube Shorts video uploads.',
-        };
-      }
-      throw err;
+      return {
+        id: 'upload-active',
+        title: 'YouTube Channel (Upload Active)',
+        description: 'Channel authenticated for automatic YouTube Shorts video uploads.',
+      };
     }
   }
 
@@ -276,7 +285,15 @@ export class YouTubeClient {
 
     if (!initRes.ok) {
       const errData = (await initRes.json().catch(() => ({}))) as any;
-      throw new Error(`YouTube upload initiation failed: ${errData.error?.message || initRes.statusText}`);
+      const errorMsg = errData.error?.message || initRes.statusText;
+      const reason = errData.error?.errors?.[0]?.reason || errData.error?.status;
+
+      if (reason === 'uploadLimitExceeded' || errorMsg?.includes('exceeded the number of videos')) {
+        throw new Error(
+          `[YOUTUBE_DAILY_LIMIT_EXCEEDED] YouTube upload limit reached: ${errorMsg}. YouTube enforces a 24-hour limit (~10-15 videos) on unverified/new channels. Verify your channel at youtube.com/verify to increase upload limits.`
+        );
+      }
+      throw new Error(`YouTube upload initiation failed: ${errorMsg}`);
     }
 
     const uploadLocation = initRes.headers.get('location');

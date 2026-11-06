@@ -2610,7 +2610,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
             : (isDryRun 
                 ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
-                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>');
+                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
+                  (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
 
           const videoLink = log.fbVideoId && !log.fbVideoId.startsWith('dryrun')
             ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
@@ -2767,7 +2768,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
             : (isDryRun 
                 ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
-                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>');
+                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
+                  (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
 
           const videoLink = log.ytVideoId && !log.ytVideoId.startsWith('dryrun')
             ? '<a href="https://youtube.com/shorts/' + log.ytVideoId + '" target="_blank" class="text-red-400 hover:underline flex items-center gap-1 font-mono">' + log.ytVideoId + ' ↗</a>'
