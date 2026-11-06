@@ -278,33 +278,111 @@ export class FacebookGraphClient {
       console.warn(`[FacebookClient] Reels API error: ${reelApiError}. Executing fallback to graph-video.facebook.com...`);
     }
 
-    // Strategy 2: Resilient Fallback to graph-video.facebook.com/{pageId}/videos
-    console.log(`[FacebookClient] Fallback: Publishing video via POST https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos...`);
-    const fallbackUrl = `https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos`;
+    // Strategy 2: Official Meta 3-Phase Resumable Video Upload API
+    console.log(`[FacebookClient] Fallback: Publishing video via Meta Resumable Video API (https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos)...`);
+    try {
+      return await this.publishVideoResumable(pageId, accessToken, videoBuffer, description, title, dryRun);
+    } catch (resumableErr: any) {
+      const compositeMsg = `Page Videos API failed: ${resumableErr.message}${reelApiError ? ` | Reels API also failed: ${reelApiError}` : ''}`;
+      this.handleGraphError(resumableErr?.graphError || { message: compositeMsg }, compositeMsg);
+    }
+  }
+
+  /**
+   * Publishes a video/reel to a Facebook Page using Meta's official 3-phase Resumable Video Upload API:
+   * 1. upload_phase=start    -> receives upload_session_id & video_id
+   * 2. upload_phase=transfer -> transfers binary video_file_chunk
+   * 3. upload_phase=finish   -> finalizes title, description, and publishes
+   * 
+   * Requires only: pages_manage_posts, pages_read_engagement, pages_show_list
+   */
+  public async publishVideoResumable(
+    pageId: string,
+    accessToken: string,
+    videoBuffer: Buffer,
+    description: string,
+    title?: string,
+    dryRun: boolean = config.DRY_RUN
+  ): Promise<{ videoId: string; postId: string }> {
+    if (dryRun) {
+      const mockVideoId = `dryrun_vid_${Date.now()}`;
+      return { videoId: mockVideoId, postId: `${pageId}_${mockVideoId}` };
+    }
+
+    const videoApiUrl = `https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos`;
+
+    // 1. Phase 1: Start upload session
+    console.log(`[FacebookClient] Resumable Video Upload - Phase 1: Initializing session for page ${pageId}...`);
+    const startParams = new URLSearchParams();
+    startParams.append('upload_phase', 'start');
+    startParams.append('file_size', String(videoBuffer.length));
+    startParams.append('access_token', accessToken);
+
+    const startRes = await fetch(videoApiUrl, {
+      method: 'POST',
+      body: startParams,
+    });
+    const startData = (await startRes.json()) as any;
+    console.log(`[FacebookClient] Phase 1 response status: ${startRes.status}`, JSON.stringify(startData));
+
+    if (!startRes.ok || startData.error || !startData.upload_session_id) {
+      const err = new Error(`Video upload start failed: ${startData.error?.message || startRes.statusText}`);
+      (err as any).graphError = startData.error;
+      throw err;
+    }
+
+    const uploadSessionId = startData.upload_session_id;
+    const initialVideoId = startData.video_id;
+
+    // 2. Phase 2: Transfer binary chunk
+    console.log(`[FacebookClient] Resumable Video Upload - Phase 2: Transferring video chunk (${videoBuffer.length} bytes, session ${uploadSessionId})...`);
     const formData = new FormData();
-    const blob = new Blob([new Uint8Array(videoBuffer)], { type: 'video/mp4' });
-    formData.append('source', blob, 'news_reel.mp4');
-    formData.append('description', description);
-    if (title) formData.append('title', title);
-    formData.append('published', 'true');
+    formData.append('upload_phase', 'transfer');
+    formData.append('upload_session_id', uploadSessionId);
+    formData.append('start_offset', startData.start_offset || '0');
     formData.append('access_token', accessToken);
 
-    const fbRes = await fetch(fallbackUrl, {
+    const blob = new Blob([new Uint8Array(videoBuffer)], { type: 'video/mp4' });
+    formData.append('video_file_chunk', blob, 'news_reel.mp4');
+
+    const transferRes = await fetch(videoApiUrl, {
       method: 'POST',
       body: formData,
     });
+    const transferData = (await transferRes.json()) as any;
+    console.log(`[FacebookClient] Phase 2 response status: ${transferRes.status}`, JSON.stringify(transferData));
 
-    const fbData = (await fbRes.json()) as any;
-    console.log(`[FacebookClient] Fallback response status: ${fbRes.status}`, JSON.stringify(fbData));
-
-    if (!fbRes.ok || fbData.error) {
-      const compositeMsg = `Page Videos API failed: ${fbData.error?.message || fbRes.statusText}${reelApiError ? ` | Reels API also failed: ${reelApiError}` : ''}`;
-      this.handleGraphError(fbData.error || { message: compositeMsg }, compositeMsg);
+    if (!transferRes.ok || transferData.error) {
+      const err = new Error(`Video chunk transfer failed: ${transferData.error?.message || transferRes.statusText}`);
+      (err as any).graphError = transferData.error;
+      throw err;
     }
 
-    const videoId = fbData.id;
-    const postId = fbData.post_id || `${pageId}_${videoId}`;
-    console.log(`✓ [FacebookClient] Video published successfully via graph-video fallback! Video ID: ${videoId}, Post ID: ${postId}`);
+    // 3. Phase 3: Finalize and publish video
+    console.log(`[FacebookClient] Resumable Video Upload - Phase 3: Finalizing publication...`);
+    const finishParams = new URLSearchParams();
+    finishParams.append('upload_phase', 'finish');
+    finishParams.append('upload_session_id', uploadSessionId);
+    finishParams.append('description', description);
+    if (title) finishParams.append('title', title);
+    finishParams.append('access_token', accessToken);
+
+    const finishRes = await fetch(videoApiUrl, {
+      method: 'POST',
+      body: finishParams,
+    });
+    const finishData = (await finishRes.json()) as any;
+    console.log(`[FacebookClient] Phase 3 response status: ${finishRes.status}`, JSON.stringify(finishData));
+
+    if (!finishRes.ok || finishData.error) {
+      const err = new Error(`Video publication finalization failed: ${finishData.error?.message || finishRes.statusText}`);
+      (err as any).graphError = finishData.error;
+      throw err;
+    }
+
+    const videoId = finishData.id || initialVideoId;
+    const postId = finishData.post_id || `${pageId}_${videoId}`;
+    console.log(`✓ [FacebookClient] Video/Reel published successfully via Resumable Video API! Video ID: ${videoId}, Post ID: ${postId}`);
     return { videoId, postId };
   }
 
