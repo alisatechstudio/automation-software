@@ -1648,7 +1648,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <tr class="hover:bg-slate-800/40 text-xs transition">
               <td class="px-5 py-3">
                 <span class="px-2 py-0.5 rounded font-mono font-bold uppercase \${badgeClass}">\${displayStatus}</span>
-                \${l.error_message ? \`<div class="text-[10px] text-red-400/90 font-mono mt-1 max-w-[220px] truncate" title="\${l.error_message}">\${l.error_message}</div>\` : ''}
+                \${l.error_message ? \`<div class="text-[10px] text-red-400/90 font-mono mt-1 max-w-[220px] truncate cursor-pointer hover:underline" onclick="alert(this.getAttribute('data-full-error'))" data-full-error="\${(l.error_message || '').replace(/"/g, '&quot;')}" title="Click to view full error">\${l.error_message}</div>\` : ''}
               </td>
               <td class="px-5 py-3 text-slate-200 max-w-sm truncate bn font-medium">\${l.article_title || ''}</td>
               <td class="px-5 py-3 font-mono">
@@ -1672,8 +1672,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function retryJob(id) {
       try {
-        const res = await fetch('/api/queue/' + id + '/retry', { method: 'POST' });
-        const d = await res.json();
+        const res = await safeFetchJson('/api/queue/' + id + '/retry', { method: 'POST' });
+        const d = res.data || {};
         if (d.success) {
           showToast('Job queued for immediate publishing!');
           loadQueue();
@@ -1727,12 +1727,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         template_id: document.getElementById('source-template').value,
       };
 
-      const res = await fetch('/api/sources', {
+      const res = await safeFetchJson('/api/sources', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const d = await res.json();
+      const d = res.data || {};
       if (d.success) {
         showToast('Source added successfully!');
         document.getElementById('add-source-form').reset();
@@ -1744,7 +1744,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function deleteSource(id) {
       if (!confirm('Are you sure you want to delete this source?')) return;
-      await fetch('/api/sources/' + id, { method: 'DELETE' });
+      await safeFetchJson('/api/sources/' + id, { method: 'DELETE' });
       showToast('Source deleted');
       loadSources();
     }

@@ -293,6 +293,56 @@ export class QueueWorker {
           } catch (re: any) {
             reelError = re.message || String(re);
             console.error('[QueueWorker] Reel publish error:', reelError);
+
+            // GRACEFUL FALLBACK: If Facebook rejected video/reels API (e.g. missing publish_video permission),
+            // immediately publish the high-resolution 1080x1080 News Card image to the feed!
+            try {
+              console.log(`[QueueWorker] ⚠️ Reels API rejected. Executing fallback to 1080x1080 News Card Image for "${article.title}"...`);
+              let fallbackCard = posterRenderResult;
+              if (!fallbackCard?.imageBuffer) {
+                fallbackCard = await this.canvasRenderer.render({
+                  templateId: 'template-canva-bdnews',
+                  headline: article.title,
+                  category: article.category || 'বিশেষ খবর',
+                  imageUrl: article.imageUrl || undefined,
+                });
+              }
+              const feedCaption = this.fbClient.formatCaption(
+                article.title,
+                article.description || '',
+                config.DEFAULT_HASHTAGS,
+                config.DEFAULT_CAPTION_FORMAT
+              );
+              const photoRes = await this.fbClient.publishPhoto(
+                page._id,
+                page.accessToken,
+                fallbackCard.imageBuffer,
+                feedCaption,
+                config.DRY_RUN
+              );
+              reelPostId = photoRes.postId;
+              reelVideoId = photoRes.photoId;
+              reelError = null; // Fallback succeeded!
+              console.log(`✓ [QueueWorker] Fallback News Card photo published successfully! Post ID: ${reelPostId}`);
+
+              if (article.link && reelPostId) {
+                try {
+                  const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+                  const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+                  const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+                  const { commentId } = await this.fbClient.publishComment(
+                    reelPostId,
+                    page.accessToken,
+                    commentText,
+                    config.DRY_RUN
+                  );
+                  reelCommentId = commentId;
+                } catch {}
+              }
+            } catch (fallbackErr: any) {
+              console.error('[QueueWorker] Fallback photo publish also failed:', fallbackErr.message);
+              reelError = `${reelError} | Fallback photo error: ${fallbackErr.message}`;
+            }
           }
         })());
 

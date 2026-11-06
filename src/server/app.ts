@@ -21,9 +21,12 @@ export function createServer(): Express {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Strip Vercel rewrite prefix if present
+  // Strip Vercel rewrite prefix & restore original requested route if rewritten
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.url.startsWith('/api/index')) {
+    const originalUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string;
+    if (originalUri && (req.url === '/api/index' || req.url === '/' || req.url.startsWith('/api/index?'))) {
+      req.url = originalUri;
+    } else if (req.url.startsWith('/api/index')) {
       req.url = req.url.replace(/^\/api\/index/, '') || '/';
     }
     next();
