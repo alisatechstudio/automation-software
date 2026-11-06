@@ -179,7 +179,8 @@ export class QueueWorker {
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
       const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
       let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'rolling';
-      const reelDuration = parseInt(reelDurationSetting?.value || '15', 10) || 15;
+      const defaultDuration = process.env.VERCEL ? 8 : 10;
+      const reelDuration = parseInt(reelDurationSetting?.value || String(defaultDuration), 10) || defaultDuration;
 
       if (!targetReelTheme || targetReelTheme === 'rolling') {
         targetReelTheme = await getNextRollingReelTheme(db);
@@ -201,9 +202,9 @@ export class QueueWorker {
       let reelBuffer: Buffer | null = null;
       if (isPosterDisabled) {
         // =========================================================================
-        // REELS-ONLY MODE: 15-Second MP4 Video Reel (Ultra-Fast Parallel Distribution)
+        // REELS-ONLY MODE: MP4 Video Reel (Meta strictly requires 24-60 FPS)
         // =========================================================================
-        const reelFps = process.env.VERCEL ? 10 : 15;
+        const reelFps = 24;
         console.log(`[QueueWorker] 🎬 Reels Mode: Rendering ${reelDuration}s MP4 Reel at ${reelFps}fps (${targetReelTheme}) for "${article.title}"...`);
         try {
           reelBuffer = await this.reelRenderer.renderReel({
@@ -618,7 +619,7 @@ export class QueueWorker {
                 imageUrl: article.imageUrl || undefined,
                 theme: targetReelTheme,
                 durationSeconds: reelDuration,
-                fps: 15,
+                fps: 24,
               });
             } catch (rErr: any) {
               console.warn(`[QueueWorker] Reel render failed on shared host (${rErr.message}). Skipping reel for this article.`);
@@ -956,7 +957,7 @@ export class QueueWorker {
       imageUrl: article.imageUrl || undefined,
       theme: selectedTheme,
       durationSeconds,
-      fps: 15,
+      fps: 24,
     });
 
     // Caption: ONLY hashtags (no headline, no summary)
@@ -1096,7 +1097,7 @@ export class QueueWorker {
       imageUrl: article.imageUrl || undefined,
       theme: 'vertical-916', // YouTube Shorts prefers 9:16 vertical fullscreen
       durationSeconds: 15,
-      fps: 20,
+      fps: 24,
     });
 
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });

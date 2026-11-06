@@ -205,25 +205,27 @@ export class FacebookGraphClient {
       console.log(`[FacebookClient] Phase 1: Initializing Reel upload session for page ${pageId}...`);
       const initUrl = `https://graph.facebook.com/${this.apiVersion}/${pageId}/video_reels`;
 
-      const initParams = new URLSearchParams();
-      initParams.append('upload_phase', 'start');
-      initParams.append('access_token', accessToken);
-
       const initRes = await fetch(initUrl, {
         method: 'POST',
-        body: initParams,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          upload_phase: 'start',
+          access_token: accessToken,
+        }),
       });
 
       const initData = (await initRes.json()) as any;
       console.log(`[FacebookClient] Phase 1 response status: ${initRes.status}`, JSON.stringify(initData));
 
-      if (!initRes.ok || initData.error || !initData.video_id || !initData.upload_url) {
+      if (!initRes.ok || initData.error || !initData.video_id) {
         const errorDetail = initData.error?.message || `HTTP ${initRes.status}`;
         throw new Error(`video_reels start failed: ${errorDetail} (code ${initData.error?.code || 'none'})`);
       }
 
       const videoId = initData.video_id;
-      const uploadUrl = initData.upload_url;
+      const uploadUrl = initData.upload_url || `https://rupload.facebook.com/video-upload/${this.apiVersion}/${videoId}`;
       console.log(`[FacebookClient] Phase 2: Uploading video binary (${videoBuffer.length} bytes) to ${uploadUrl}...`);
 
       const uploadRes = await fetch(uploadUrl, {
@@ -250,17 +252,21 @@ export class FacebookGraphClient {
       }
 
       console.log(`[FacebookClient] Phase 3: Finalizing Reel publication...`);
-      const finishParams = new URLSearchParams();
-      finishParams.append('upload_phase', 'finish');
-      finishParams.append('video_id', videoId);
-      finishParams.append('video_state', 'PUBLISHED');
-      finishParams.append('description', description);
-      if (title) finishParams.append('title', title);
-      finishParams.append('access_token', accessToken);
+      const finishPayload: any = {
+        upload_phase: 'finish',
+        video_id: videoId,
+        video_state: 'PUBLISHED',
+        description: description,
+        access_token: accessToken,
+      };
+      if (title) finishPayload.title = title;
 
       const finishRes = await fetch(initUrl, {
         method: 'POST',
-        body: finishParams,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finishPayload),
       });
 
       const finishData = (await finishRes.json()) as any;

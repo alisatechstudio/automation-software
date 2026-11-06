@@ -130,9 +130,9 @@ export class ReelVideoRenderer {
 
     const rawTheme = input.theme || 'studio-red';
     const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
-    const isVertical = theme === 'vertical-916' || input.height === 1920;
-    const width = isVertical ? 1080 : input.width || 1080;
-    const height = isVertical ? 1920 : input.height || 1080;
+    // Reels are strictly 9:16 vertical (1080x1920) as mandated by Meta Reels Publishing API
+    const width = input.width || 1080;
+    const height = input.height || 1920;
 
     const headline = (input.headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি').trim();
     const category = (input.category || 'বিশেষ খবর').trim();
@@ -161,12 +161,13 @@ export class ReelVideoRenderer {
 
     const rawTheme = input.theme || 'studio-red';
     const theme = (rawTheme === 'rolling' ? 'studio-red' : rawTheme) as ReelTheme;
-    const isVertical = theme === 'vertical-916' || input.height === 1920;
-    const width = isVertical ? 1080 : input.width || 1080;
-    const height = isVertical ? 1920 : input.height || 1080;
+    // Always enforce 9:16 vertical resolution (1080x1920) for Meta Reels compliance
+    const width = input.width || 1080;
+    const height = input.height || 1920;
 
-    const durationSeconds = input.durationSeconds || 15;
-    const fps = input.fps || (process.env.VERCEL ? 10 : 15);
+    const durationSeconds = input.durationSeconds || (process.env.VERCEL ? 8 : 10);
+    // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
+    const fps = Math.max(24, input.fps || 24);
     const totalFrames = durationSeconds * fps;
 
     const headline = (input.headline || '').trim();
@@ -220,6 +221,12 @@ export class ReelVideoRenderer {
         '-stream_loop', '-1',
         '-i', audioPath
       );
+    } else {
+      // Meta Reels strictly requires a stereo 48kHz audio track (generate silent stereo fallback if asset is missing)
+      ffmpegArgs.push(
+        '-f', 'lavfi',
+        '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000'
+      );
     }
 
     ffmpegArgs.push(
@@ -229,12 +236,20 @@ export class ReelVideoRenderer {
       '-threads', '1',
       '-x264opts', 'threads=1:sliced-threads=0:lookahead_threads=0',
       '-crf', '26',
-      '-pix_fmt', 'yuv420p'
+      '-pix_fmt', 'yuv420p',
+      '-g', String(fps * 2), // Closed GOP (2s keyframe interval as required by Meta)
+      '-keyint_min', String(fps * 2),
+      '-sc_threshold', '0'
     );
 
-    if (audioPath) {
-      ffmpegArgs.push('-c:a', 'aac', '-b:a', '96k', '-threads', '1', '-shortest');
-    }
+    ffmpegArgs.push(
+      '-c:a', 'aac',
+      '-b:a', '128k', // 128kbps+ AAC as required by Meta
+      '-ar', '48000', // 48kHz sample rate as required by Meta
+      '-ac', '2',     // Stereo channels as required by Meta
+      '-threads', '1',
+      '-shortest'
+    );
 
     ffmpegArgs.push(tempFile);
 
@@ -384,6 +399,15 @@ export class ReelVideoRenderer {
     category: string,
     website: string
   ): void {
+    if (height === 1920) {
+      if (theme === 'vertical-916') {
+        this.renderFrameVertical916(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      } else {
+        this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      }
+      return;
+    }
+
     switch (theme) {
       case 'breaking-bold':
         this.renderFrameBreakingBold(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
@@ -402,6 +426,152 @@ export class ReelVideoRenderer {
         this.renderFrameStudioRed(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
         break;
     }
+  }
+
+  /**
+   * Adapts any 1080x1080 theme design into a broadcast-grade 9:16 vertical fullscreen Reel (1080x1920)
+   * with TV studio top header and interactive social footer.
+   */
+  private renderVerticalFrameWithTheme(
+    theme: ReelTheme | string,
+    ctx: any,
+    width: number,
+    height: number,
+    progress: number,
+    f: number,
+    articleImg: any,
+    logoImg: any,
+    headline: string,
+    category: string,
+    website: string
+  ): void {
+    // 1. Theme-Specific Vertical Background Gradient
+    let topColor = '#500707';
+    let midColor = '#1f0404';
+    let botColor = '#020617';
+
+    if (theme === 'breaking-bold') {
+      topColor = '#78350f';
+      midColor = '#1e1b4b';
+      botColor = '#020617';
+    } else if (theme === 'dark-cinema') {
+      topColor = '#18181b';
+      midColor = '#09090b';
+      botColor = '#020617';
+    } else if (theme === 'viral-gradient') {
+      topColor = '#581c87';
+      midColor = '#1e1b4b';
+      botColor = '#020617';
+    }
+
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, topColor);
+    bgGrad.addColorStop(0.3, midColor);
+    bgGrad.addColorStop(0.7, '#0f172a');
+    bgGrad.addColorStop(1, botColor);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Top Broadcast Header Section (Y: 0 to 420)
+    if (logoImg) {
+      ctx.save();
+      const logoRadius = 55;
+      const logoCenterY = 125;
+      ctx.beginPath();
+      ctx.arc(width / 2, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logoImg, width / 2 - logoRadius, logoCenterY - logoRadius, logoRadius * 2, logoRadius * 2);
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(width / 2, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 44px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 12;
+    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2, 225);
+
+    // Live pill
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.roundRect(width / 2 - 140, 255, 280, 48, 24);
+    ctx.fill();
+
+    const dotRadius = 5 + Math.sin(f * 0.4) * 1.5;
+    ctx.beginPath();
+    ctx.arc(width / 2 - 100, 279, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.fillText('লাইভ ব্রেকিং • ' + category, width / 2 + 10, 279);
+    ctx.restore();
+
+    // 3. Centered 1080x1080 Card Container (Y: 420 to 1500)
+    ctx.save();
+    ctx.translate(0, 420);
+    switch (theme) {
+      case 'breaking-bold':
+        this.renderFrameBreakingBold(ctx, 1080, 1080, progress, f, articleImg, logoImg, headline, category, website);
+        break;
+      case 'dark-cinema':
+        this.renderFrameDarkCinema(ctx, 1080, 1080, progress, f, articleImg, logoImg, headline, category, website);
+        break;
+      case 'viral-gradient':
+        this.renderFrameViralGradient(ctx, 1080, 1080, progress, f, articleImg, logoImg, headline, category, website);
+        break;
+      case 'studio-red':
+      default:
+        this.renderFrameStudioRed(ctx, 1080, 1080, progress, f, articleImg, logoImg, headline, category, website);
+        break;
+    }
+    ctx.restore();
+
+    // 4. Bottom Social Footer Section (Y: 1500 to 1920)
+    ctx.save();
+    const pillY = 1580;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(width / 2 - 280, pillY, 560, 60, 30);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 28px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💬 বিস্তারিত পড়তে প্রথম কমেন্ট দেখুন', width / 2, pillY + 30);
+
+    // Website link pill
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.fillText(`🌐 ${website || 'bdnews.site'} • লাইভ আপডেট`, width / 2, 1690);
+
+    // Follow ticker
+    const tickerY = 1790;
+    const tickerGrad = ctx.createLinearGradient(0, tickerY - 20, 0, 1920);
+    tickerGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    tickerGrad.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = tickerGrad;
+    ctx.fillRect(0, tickerY - 20, width, 150);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.fillText('🔴 প্রতিদিনের ব্রেকিং খবর পেতে ফলো করে সাথে থাকুন • শেয়ার করুন', width / 2, tickerY + 45);
+    ctx.restore();
   }
 
   // ============================================================================
