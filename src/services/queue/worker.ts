@@ -223,10 +223,11 @@ export class QueueWorker {
       }
 
       if (isPosterDisabled && reelBuffer) {
-        // Caption: ONLY hashtags (no headline and no summary, as requested)
+        // Caption: Clean & deduplicated hashtags
         const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
         const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-        const reelCaption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
+        const allTags = `${configuredHashtags} #Reels #FBReels`.split(/\s+/).filter(Boolean);
+        const reelCaption = Array.from(new Set(allTags)).join(' ');
 
         // Pre-render Story poster card if enabled (takes ~100ms)
         const storySetting = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
@@ -960,10 +961,11 @@ export class QueueWorker {
       fps: 24,
     });
 
-    // Caption: ONLY hashtags (no headline, no summary)
+    // Caption: ONLY hashtags (no headline, no summary, clean deduplicated)
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const caption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
+    const allTags = `${configuredHashtags} #Reels #FBReels`.split(/\s+/).filter(Boolean);
+    const caption = Array.from(new Set(allTags)).join(' ');
 
     try {
       const { videoId, postId } = await this.fbClient.publishReel(
