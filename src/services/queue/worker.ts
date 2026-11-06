@@ -241,6 +241,7 @@ export class QueueWorker {
         let reelVideoId: string | null = null;
         let reelPostId: string | null = null;
         let reelCommentId: string | null = null;
+        let reelError: string | null = null;
         let storyPhotoId: string | null = null;
         let storyId: string | null = null;
         let storyStatus: 'success' | 'failed' | 'dry_run' | 'skipped' = 'skipped';
@@ -282,7 +283,8 @@ export class QueueWorker {
               }
             }
           } catch (re: any) {
-            console.error('[QueueWorker] Reel publish error:', re.message);
+            reelError = re.message || String(re);
+            console.error('[QueueWorker] Reel publish error:', reelError);
           }
         })());
 
@@ -369,7 +371,10 @@ export class QueueWorker {
         await Promise.allSettled(publishTasks);
         const durationMs = Date.now() - startTime;
 
-                // Record Post & Reel Log
+        const isReelSuccess = config.DRY_RUN ? true : (!!reelPostId && !reelError);
+        const overallStatus = config.DRY_RUN ? 'dry_run' : (isReelSuccess ? 'success' : 'failed');
+
+        // Record Post & Reel Log
         const logId = crypto.randomUUID();
         const logDoc: PostLog = {
           _id: logId,
@@ -386,7 +391,8 @@ export class QueueWorker {
           caption: reelCaption,
           comment: article.link || null,
           durationMs,
-          status: config.DRY_RUN ? 'dry_run' : 'success',
+          status: overallStatus,
+          errorMessage: isReelSuccess ? null : reelError,
           createdAt: new Date(),
         };
         await logsCol.insertOne(logDoc as any);
@@ -401,15 +407,22 @@ export class QueueWorker {
           fbVideoId: reelVideoId || '',
           fbPostId: reelPostId || '',
           durationMs,
-          status: config.DRY_RUN ? 'dry_run' : 'success',
+          status: overallStatus,
+          errorMessage: isReelSuccess ? null : reelError,
           createdAt: new Date(),
         });
+
+        if (!isReelSuccess && !config.DRY_RUN) {
+          console.error(`❌ [QueueWorker] Facebook Reel publish failed for article "${article.title}". Error: ${reelError}`);
+          await this.queue.handleFailure(job, reelError || 'Facebook Reel upload failed');
+          return;
+        }
 
         // Update article status & mark job completed
         await articlesCol.updateOne({ _id: article._id }, { $set: { status: 'published' } });
         await this.queue.markCompleted(job._id);
 
-        console.log(`✓ [QueueWorker] Successfully published ${reelDuration}s Reel for "${article.title.substring(0, 40)}..." (Reel ID: ${reelVideoId}, Took ${durationMs}ms)`);
+        console.log(`✓ [QueueWorker] Successfully published ${reelDuration}s Reel for "${article.title.substring(0, 40)}..." (Reel ID: ${reelVideoId}, Post ID: ${reelPostId}, Took ${durationMs}ms)`);
 
         // Auto Share Reel to Relevant Facebook Groups
         if (reelPostId) {
@@ -871,43 +884,62 @@ export class QueueWorker {
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
     const caption = (configuredHashtags + ' #Reels #FBReels #Bangladesh #NewsUpdate').trim();
 
-    const { videoId, postId } = await this.fbClient.publishReel(
-      page._id,
-      page.accessToken,
-      reelBuffer,
-      caption,
-      undefined, // No title/headline in post metadata
-      config.DRY_RUN
-    );
+    try {
+      const { videoId, postId } = await this.fbClient.publishReel(
+        page._id,
+        page.accessToken,
+        reelBuffer,
+        caption,
+        undefined, // No title/headline in post metadata
+        config.DRY_RUN
+      );
 
-    // News URL in First Comment
-    if (article.link && postId) {
-      try {
-        const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
-        const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-        const commentText = this.fbClient.formatComment(article.link, commentTemplate);
-        await this.fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
-        console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${postId}!`);
-      } catch (cErr: any) {
-        console.warn(`[QueueWorker] Could not post first comment on Reel:`, cErr.message);
+      // News URL in First Comment
+      if (article.link && postId) {
+        try {
+          const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+          const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+          const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+          await this.fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
+          console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${postId}!`);
+        } catch (cErr: any) {
+          console.warn(`[QueueWorker] Could not post first comment on Reel:`, cErr.message);
+        }
       }
+
+      await db.collection<ReelLog>('reel_logs').insertOne({
+        _id: crypto.randomUUID(),
+        articleId: article._id,
+        articleTitle: article.title,
+        pageId: page._id,
+        pageName: page.name,
+        theme: selectedTheme,
+        fbVideoId: videoId,
+        fbPostId: postId,
+        durationMs: Date.now() - startTime,
+        status: config.DRY_RUN ? 'dry_run' : 'success',
+        createdAt: new Date(),
+      });
+
+      return { success: true, videoId, postId };
+    } catch (publishErr: any) {
+      console.error(`[QueueWorker] Manual Reel publish failed:`, publishErr.message);
+      await db.collection<ReelLog>('reel_logs').insertOne({
+        _id: crypto.randomUUID(),
+        articleId: article._id,
+        articleTitle: article.title,
+        pageId: page._id,
+        pageName: page.name,
+        theme: selectedTheme,
+        fbVideoId: '',
+        fbPostId: '',
+        durationMs: Date.now() - startTime,
+        status: 'failed',
+        errorMessage: publishErr.message,
+        createdAt: new Date(),
+      });
+      return { success: false, error: publishErr.message };
     }
-
-    await db.collection<ReelLog>('reel_logs').insertOne({
-      _id: crypto.randomUUID(),
-      articleId: article._id,
-      articleTitle: article.title,
-      pageId: page._id,
-      pageName: page.name,
-      theme: selectedTheme,
-      fbVideoId: videoId,
-      fbPostId: postId,
-      durationMs: Date.now() - startTime,
-      status: config.DRY_RUN ? 'dry_run' : 'success',
-      createdAt: new Date(),
-    });
-
-    return { success: true, videoId, postId };
   }
 
   /**

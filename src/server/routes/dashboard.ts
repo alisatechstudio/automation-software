@@ -485,12 +485,18 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       <!-- Execution Logs Section -->
       <div>
-        <div class="mb-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Recent Execution Logs & Facebook Telemetry
-          </h3>
-          <p class="text-xs text-slate-400">Click on any FB Post ID to inspect directly on Facebook</p>
+        <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Recent Execution Logs & Facebook Telemetry
+            </h3>
+            <p class="text-xs text-slate-400">Click on any FB Post ID to inspect directly on Facebook</p>
+          </div>
+          <button onclick="resetUnpostedArticles()" id="btn-reset-unposted" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-amber-600/20 text-slate-300 hover:text-amber-400 border border-slate-700/80 hover:border-amber-500/50 transition active:scale-95 flex items-center gap-1.5 self-start sm:self-auto" title="Fix and re-queue any articles whose publication had empty post IDs">
+            <span>🔄</span>
+            <span>Re-queue Unposted Articles</span>
+          </button>
         </div>
 
         <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl">
@@ -1557,10 +1563,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         const res = await safeFetchJson('/api/queue/publish-next', { method: 'POST' });
         if (res.ok && res.data.success) {
           const log = res.data.log;
-          if (log && log.status === 'success') {
+          if (log && log.status === 'success' && log.fbPostId) {
             showToast('✓ Successfully published: ' + (res.data.articleTitle || '').substring(0, 30) + '...');
           } else if (log && log.errorMessage) {
-            showToast('Facebook note: ' + log.errorMessage, true);
+            showToast('Facebook error: ' + log.errorMessage, true);
           } else {
             showToast('Published to Facebook!');
           }
@@ -1571,6 +1577,24 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }
       } catch (e) {
         showToast('Error publishing: ' + e.message, true);
+      }
+    }
+
+    // --- RE-QUEUE UNPOSTED ARTICLES ---
+    async function resetUnpostedArticles() {
+      if (!confirm('This will find any articles that were not posted to Facebook (missing Post IDs) and re-queue them as pending so they can be published live. Proceed?')) return;
+      try {
+        showToast('Re-queueing unposted articles...');
+        const res = await safeFetchJson('/api/queue/reset-unposted', { method: 'POST' });
+        if (res.ok && res.data.success) {
+          showToast('✓ ' + (res.data.message || 'Articles re-queued successfully!'));
+          loadOverview();
+          loadQueue();
+        } else {
+          showToast(res.data?.error || 'Failed to re-queue articles', true);
+        }
+      } catch (e) {
+        showToast('Error re-queueing articles: ' + e.message, true);
       }
     }
 
@@ -1613,10 +1637,18 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (logs.length === 0) {
           logBody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-mono text-xs">No publication logs recorded yet.</td></tr>';
         } else {
-          logBody.innerHTML = logs.map(l => \`
+          logBody.innerHTML = logs.map(l => {
+            const isLiveSuccess = (l.status === 'success' || l.status === 'dry_run') && (l.status === 'dry_run' || !!l.fb_post_id);
+            const badgeClass = isLiveSuccess
+              ? (l.status === 'dry_run' ? 'text-blue-400 bg-blue-950/60 border border-blue-800/50' : 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/50')
+              : 'text-red-400 bg-red-950/60 border border-red-800/50';
+            const displayStatus = (!l.fb_post_id && l.status === 'success') ? 'FAILED' : l.status;
+
+            return \`
             <tr class="hover:bg-slate-800/40 text-xs transition">
               <td class="px-5 py-3">
-                <span class="px-2 py-0.5 rounded font-mono font-bold uppercase \${l.status === 'success' || l.status === 'dry_run' ? 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/50' : 'text-red-400 bg-red-950/60 border border-red-800/50'}">\${l.status}</span>
+                <span class="px-2 py-0.5 rounded font-mono font-bold uppercase \${badgeClass}">\${displayStatus}</span>
+                \${l.error_message ? \`<div class="text-[10px] text-red-400/90 font-mono mt-1 max-w-[220px] truncate" title="\${l.error_message}">\${l.error_message}</div>\` : ''}
               </td>
               <td class="px-5 py-3 text-slate-200 max-w-sm truncate bn font-medium">\${l.article_title || ''}</td>
               <td class="px-5 py-3 font-mono">
@@ -1625,12 +1657,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                     <span>\${l.fb_post_id}</span>
                     <svg class="w-3.5 h-3.5 inline opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                   </a>
-                \` : '<span class="text-slate-500">-</span>'}
+                \` : '<span class="text-slate-500 font-semibold" title="No live post ID was recorded">-</span>'}
               </td>
               <td class="px-5 py-3 text-slate-400 font-mono">\${l.duration_ms ? l.duration_ms + 'ms' : '-'}</td>
               <td class="px-5 py-3 text-slate-500 font-mono">\${new Date(l.created_at).toLocaleString()}</td>
             </tr>
-          \`).join('');
+          \`;
+          }).join('');
         }
       } catch (e) {
         console.error(e);

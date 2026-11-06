@@ -178,7 +178,7 @@ export class FacebookGraphClient {
    * 1. POST /{page-id}/video_reels (upload_phase: 'start')
    * 2. POST {upload_url} with binary stream
    * 3. POST /{page-id}/video_reels (upload_phase: 'finish', video_state: 'PUBLISHED')
-   * With automatic fallback to POST /{page-id}/videos.
+   * With resilient automatic fallback to POST https://graph-video.facebook.com/{apiVersion}/{page-id}/videos.
    */
   public async publishReel(
     pageId: string,
@@ -198,71 +198,89 @@ export class FacebookGraphClient {
       return { videoId: mockVideoId, postId: mockPostId };
     }
 
+    let reelApiError: string | null = null;
+
+    // Strategy 1: Official Meta 3-phase Reels Publishing API
     try {
       console.log(`[FacebookClient] Phase 1: Initializing Reel upload session for page ${pageId}...`);
       const initUrl = `https://graph.facebook.com/${this.apiVersion}/${pageId}/video_reels`;
+
+      const initParams = new URLSearchParams();
+      initParams.append('upload_phase', 'start');
+      initParams.append('access_token', accessToken);
+
       const initRes = await fetch(initUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          upload_phase: 'start',
-          access_token: accessToken,
-        }),
+        body: initParams,
       });
 
       const initData = (await initRes.json()) as any;
+      console.log(`[FacebookClient] Phase 1 response status: ${initRes.status}`, JSON.stringify(initData));
 
-      if (initRes.ok && initData.video_id && initData.upload_url) {
-        const videoId = initData.video_id;
-        const uploadUrl = initData.upload_url;
-        console.log(`[FacebookClient] Phase 2: Uploading video binary (${videoBuffer.length} bytes) to ${uploadUrl}...`);
-
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `OAuth ${accessToken}`,
-            offset: '0',
-            file_size: String(videoBuffer.length),
-            'Content-Type': 'application/octet-stream',
-          },
-          body: new Uint8Array(videoBuffer),
-        });
-
-        const uploadData = (await uploadRes.json()) as any;
-        if (!uploadRes.ok || uploadData.error) {
-          throw new Error(`Reel binary upload failed: ${uploadData.error?.message || uploadRes.statusText}`);
-        }
-
-        console.log(`[FacebookClient] Phase 3: Finalizing Reel publication...`);
-        const finishRes = await fetch(initUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            upload_phase: 'finish',
-            video_id: videoId,
-            video_state: 'PUBLISHED',
-            description: description,
-            title: title || undefined,
-            access_token: accessToken,
-          }),
-        });
-
-        const finishData = (await finishRes.json()) as any;
-        if (!finishRes.ok || finishData.error) {
-          throw new Error(`Reel publish finalization failed: ${finishData.error?.message || finishRes.statusText}`);
-        }
-
-        const postId = finishData.post_id || `${pageId}_${videoId}`;
-        console.log(`✓ [FacebookClient] Reel published successfully via Reels API! Video ID: ${videoId}, Post ID: ${postId}`);
-        return { videoId, postId };
+      if (!initRes.ok || initData.error || !initData.video_id || !initData.upload_url) {
+        const errorDetail = initData.error?.message || `HTTP ${initRes.status}`;
+        throw new Error(`video_reels start failed: ${errorDetail} (code ${initData.error?.code || 'none'})`);
       }
+
+      const videoId = initData.video_id;
+      const uploadUrl = initData.upload_url;
+      console.log(`[FacebookClient] Phase 2: Uploading video binary (${videoBuffer.length} bytes) to ${uploadUrl}...`);
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `OAuth ${accessToken}`,
+          offset: '0',
+          file_size: String(videoBuffer.length),
+          'Content-Type': 'application/octet-stream',
+        },
+        body: new Uint8Array(videoBuffer),
+      });
+
+      let uploadData: any = {};
+      try {
+        uploadData = await uploadRes.json();
+      } catch {
+        // Some Meta upload handlers return text or empty JSON
+      }
+      console.log(`[FacebookClient] Phase 2 response status: ${uploadRes.status}`, JSON.stringify(uploadData));
+
+      if (!uploadRes.ok || uploadData.error) {
+        throw new Error(`Reel binary upload failed (${uploadRes.status}): ${uploadData.error?.message || uploadRes.statusText}`);
+      }
+
+      console.log(`[FacebookClient] Phase 3: Finalizing Reel publication...`);
+      const finishParams = new URLSearchParams();
+      finishParams.append('upload_phase', 'finish');
+      finishParams.append('video_id', videoId);
+      finishParams.append('video_state', 'PUBLISHED');
+      finishParams.append('description', description);
+      if (title) finishParams.append('title', title);
+      finishParams.append('access_token', accessToken);
+
+      const finishRes = await fetch(initUrl, {
+        method: 'POST',
+        body: finishParams,
+      });
+
+      const finishData = (await finishRes.json()) as any;
+      console.log(`[FacebookClient] Phase 3 response status: ${finishRes.status}`, JSON.stringify(finishData));
+
+      if (!finishRes.ok || finishData.error || finishData.success === false) {
+        throw new Error(`Reel publish finalization failed (${finishRes.status}): ${finishData.error?.message || finishRes.statusText}`);
+      }
+
+      const postId = finishData.post_id || `${pageId}_${videoId}`;
+      console.log(`✓ [FacebookClient] Reel published successfully via Reels API! Video ID: ${videoId}, Post ID: ${postId}`);
+      return { videoId, postId };
     } catch (reelsApiErr: any) {
-      console.warn(`[FacebookClient] Reels API error: ${reelsApiErr.message}. Attempting fallback to Page Videos API...`);
+      reelApiError = reelsApiErr.message;
+      console.warn(`[FacebookClient] Reels API error: ${reelApiError}. Executing fallback to graph-video.facebook.com...`);
     }
 
-    // Resilient Fallback: POST /{page-id}/videos
-    console.log(`[FacebookClient] Publishing video via POST /${pageId}/videos...`);
-    const fallbackUrl = `https://graph.facebook.com/${this.apiVersion}/${pageId}/videos`;
+    // Strategy 2: Resilient Fallback to graph-video.facebook.com/{pageId}/videos
+    console.log(`[FacebookClient] Fallback: Publishing video via POST https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos...`);
+    const fallbackUrl = `https://graph-video.facebook.com/${this.apiVersion}/${pageId}/videos`;
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(videoBuffer)], { type: 'video/mp4' });
     formData.append('source', blob, 'news_reel.mp4');
@@ -277,12 +295,16 @@ export class FacebookGraphClient {
     });
 
     const fbData = (await fbRes.json()) as any;
+    console.log(`[FacebookClient] Fallback response status: ${fbRes.status}`, JSON.stringify(fbData));
+
     if (!fbRes.ok || fbData.error) {
-      this.handleGraphError(fbData.error, `Reel / Video upload to ${pageId} failed`);
+      const compositeMsg = `Page Videos API failed: ${fbData.error?.message || fbRes.statusText}${reelApiError ? ` | Reels API also failed: ${reelApiError}` : ''}`;
+      this.handleGraphError(fbData.error || { message: compositeMsg }, compositeMsg);
     }
 
     const videoId = fbData.id;
     const postId = fbData.post_id || `${pageId}_${videoId}`;
+    console.log(`✓ [FacebookClient] Video published successfully via graph-video fallback! Video ID: ${videoId}, Post ID: ${postId}`);
     return { videoId, postId };
   }
 

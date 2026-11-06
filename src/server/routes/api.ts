@@ -1005,6 +1005,7 @@ apiRouter.get('/logs', async (req: Request, res: Response) => {
             fb_post_id: '$fbPostId',
             fb_comment_id: '$fbCommentId',
             duration_ms: '$durationMs',
+            error_message: '$errorMessage',
             created_at: '$createdAt',
             article_title: { $arrayElemAt: ['$articleDoc.title', 0] },
             article_link: { $arrayElemAt: ['$articleDoc.link', 0] },
@@ -1143,8 +1144,18 @@ apiRouter.post('/queue/publish-next', async (req: Request, res: Response) => {
       return;
     }
 
-    // Find the latest article that hasn't been published yet, or fall back to most recent
+    // Find the latest article that hasn't been published yet
     let article = await articlesCol.findOne({ status: { $ne: 'published' } }, { sort: { createdAt: -1 } });
+    if (!article) {
+      // If all are marked published, check if there are articles whose post_logs failed or have no fbPostId
+      const failedLog = await db.collection<PostLog>('post_logs').findOne(
+        { $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }] },
+        { sort: { createdAt: -1 } }
+      );
+      if (failedLog?.articleId) {
+        article = await articlesCol.findOne({ _id: failedLog.articleId });
+      }
+    }
     if (!article) {
       article = await articlesCol.findOne({}, { sort: { createdAt: -1 } });
     }
@@ -1181,16 +1192,61 @@ apiRouter.post('/queue/publish-next', async (req: Request, res: Response) => {
 
     const logsCol = db.collection<PostLog>('post_logs');
     const latestLog = await logsCol.findOne({ articleId: article._id }, { sort: { createdAt: -1 } });
+    const isSuccess = latestLog?.status === 'success' || latestLog?.status === 'dry_run';
 
     res.json({
-      success: true,
+      success: isSuccess,
       articleTitle: article.title,
       pageName: page.name,
       pageId: page._id,
       log: latestLog,
+      error: !isSuccess ? (latestLog?.errorMessage || 'Facebook Reel failed to publish (no post ID generated)') : undefined,
     });
   } catch (err: any) {
     console.error('[PublishNext] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7c. Reset unposted articles whose logs falsely said success with empty fbPostId
+apiRouter.post('/queue/reset-unposted', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    // Find all post_logs where fbPostId is null/empty and status is 'success'
+    const unpostedLogs = await db.collection<PostLog>('post_logs').find({
+      $and: [
+        { status: 'success' },
+        { $or: [{ fbPostId: null }, { fbPostId: '' }] },
+      ],
+    }).toArray();
+
+    const articleIds = Array.from(new Set(unpostedLogs.map((l) => l.articleId).filter(Boolean)));
+
+    if (unpostedLogs.length > 0) {
+      await db.collection('post_logs').updateMany(
+        { _id: { $in: unpostedLogs.map((l) => l._id) as any } },
+        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
+      );
+      await db.collection('reel_logs').updateMany(
+        { fbPostId: { $in: [null, ''] }, status: 'success' },
+        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
+      );
+    }
+
+    if (articleIds.length > 0) {
+      await db.collection('news_articles').updateMany(
+        { _id: { $in: articleIds as any } },
+        { $set: { status: 'pending' } }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Reset ${articleIds.length} unposted articles back to pending queue`,
+      count: articleIds.length,
+    });
+  } catch (err: any) {
+    console.error('[ResetUnposted] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
