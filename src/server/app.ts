@@ -162,7 +162,9 @@ export function createServer(): Express {
     `);
     setTimeout(() => {
       console.log('[System] Reset endpoint triggered. Gracefully exiting process (code 0) to clear locks...');
-      process.exit(0);
+      if (!process.env.VERCEL) {
+        process.exit(0);
+      }
     }, 600);
   });
 

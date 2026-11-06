@@ -1496,7 +1496,9 @@ apiRouter.post('/system/restart', (req: Request, res: Response) => {
   res.json({ success: true, message: 'Server process exiting to clear threads and recycle Passenger...' });
   setTimeout(() => {
     console.log('[System] Manual restart triggered via API. Exiting process with code 0...');
-    process.exit(0);
+    if (!process.env.VERCEL) {
+      process.exit(0);
+    }
   }, 500);
 });
 

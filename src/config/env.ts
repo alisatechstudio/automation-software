@@ -37,15 +37,24 @@ const isVercel = !!process.env.VERCEL;
 const dataDir = process.env.DATA_DIR || (isVercel ? '/tmp/data' : path.join(rootDir, 'data'));
 const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 
+const resolvedDbType: 'mysql' | 'mongodb' =
+  process.env.DB_TYPE === 'mysql'
+    ? 'mysql'
+    : process.env.DB_TYPE === 'mongodb'
+    ? 'mongodb'
+    : isVercel
+    ? (process.env.MYSQL_DATABASE && !process.env.MONGODB_URI ? 'mysql' : 'mongodb')
+    : (process.env.MONGODB_URI || process.env.MONGODB_URL ? 'mongodb' : (process.env.MYSQL_DATABASE ? 'mysql' : 'mongodb'));
+
 export const config: AppConfig = {
   PORT: process.env.PORT && !isNaN(Number(process.env.PORT)) ? parseInt(process.env.PORT, 10) : 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  DB_TYPE: (process.env.DB_TYPE === 'mongodb' ? 'mongodb' : (process.env.MYSQL_DATABASE || process.env.DB_TYPE === 'mysql' ? 'mysql' : (process.env.MONGODB_URI ? 'mongodb' : 'mysql'))),
+  DB_TYPE: resolvedDbType,
   MYSQL_HOST: process.env.MYSQL_HOST || '127.0.0.1',
   MYSQL_PORT: parseInt(process.env.MYSQL_PORT || '3306', 10),
-  MYSQL_USER: process.env.MYSQL_USER || 'alisatec_automation',
+  MYSQL_USER: process.env.MYSQL_USER || (isVercel ? '' : 'alisatec_automation'),
   MYSQL_PASSWORD: process.env.MYSQL_PASSWORD || '',
-  MYSQL_DATABASE: process.env.MYSQL_DATABASE || 'alisatec_automation',
+  MYSQL_DATABASE: process.env.MYSQL_DATABASE || (isVercel ? '' : 'alisatec_automation'),
   MONGODB_URI:
     process.env.MONGODB_URI ||
     process.env.MONGODB_URL ||

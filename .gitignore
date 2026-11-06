@@ -8,4 +8,6 @@ startup-debug.log
 *.log
 .vscode/
 .DS_Store
+tmp/
+sftp.json
 

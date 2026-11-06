@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { MongoClient, MongoClientOptions } from 'mongodb';
 import { attachDatabasePool } from '@vercel/functions';
 import { config } from '../config/env.js';
@@ -9,7 +10,7 @@ let mysqlInstance: MySqlDatabase | null = null;
 let dbInstance: any = null;
 let isConnected = false;
 let lastError: string | null = null;
-let activeDbType: 'mysql' | 'mongodb' = 'mysql';
+let activeDbType: 'mysql' | 'mongodb' = config.DB_TYPE;
 
 export function isDbConnected(): boolean {
   return isConnected && !!dbInstance;
@@ -60,15 +61,17 @@ export async function initMySql(): Promise<any> {
   ];
 
   for (const sock of standardSockets) {
-    candidates.push({
-      label: `cPanel socket "${sock}"`,
-      config: {
-        socketPath: sock,
-        user: config.MYSQL_USER,
-        password: config.MYSQL_PASSWORD,
-        database: config.MYSQL_DATABASE,
-      },
-    });
+    if (fs.existsSync(sock)) {
+      candidates.push({
+        label: `cPanel socket "${sock}"`,
+        config: {
+          socketPath: sock,
+          user: config.MYSQL_USER,
+          password: config.MYSQL_PASSWORD,
+          database: config.MYSQL_DATABASE,
+        },
+      });
+    }
   }
 
   // 3. TCP candidates (127.0.0.1 and localhost)
