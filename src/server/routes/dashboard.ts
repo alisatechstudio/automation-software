@@ -1754,8 +1754,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
       if (tabId === 'reels') loadReels();
-      if (tabId === 'gdrive-reels' || tabId === 'local-reels') {
-        const el = document.getElementById('tab-gdrive-reels') || document.getElementById('tab-local-reels');
+      if (tabId === 'gdrive-reels') {
+        const el = document.getElementById('tab-gdrive-reels');
         if (el) el.classList.remove('hidden');
         loadGDriveReels();
       }
@@ -3052,7 +3052,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       await loadGDriveReelPages();
       await refreshGDriveReelsStatus();
     }
-    const loadLocalReels = loadGDriveReels;
 
     async function loadGDriveReelPages() {
       try {
@@ -3171,7 +3170,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         console.error('Failed to refresh gdrive reels status:', e);
       }
     }
-    const refreshLocalReelsStatus = refreshGDriveReelsStatus;
 
     function toggleGDriveCaptionFields() {
       const isCustom = document.getElementById('gdrive-caption-mode-custom')?.checked;
@@ -3181,7 +3179,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         else box.classList.add('hidden');
       }
     }
-    const toggleLocalCaptionFields = toggleGDriveCaptionFields;
 
     function renderGDriveReelsTable(videos) {
       const tbody = document.getElementById('gdrive-reels-table-body');
@@ -3219,7 +3216,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const file = cachedGDriveVideos[idx];
       publishSpecificGDriveReel(file.id, file.cleanTitle || file.name);
     }
-    const onLocalReelActionClick = onGDriveActionClick;
 
     async function triggerScanGDriveFolder() {
       const folderUrlOrId = document.getElementById('gdrive-folder-input')?.value.trim();
@@ -3251,7 +3247,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Error scanning Google Drive: ' + e.message, true);
       }
     }
-    const triggerScanLocalReelsFolder = triggerScanGDriveFolder;
 
     async function handleSaveGDriveConfig(e) {
       if (e) e.preventDefault();
@@ -3300,7 +3295,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }
       }
     }
-    const handleSaveLocalReelsConfig = handleSaveGDriveConfig;
 
     async function publishNextGDriveReel() {
       const btn = document.getElementById('btn-publish-next-gdrive');
@@ -3331,7 +3325,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }
       }
     }
-    const publishNextLocalReel = publishNextGDriveReel;
 
     async function publishSpecificGDriveReel(fileId, title) {
       if (!confirm('Are you sure you want to publish "' + title + '" from Google Drive to your Facebook Page now?')) return;
@@ -3354,7 +3347,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Error: ' + e.message, true);
       }
     }
-    const publishSpecificLocalReel = publishSpecificGDriveReel;
 
     async function confirmResetGDriveHistory() {
       if (!confirm('Do you want to reset the posted video history? All videos in your Google Drive folder will be marked as "Ready to Post" again.')) return;
@@ -3371,7 +3363,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Error: ' + e.message, true);
       }
     }
-    const confirmResetLocalHistory = confirmResetGDriveHistory;
 
 
     // --- YOUTUBE SHORTS AUTOMATION ---

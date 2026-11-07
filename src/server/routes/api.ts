@@ -11,7 +11,6 @@ import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
-import { LocalReelService } from '../../services/local-reels/service.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
@@ -24,7 +23,6 @@ const canvasRenderer = new CanvasCardRenderer();
 const reelRenderer = new ReelVideoRenderer();
 const ytClient = new YouTubeClient();
 const dedupeService = new ArticleDedupeService();
-const localReelService = new LocalReelService();
 const gdriveReelService = new GDriveReelService();
 
 // 1. Dashboard Overview Stats
@@ -884,93 +882,6 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 15,
       reelTheme: reelTheme || 'rolling',
     });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// -------------------------------------------------------------
-// LOCAL FOLDER REELS AUTOMATION API
-// -------------------------------------------------------------
-
-// 1. Get status & folder scan
-apiRouter.get('/local-reels/status', async (req: Request, res: Response) => {
-  try {
-    const config = await localReelService.getConfig();
-    const scan = await localReelService.scanFolder();
-    res.json({
-      success: true,
-      config,
-      scan,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. Scan a specific folder path
-apiRouter.post('/local-reels/scan', async (req: Request, res: Response) => {
-  try {
-    const { folderPath } = req.body;
-    const scan = await localReelService.scanFolder(folderPath);
-    res.json({ success: true, scan });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 3. Save configuration
-apiRouter.post('/local-reels/config', async (req: Request, res: Response) => {
-  try {
-    const updates = req.body;
-    const updatedConfig = await localReelService.saveConfig(updates);
-    const scan = await localReelService.scanFolder(updatedConfig.folderPath);
-    res.json({ success: true, config: updatedConfig, scan });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 4. Publish next video from folder
-apiRouter.post('/local-reels/publish-next', async (req: Request, res: Response) => {
-  try {
-    const result = await localReelService.publishNext();
-    if (!result.success) {
-      res.status(400).json(result);
-      return;
-    }
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 5. Publish specific file from folder
-apiRouter.post('/local-reels/publish-file', async (req: Request, res: Response) => {
-  try {
-    const { filename } = req.body;
-    if (!filename) {
-      res.status(400).json({ error: 'Filename is required' });
-      return;
-    }
-    const result = await localReelService.publishSpecificFile(filename);
-    if (!result.success) {
-      res.status(400).json(result);
-      return;
-    }
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 6. Reset posted history
-apiRouter.post('/local-reels/reset-history', async (req: Request, res: Response) => {
-  try {
-    await localReelService.resetPostedHistory();
-    const config = await localReelService.getConfig();
-    const scan = await localReelService.scanFolder();
-    res.json({ success: true, config, scan });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

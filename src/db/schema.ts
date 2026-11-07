@@ -192,40 +192,6 @@ export interface GroupShareLog {
   createdAt: Date;
 }
 
-export interface LocalReelConfig {
-  _id: string; // Identifier e.g. 'default_local_reels'
-  folderPath: string; // Absolute or relative local directory containing video files
-  pageId: string; // Target Facebook Page ID
-  pageName?: string;
-  isActive: boolean; // Automated scheduling ON/OFF
-  scheduleIntervalHours: number; // Interval in hours (e.g. 2, 3, 4, 6)
-  cronExpression?: string; // Standard cron expression e.g. "0 */2 * * *"
-  captionStrategy: 'viral_hashtags' | 'custom';
-  customCaption?: string;
-  firstCommentText?: string;
-  orderStrategy: 'oldest_first' | 'newest_first' | 'alphabetical' | 'random';
-  postedVideos: string[]; // List of filenames already published
-  lastPostedAt?: Date | null;
-  lastPostedFile?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface LocalReelPostLog {
-  _id: string; // UUID
-  filename: string;
-  filePath: string;
-  fileSizeBytes: number;
-  pageId: string;
-  pageName: string;
-  fbVideoId: string;
-  fbPostId: string;
-  caption: string;
-  publishedAt: Date;
-  status: 'published' | 'failed';
-  errorMessage?: string;
-}
-
 export interface GDriveReelConfig {
   _id: string; // Identifier e.g. 'default_gdrive_reels'
   folderUrlOrId: string; // Full Drive folder URL or ID
