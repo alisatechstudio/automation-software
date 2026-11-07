@@ -191,17 +191,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
   <!-- Top Glassmorphic Navbar -->
   <header class="border-b border-slate-800/80 bg-slate-950/75 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
       <!-- Logo & Brand Header -->
       <div class="flex items-center space-x-3.5 group cursor-pointer" onclick="switchTab('overview')">
         <div class="relative">
           <div class="absolute -inset-1 bg-gradient-to-r from-red-600 to-amber-600 rounded-full blur opacity-70 group-hover:opacity-100 transition duration-300"></div>
-          <img src="/assets/images/favicon.png" alt="BD News 24/7" class="relative w-11 h-11 rounded-full object-cover border-2 border-red-500/80 shadow-glow-red transform group-hover:scale-105 transition-all duration-300" />
+          <img src="/assets/images/favicon.png" alt="BD News 24/7" class="relative w-9 h-9 rounded-full object-cover border border-red-500/80 shadow-glow-red transform group-hover:scale-105 transition-all duration-300" />
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">BD News 24/7</span>
+            <span class="font-black text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">BD News 24/7</span>
             <span class="px-2 py-0.5 text-[10px] font-mono tracking-wider font-bold rounded-md bg-red-950/80 text-red-400 border border-red-800/60 shadow-sm uppercase">v2.0 Pro</span>
           </div>
           <p class="text-xs text-slate-400 font-medium hidden sm:block">Autonomous Meta Graph API & Visual Engine</p>
@@ -237,45 +237,45 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
   <!-- Navigation Glass Tabs -->
   <div class="border-b border-slate-800/80 bg-slate-950/40 backdrop-blur-md sticky top-20 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 sm:space-x-4 overflow-x-auto py-2.5 no-scrollbar">
-      <button onclick="switchTab('overview')" class="tab-btn active px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-red-400 bg-red-950/40 border border-red-800/50 shadow-inner flex items-center gap-2 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1.5 sm:space-x-2 overflow-x-auto py-1.5 no-scrollbar">
+      <button onclick="switchTab('overview')" class="tab-btn active px-3 py-1.5 text-xs font-semibold rounded-lg text-red-400 bg-red-950/40 border border-red-800/50 shadow-inner flex items-center gap-2 transition-all">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         Overview
       </button>
-      <button onclick="switchTab('queue')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('queue')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
         Queue & Logs
       </button>
-      <button onclick="switchTab('sources')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('sources')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
         RSS Sources
       </button>
-      <button onclick="switchTab('pages')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('pages')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         Facebook Pages
       </button>
-      <button onclick="switchTab('groups')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('groups')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         <span>Groups (গ্রুপ শেয়ার)</span>
       </button>
-      <button onclick="switchTab('reels')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <span>🎬 Reels (রিলস)</span>
       </button>
-      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
         <span>☁️ Google Drive Reels</span>
         <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30 font-mono">24/7 Vercel</span>
       </button>
-      <button onclick="switchTab('youtube')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('youtube')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
         <span>📺 YouTube (ইউটিউব শর্টস)</span>
       </button>
-      <button onclick="switchTab('preview')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('preview')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
         Template Preview
       </button>
-      <button onclick="switchTab('settings')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+      <button onclick="switchTab('settings')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
       </button>
@@ -283,16 +283,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
   </div>
 
   <!-- Main Content Stage -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full relative z-10">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex-1 w-full relative z-10">
 
     <!-- 1. OVERVIEW TAB -->
-    <div id="tab-overview" class="tab-content space-y-8">
+    <div id="tab-overview" class="tab-content space-y-4 sm:space-y-5">
       
       <!-- 3D Holographic Stat Cards Grid -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         
         <!-- Card 1: Pending Queue -->
-        <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
           <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
           <div class="tilt-card-inner">
             <div class="flex items-center justify-between">
@@ -310,7 +310,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
 
         <!-- Card 2: Published Successfully -->
-        <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
           <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
           <div class="tilt-card-inner">
             <div class="flex items-center justify-between">
@@ -328,7 +328,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
 
         <!-- Card 3: Active RSS Feeds -->
-        <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
           <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
           <div class="tilt-card-inner">
             <div class="flex items-center justify-between">
@@ -346,7 +346,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
 
         <!-- Card 4: Connected Facebook Pages -->
-        <div class="tilt-card glass-panel rounded-2xl p-6 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
+        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
           <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
           <div class="tilt-card-inner">
             <div class="flex items-center justify-between">
@@ -449,7 +449,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 2. QUEUE & LOGS TAB -->
-    <div id="tab-queue" class="tab-content hidden space-y-8">
+    <div id="tab-queue" class="tab-content hidden space-y-4 sm:space-y-5">
       
       <!-- Queue Section -->
       <div>
@@ -485,6 +485,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               </tbody>
             </table>
           </div>
+          <div id="queue-pagination"></div>
         </div>
       </div>
 
@@ -521,13 +522,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               </tbody>
             </table>
           </div>
+          <div id="logs-pagination"></div>
         </div>
       </div>
 
     </div>
 
     <!-- 3. RSS SOURCES TAB -->
-    <div id="tab-sources" class="tab-content hidden space-y-6">
+    <div id="tab-sources" class="tab-content hidden space-y-4 sm:space-y-5">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Add Source Form -->
@@ -571,16 +573,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <h3 class="text-base font-bold text-white">Configured Feed Pipelines</h3>
             <span class="text-xs text-slate-500 font-mono">Continuous Auto-Ingest</span>
           </div>
-          <div id="sources-list" class="space-y-3.5">
+          <div id="sources-list" class="space-y-2.5">
             <div class="text-sm text-slate-500 font-mono">Loading sources...</div>
           </div>
+          <div id="sources-pagination"></div>
         </div>
 
       </div>
     </div>
 
     <!-- 4. FACEBOOK PAGES TAB -->
-    <div id="tab-pages" class="tab-content hidden space-y-6">
+    <div id="tab-pages" class="tab-content hidden space-y-4 sm:space-y-5">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Add Page Form -->
@@ -641,10 +644,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 4.5. FACEBOOK GROUPS AUTO-SHARE TAB -->
-    <div id="tab-groups" class="tab-content hidden space-y-8">
+    <div id="tab-groups" class="tab-content hidden space-y-4 sm:space-y-5">
       
       <!-- Header Banner & Action Button -->
-      <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-emerald-500/20 shadow-glow-emerald">
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-emerald-500/20 shadow-glow-emerald">
         <div class="space-y-2">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -744,7 +747,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 5. TEMPLATE PREVIEW TAB -->
-    <div id="tab-preview" class="tab-content hidden space-y-6">
+    <div id="tab-preview" class="tab-content hidden space-y-4 sm:space-y-5">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <!-- Controls -->
@@ -803,10 +806,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 6. REELS TAB (1080x1080 MP4 News Reels Studio) -->
-    <div id="tab-reels" class="tab-content hidden space-y-8">
+    <div id="tab-reels" class="tab-content hidden space-y-4 sm:space-y-5">
       
       <!-- Top Banner & Quick Controls -->
-      <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-rose-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-rose-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div class="space-y-1 relative z-10">
           <div class="flex items-center gap-2.5 flex-wrap">
             <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-rose-950/80 text-rose-400 border border-rose-800/60 uppercase">15 SECONDS • 20 FPS • AAC BROADCAST AUDIO</span>
@@ -1091,16 +1094,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </tbody>
           </table>
         </div>
+        <div id="reels-pagination"></div>
       </div>
 
     </div>
 
 
     <!-- 6.4. GOOGLE DRIVE MULTI-CHANNEL REELS TAB -->
-    <div id="tab-gdrive-reels" class="tab-content hidden space-y-6">
+    <div id="tab-gdrive-reels" class="tab-content hidden space-y-4 sm:space-y-5">
       
       <!-- Header Banner -->
-      <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden">
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden">
         <div class="absolute -right-12 -top-12 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
@@ -1367,6 +1371,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 </tbody>
               </table>
             </div>
+            <div id="gdrive-videos-pagination"></div>
 
           </div>
 
@@ -1377,10 +1382,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 6.5. YOUTUBE SHORTS TAB -->
-    <div id="tab-youtube" class="tab-content hidden space-y-8">
+    <div id="tab-youtube" class="tab-content hidden space-y-4 sm:space-y-5">
       
       <!-- Header Banner -->
-      <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden">
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden">
         <div class="absolute -right-12 -top-12 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
@@ -1558,8 +1563,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 7. SETTINGS TAB -->
-    <div id="tab-settings" class="tab-content hidden space-y-6">
-      <div class="glass-panel p-6 sm:p-8 rounded-2xl max-w-3xl">
+    <div id="tab-settings" class="tab-content hidden space-y-4 sm:space-y-5">
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl max-w-3xl">
         <div class="flex items-center gap-2.5 mb-6">
           <div class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold">⚙️</div>
           <div>
@@ -1623,7 +1628,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
   <!-- Add Group Modal -->
   <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all duration-300">
-    <div class="glass-panel w-full max-w-xl p-6 sm:p-8 rounded-3xl border border-emerald-500/30 shadow-2xl relative space-y-6">
+    <div class="glass-panel w-full max-w-xl p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-2xl relative space-y-6">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">👥</div>
@@ -1941,6 +1946,30 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       } catch (e) {
         showToast('Error re-queueing articles: ' + e.message, true);
       }
+    }
+
+
+    // --- GENERIC PAGINATION HELPER ---
+    function renderPagination(containerId, currentPage, totalPages, totalItems, onPageChangeFnName) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (totalPages <= 1) {
+        el.innerHTML = totalItems > 0
+          ? '<div class="px-3 py-2 text-right text-[11px] text-slate-500 font-mono bg-slate-950/60 rounded-b-xl border-t border-slate-800">' + totalItems + ' total items</div>'
+          : '';
+        return;
+      }
+      const prevDisabled = currentPage <= 1;
+      const nextDisabled = currentPage >= totalPages;
+      el.innerHTML =
+        '<div class="flex items-center justify-between px-3 py-2 border-t border-slate-800 text-[11px] text-slate-400 font-mono bg-slate-950/70 rounded-b-xl">' +
+          '<div>Page <span class="text-white font-bold">' + currentPage + '</span> of <span class="text-white font-bold">' + totalPages + '</span> (' + totalItems + ' items)</div>' +
+          '<div class="flex items-center gap-1.5">' +
+            '<button ' + (prevDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage - 1) + ')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer"') + '>Prev</button>' +
+            '<span class="px-2 text-xs font-bold text-slate-300">' + currentPage + ' / ' + totalPages + '</span>' +
+            '<button ' + (nextDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage + 1) + ')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer"') + '>Next</button>' +
+          '</div>' +
+        '</div>';
     }
 
     // --- QUEUE & LOGS ---
@@ -3047,56 +3076,78 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
+    // --- REEL LOGS (WITH PAGINATION) ---
+    let reelLogsData = [];
+    let reelLogsPage = 1;
+    const REEL_LOGS_PAGE_SIZE = 10;
+
+    function changeReelsPage(newPage) {
+      reelLogsPage = newPage;
+      renderReelLogsPage(reelLogsPage);
+    }
+
+    function renderReelLogsPage(page) {
+      const tbody = document.getElementById('reels-table-body');
+      const statCount = document.getElementById('stat-reels-count');
+      if (!tbody) return;
+
+      const total = reelLogsData.length;
+      if (statCount) statCount.innerText = total;
+
+      const totalPages = Math.ceil(total / REEL_LOGS_PAGE_SIZE);
+      const start = (page - 1) * REEL_LOGS_PAGE_SIZE;
+      const pageLogs = reelLogsData.slice(start, start + REEL_LOGS_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500 font-mono text-xs">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
+        renderPagination('reels-pagination', 1, 0, 0, 'changeReelsPage');
+        return;
+      }
+
+      const themeLabels = {
+        'studio-red': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-300 border border-rose-800">Studio Red</span>',
+        'breaking-bold': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800">Breaking Flash</span>',
+        'dark-cinema': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">Dark Cyber</span>',
+        'viral-gradient': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-800">Viral Mesh</span>',
+        'vertical-916': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800">9:16 Vertical</span>',
+      };
+
+      tbody.innerHTML = pageLogs.map(log => {
+        const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+        const isSuccess = log.status === 'success';
+        const isDryRun = log.status === 'dry_run';
+        const statusBadge = isSuccess
+          ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
+          : (isDryRun 
+              ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
+              : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
+                (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
+
+        const videoLink = log.fbVideoId && !log.fbVideoId.startsWith('dryrun')
+          ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
+          : (log.fbVideoId || 'N/A');
+
+        const themeBadge = log.theme && themeLabels[log.theme] ? themeLabels[log.theme] : '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-400">Standard</span>';
+
+        return '<tr class="hover:bg-slate-900/40 text-xs transition">' +
+          '<td class="py-2.5 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+          '<td class="py-2.5 pr-4 text-slate-400">' + (log.pageName || 'BD News 24/7') + '</td>' +
+          '<td class="py-2.5 pr-4">' + themeBadge + '</td>' +
+          '<td class="py-2.5 pr-4 font-mono">' + videoLink + '</td>' +
+          '<td class="py-2.5 pr-4 text-slate-400 font-mono">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
+          '<td class="py-2.5 pr-4 text-slate-400 font-mono">' + dateStr + '</td>' +
+          '<td class="py-2.5">' + statusBadge + '</td>' +
+          '</tr>';
+      }).join('');
+
+      renderPagination('reels-pagination', page, totalPages, total, 'changeReelsPage');
+    }
+
     async function loadReelLogs() {
       try {
-        const res = await safeFetchJson('/api/reels/logs?limit=25');
-        const tbody = document.getElementById('reels-table-body');
-        const statCount = document.getElementById('stat-reels-count');
-        if (!tbody) return;
-
-        if (!res.ok || !res.data || res.data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
-          if (statCount) statCount.innerText = '0';
-          return;
-        }
-
-        if (statCount) statCount.innerText = res.data.length;
-
-        const themeLabels = {
-          'studio-red': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-300 border border-rose-800">Studio Red</span>',
-          'breaking-bold': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800">Breaking Flash</span>',
-          'dark-cinema': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">Dark Cyber</span>',
-          'viral-gradient': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-800">Viral Mesh</span>',
-          'vertical-916': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800">9:16 Vertical</span>',
-        };
-
-        tbody.innerHTML = res.data.map(log => {
-          const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
-          const isSuccess = log.status === 'success';
-          const isDryRun = log.status === 'dry_run';
-          const statusBadge = isSuccess
-            ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
-            : (isDryRun 
-                ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
-                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
-                  (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
-
-          const videoLink = log.fbVideoId && !log.fbVideoId.startsWith('dryrun')
-            ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
-            : (log.fbVideoId || 'N/A');
-
-          const themeBadge = log.theme && themeLabels[log.theme] ? themeLabels[log.theme] : '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-400">Standard</span>';
-
-          return '<tr class="hover:bg-slate-900/40 transition">' +
-            '<td class="py-3 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
-            '<td class="py-3 pr-4 text-slate-400">' + (log.pageName || 'BD News 24/7') + '</td>' +
-            '<td class="py-3 pr-4">' + themeBadge + '</td>' +
-            '<td class="py-3 pr-4">' + videoLink + '</td>' +
-            '<td class="py-3 pr-4 text-slate-400">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
-            '<td class="py-3 pr-4 text-slate-400">' + dateStr + '</td>' +
-            '<td class="py-3">' + statusBadge + '</td>' +
-            '</tr>';
-        }).join('');
+        const res = await safeFetchJson('/api/reels/logs?limit=50');
+        reelLogsData = (res.ok && Array.isArray(res.data)) ? res.data : [];
+        renderReelLogsPage(reelLogsPage);
       } catch (e) {
         console.error('Error loading reel logs:', e);
       }
@@ -3347,34 +3398,57 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    function renderSelectedChannelVideosTable(videos) {
+    // --- GDRIVE VIDEOS (WITH PAGINATION) ---
+    let gdriveVideoPage = 1;
+    const GDRIVE_PAGE_SIZE = 10;
+
+    function changeGDriveVideoPage(newPage) {
+      gdriveVideoPage = newPage;
+      renderGDriveVideoPage(gdriveVideoPage);
+    }
+
+    function renderGDriveVideoPage(page) {
       const tbody = document.getElementById('gdrive-channel-videos-table-body');
       if (!tbody) return;
 
-      if (!videos || videos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in this Drive folder. Check folder link or add videos.</td></tr>';
+      const total = cachedGDriveVideos.length;
+      const totalPages = Math.ceil(total / GDRIVE_PAGE_SIZE);
+      const start = (page - 1) * GDRIVE_PAGE_SIZE;
+      const pageVideos = cachedGDriveVideos.slice(start, start + GDRIVE_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in this Drive folder. Check folder link or add videos.</td></tr>';
+        renderPagination('gdrive-videos-pagination', 1, 0, 0, 'changeGDriveVideoPage');
         return;
       }
 
-      tbody.innerHTML = videos.map((v, idx) => {
+      tbody.innerHTML = pageVideos.map((v, pageIdx) => {
+        const globalIdx = start + pageIdx;
         const statusBadge = v.isPosted
           ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-950 text-purple-400 border border-purple-800">✓ Posted</span>'
           : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">🟢 Ready</span>';
 
         const publishBtn = v.isPosted
-          ? '<button data-idx="' + idx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
-          : '<button data-idx="' + idx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
+          ? '<button data-idx="' + globalIdx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
+          : '<button data-idx="' + globalIdx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
 
         return '<tr class="hover:bg-slate-900/60 transition">' +
-          '<td class="py-2.5 px-3 max-w-[240px] truncate">' +
+          '<td class="py-2 px-3 max-w-[240px] truncate">' +
             '<div class="font-bold text-slate-200 text-xs truncate" title="' + v.cleanTitle + '">' + v.cleanTitle + '</div>' +
             '<div class="text-[10px] font-mono text-slate-500 truncate">' + v.name + '</div>' +
           '</td>' +
-          '<td class="py-2.5 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
-          '<td class="py-2.5 px-2">' + statusBadge + '</td>' +
-          '<td class="py-2.5 px-3 text-right">' + publishBtn + '</td>' +
+          '<td class="py-2 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
+          '<td class="py-2 px-2">' + statusBadge + '</td>' +
+          '<td class="py-2 px-3 text-right">' + publishBtn + '</td>' +
         '</tr>';
       }).join('');
+
+      renderPagination('gdrive-videos-pagination', page, totalPages, total, 'changeGDriveVideoPage');
+    }
+
+    function renderSelectedChannelVideosTable(videos) {
+      gdriveVideoPage = 1;
+      renderGDriveVideoPage(1);
     }
 
     async function onGDriveVideoActionClick(btn) {
