@@ -615,23 +615,29 @@ export class GDriveReelService {
 
       let caption = '';
       if (conf.captionStrategy === 'custom' && conf.customCaption?.trim()) {
+        // In custom mode, replace placeholders. Do not leak raw file name unless explicitly configured
         caption = conf.customCaption
-          .replace(/{title}/gi, video.cleanTitle)
-          .replace(/{filename}/gi, video.name)
           .replace(/{hashtags}/gi, hashtags)
+          .replace(/{channel}/gi, conf.name || '')
+          .replace(/{filename}/gi, '')
+          .replace(/{title}/gi, '')
           .trim();
+        if (!caption) {
+          caption = hashtags.trim();
+        }
       } else {
-        // High-engagement Reel caption: Hook Title + line breaks + tailored viral hashtags
-        caption = `${video.cleanTitle}\n\n${hashtags}`.trim();
+        // Per user requirement: Post video with viral hashtags only (no raw file name)
+        caption = hashtags.trim();
       }
 
       // 3. Publish to Meta Graph API
+      // Omit title so Facebook Reels API does not display the filename on the Reel
       const { videoId, postId } = await this.fbClient.publishReel(
         page._id,
         page.accessToken,
         videoBuffer,
         caption,
-        video.cleanTitle,
+        undefined,
         config.DRY_RUN
       );
 
@@ -871,9 +877,14 @@ export class GDriveReelService {
   }
 
   /**
-   * Evaluates all active channels and publishes the next video for any that are due
+   * Evaluates active channels and publishes the next video.
+   * Supports targeting a specific channelId, pageId, or forcing immediate publish.
    */
-  public async publishAllDueChannels(): Promise<{
+  public async publishAllDueChannels(options?: {
+    force?: boolean;
+    channelId?: string;
+    pageId?: string;
+  }): Promise<{
     totalChannels: number;
     activeChannels: number;
     processed: Array<{
@@ -886,15 +897,37 @@ export class GDriveReelService {
     }>;
   }> {
     const channels = await this.getAllChannels();
-    const active = channels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
+    let active = channels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
+
+    if (options?.channelId) {
+      active = active.filter((c) => c._id === options.channelId);
+    } else if (options?.pageId) {
+      active = active.filter((c) => c.pageId === options.pageId);
+    }
 
     const processed: any[] = [];
+    const isExplicitTrigger = Boolean(options?.force || options?.channelId || options?.pageId);
+
+    if (active.length === 0 && (options?.channelId || options?.pageId)) {
+      return {
+        totalChannels: channels.length,
+        activeChannels: 0,
+        processed: [{
+          channelId: options.channelId || 'unknown',
+          channelName: 'Channel',
+          pageName: options.pageId || 'Unknown Page',
+          status: 'failed',
+          reason: `No active Google Drive channel found matching ${options.channelId ? `channel ID "${options.channelId}"` : `page ID "${options.pageId}"`}. Please configure and activate a channel in the Google Drive tab.`,
+        }],
+      };
+    }
+
     for (const channel of active) {
       const intervalMs = (channel.scheduleIntervalHours || 2) * 60 * 60 * 1000;
       const lastPost = channel.lastPostedAt ? new Date(channel.lastPostedAt).getTime() : 0;
       const isDue = Date.now() - lastPost >= intervalMs - 60000; // 1 min grace
 
-      if (!isDue) {
+      if (!isDue && !isExplicitTrigger) {
         const nextDueInMin = Math.round((intervalMs - (Date.now() - lastPost)) / 60000);
         processed.push({
           channelId: channel._id,
@@ -907,7 +940,7 @@ export class GDriveReelService {
       }
 
       try {
-        console.log(`[GDriveReelService] Executing scheduled post for channel "${channel.name}"...`);
+        console.log(`[GDriveReelService] Executing post for channel "${channel.name}" (Page: ${channel.pageName || channel.pageId})...`);
         const result = await this.publishNextForChannel(channel._id);
         if (result.success) {
           processed.push({

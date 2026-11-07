@@ -116,12 +116,16 @@ export class ArticleDedupeService {
   }
 
   /**
-   * Polls all active RSS sources in MongoDB
+   * Polls all active RSS sources in MongoDB, optionally filtered by target page ID
    */
-  public async pollAllActiveSources(): Promise<IngestionResult[]> {
+  public async pollAllActiveSources(pageId?: string): Promise<IngestionResult[]> {
     const db = getDatabase();
     const sourcesCol = db.collection<RssSource>('rss_sources');
-    const activeSources = await sourcesCol.find({ isActive: true }).toArray();
+    const filter: any = { isActive: true };
+    if (pageId && pageId !== 'all') {
+      filter.pageId = pageId;
+    }
+    const activeSources = await sourcesCol.find(filter).toArray();
 
     const results: IngestionResult[] = [];
     for (const source of activeSources) {

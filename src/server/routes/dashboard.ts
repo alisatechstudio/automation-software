@@ -1585,8 +1585,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <button type="button" onclick="openAddCronJobModal()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-glow-cyan transition flex items-center gap-1.5 active:scale-95">
               <span>+ Add Cron Job</span>
             </button>
-            <button type="button" onclick="syncAllCronJobs()" class="px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold text-xs transition flex items-center gap-1.5 active:scale-95" title="Synchronize all 6 distinct webhooks with this server domain">
-              <span>⚡ 1-Click Sync 6 Webhooks</span>
+            <button type="button" onclick="syncAllCronJobs()" class="px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold text-xs transition flex items-center gap-1.5 active:scale-95" title="Synchronize all distinct per-page webhooks with cron-job.org">
+              <span>⚡ 1-Click Sync All Cron Jobs</span>
             </button>
             <button type="button" onclick="loadCronJobs()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-xs transition active:scale-95" title="Reload jobs from cron-job.org">
               <span>🔄 Refresh</span>
@@ -1631,16 +1631,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <div class="border border-slate-800 rounded-xl overflow-hidden mt-4">
           <button type="button" onclick="toggleDistinctCronDetails()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-900/80 flex items-center justify-between text-xs font-semibold text-slate-300 transition">
             <span class="flex items-center gap-2">
-              <span>📋 6 Distinct Serverless Webhook Endpoints Reference</span>
-              <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">Independent Timeouts</span>
+              <span>📋 Distinct Serverless Webhooks Reference</span>
+              <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">Dedicated Per-Page Webhooks</span>
             </span>
             <span id="cron-details-arrow" class="text-slate-500 text-xs transition-transform duration-200">▼ Show Endpoints</span>
           </button>
           <div id="cron-details-content" class="p-3.5 space-y-3 bg-slate-950/40 border-t border-slate-800/80 hidden">
             <p class="text-[11px] text-slate-400 leading-relaxed">
-              সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। এক ক্রনে RSS স্ক্র্যাপিং, ভিডিও রেন্ডারিং, গুগল ড্রাইভ সিঙ্ক এবং ইউটিউব আপলোড একসাথে চালালে রিকোয়েস্ট টাইমআউট হয়ে ফেইল করতে পারে। নিচের <strong>৬টি আলাদা ওয়েব হুক</strong> আলাদা শিডিউলে সেট করলে প্রতিটি কাজ স্বাধীনভাবে এবং শতভাগ নির্ভুলভাবে সম্পন্ন হয়।
+              সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। ৪টি পেজের জন্য আলাদা আলাদা ডিস্টিঙ্কট ক্রন ব্যবহার করলে কোনো পেজ অন্য পেজের জন্য আটকে থাকবে না (২টি RSS পেজের জন্য আলাদা <code class="text-cyan-400">/api/cron/publish?pageId=...</code> এবং ২টি Google Drive পেজের জন্য আলাদা <code class="text-emerald-400">/api/cron/gdrive-reels?pageId=...</code>)।
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div id="dynamic-cron-webhooks-container" class="grid grid-cols-1 md:grid-cols-2 gap-3">
               
               <!-- 1. RSS Ingestion -->
               <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
@@ -2568,6 +2568,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               '<button onclick="deletePage(\\\'' + p.id + '\\\')" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
             '</div>' +
           '</div>' +
+          '<div class="pt-2 border-t border-slate-900 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">' +
+            '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
+              '<div class="flex items-center justify-between">' +
+                '<span class="text-cyan-400 font-bold">📰 RSS / Post Cron</span>' +
+                '<button onclick="copyCronUrl(\\\'/api/cron/publish?pageId=' + p.id + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+              '</div>' +
+              '<div class="text-[9px] text-slate-400 truncate">/api/cron/publish?pageId=' + p.id + '</div>' +
+            '</div>' +
+            '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
+              '<div class="flex items-center justify-between">' +
+                '<span class="text-emerald-400 font-bold">🎬 GDrive Reels Cron</span>' +
+                '<button onclick="copyCronUrl(\\\'/api/cron/gdrive-reels?pageId=' + p.id + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+              '</div>' +
+              '<div class="text-[9px] text-slate-400 truncate">/api/cron/gdrive-reels?pageId=' + p.id + '</div>' +
+            '</div>' +
+          '</div>' +
           '<div id="diagnose-result-' + p.id + '" class="hidden text-xs p-2.5 rounded font-mono"></div>' +
         '</div>'
       ).join('');
@@ -3014,6 +3030,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     async function loadSettings() {
       initCronPills();
       loadCronJobs();
+      loadDistinctWebhooks();
       const res = await safeFetchJson('/api/settings');
       const d = res.data || {};
       document.getElementById('setting-cron').value = d.POLL_INTERVAL_CRON || '*/10 * * * *';
@@ -3085,10 +3102,68 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (isHidden) {
         content.classList.remove('hidden');
         if (arrow) arrow.innerText = '▲ Hide Endpoints';
+        loadDistinctWebhooks();
       } else {
         content.classList.add('hidden');
         if (arrow) arrow.innerText = '▼ Show Endpoints';
       }
+    }
+
+    let cachedDistinctWebhooks = null;
+    async function loadDistinctWebhooks(force = false) {
+      const container = document.getElementById('dynamic-cron-webhooks-container');
+      if (!container) return;
+      if (cachedDistinctWebhooks && !force) {
+        renderDistinctWebhooks(cachedDistinctWebhooks);
+        return;
+      }
+      try {
+        const origin = window.location.origin;
+        const res = await safeFetchJson('/api/cron-jobs/system-webhooks?baseUrl=' + encodeURIComponent(origin));
+        if (res.data?.success && Array.isArray(res.data.webhooks)) {
+          cachedDistinctWebhooks = res.data.webhooks;
+          renderDistinctWebhooks(cachedDistinctWebhooks);
+        }
+      } catch (e) {
+        console.error('Failed to load distinct webhooks', e);
+      }
+    }
+
+    function renderDistinctWebhooks(webhooks) {
+      const container = document.getElementById('dynamic-cron-webhooks-container');
+      if (!container) return;
+      if (!webhooks || webhooks.length === 0) return;
+
+      const origin = window.location.origin;
+      container.innerHTML = webhooks.map((def, idx) => {
+        const badgeColors = {
+          rss: 'bg-cyan-600/20 text-cyan-400 border-cyan-600/40',
+          gdrive: 'bg-emerald-600/20 text-emerald-400 border-emerald-600/40',
+          stories: 'bg-purple-600/20 text-purple-400 border-purple-600/40',
+          youtube: 'bg-rose-600/20 text-rose-400 border-rose-600/40',
+          cleanup: 'bg-amber-600/20 text-amber-400 border-amber-600/40'
+        };
+        const color = badgeColors[def.type] || 'bg-slate-700/40 text-slate-300 border-slate-600/40';
+        const testResId = 'cron-res-dyn-' + idx;
+        const pathUrl = def.fullUrl || (origin + def.path);
+
+        return '<div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">' +
+          '<div class="flex items-center justify-between">' +
+            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full border uppercase tracking-wider ' + color + '">' + (def.type ? def.type.toUpperCase() : 'CRON') + (def.pageId ? ' [PAGE]' : '') + '</span>' +
+            '<span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">' + (def.preset || '15m') + '</span>' +
+          '</div>' +
+          '<div>' +
+            '<div class="text-xs font-bold text-white truncate">' + escapeHtml(def.title) + '</div>' +
+            '<p class="text-[11px] text-slate-400 leading-tight mt-0.5">' + escapeHtml(def.desc || '') + '</p>' +
+          '</div>' +
+          '<div class="flex items-center gap-1.5">' +
+            '<input type="text" readonly value="' + escapeHtml(pathUrl) + '" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none" onclick="this.select()">' +
+            '<button onclick="copyCronUrl(\\\'' + escapeHtml(def.path) + '\\\', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>' +
+            '<button onclick="testCronJob(\\\'' + escapeHtml(def.path) + '\\\', \\\'' + testResId + '\\\', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 shrink-0 transition">Test</button>' +
+          '</div>' +
+          '<div id="' + testResId + '" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>' +
+        '</div>';
+      }).join('');
     }
 
     async function quickSaveCronKey() {
@@ -3633,10 +3708,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function syncAllCronJobs() {
       const origin = window.location.origin;
-      if (!confirm('Synchronize and configure all 6 distinct automation webhooks on cron-job.org pointing to:\\n' + origin + '\\n\\nExisting jobs will be updated with this domain and missing jobs will be created. Proceed?')) {
+      if (!confirm('Synchronize and configure all distinct automation webhooks (including per-page RSS and per-page Google Drive webhooks) on cron-job.org pointing to:\n' + origin + '\n\nExisting jobs will be updated with this domain and missing jobs will be created. Proceed?')) {
         return;
       }
-      showToast('Synchronizing 6 webhooks on cron-job.org...');
+      showToast('Synchronizing distinct webhooks on cron-job.org...');
       try {
         const res = await safeFetchJson('/api/cron-jobs/sync-all', {
           method: 'POST',
@@ -3646,6 +3721,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (res.data?.success) {
           showToast('✓ Synchronized ' + (res.data.results?.length || 6) + ' webhooks successfully!');
           loadCronJobs();
+          loadDistinctWebhooks(true);
         } else {
           showToast(res.data?.error || 'Failed to sync webhooks', true);
         }
@@ -4187,6 +4263,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         };
         const catBadge = '<span class="text-slate-400 ml-1.5 px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
 
+        const cronPath = '/api/cron/gdrive-reels?channelId=' + c._id + (c.pageId ? '&pageId=' + c.pageId : '');
+
         return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +
             '<div class="min-w-0 flex-1">' +
@@ -4209,6 +4287,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '<div class="flex items-center gap-1.5 pt-1.5">' +
             '<button onclick="selectGDriveChannel(\\\'' + c._id + '\\\')" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
             '<button onclick="publishNextForGDriveChannel(\\\'' + c._id + '\\\')" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
+          '</div>' +
+          '<div class="mt-2 pt-2 border-t border-slate-900 flex flex-col gap-1">' +
+            '<div class="flex items-center justify-between text-[9px] text-slate-400">' +
+              '<span class="font-mono text-emerald-400 font-semibold">⚡ Distinct Cron Webhook:</span>' +
+              '<button onclick="copyCronUrl(\\\'' + cronPath + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 border border-emerald-700/50 transition">Copy URL</button>' +
+            '</div>' +
+            '<input type="text" readonly value="' + (window.location.origin + cronPath) + '" class="w-full bg-slate-900/90 border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 select-all focus:outline-none" onclick="this.select()">' +
           '</div>' +
         '</div>';
       }).join('');

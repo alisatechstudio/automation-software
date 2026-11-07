@@ -50,17 +50,22 @@ export class PersistentJobQueue {
 
   /**
    * Atomically fetches the next available job whose runAt <= NOW
-   * and sets status to 'processing'
+   * and sets status to 'processing' (optionally filtered by target Facebook page ID)
    */
-  public async fetchNextJob(): Promise<Job | null> {
+  public async fetchNextJob(pageId?: string): Promise<Job | null> {
     const db = getDatabase();
     const jobsCol = db.collection<Job>('jobs');
 
+    const filter: any = {
+      status: 'pending',
+      runAt: { $lte: new Date() },
+    };
+    if (pageId && pageId !== 'all') {
+      filter.pageId = pageId;
+    }
+
     const result = await jobsCol.findOneAndUpdate(
-      {
-        status: 'pending',
-        runAt: { $lte: new Date() },
-      },
+      filter,
       {
         $set: {
           status: 'processing',

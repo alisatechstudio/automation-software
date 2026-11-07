@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import { getDatabase, isDbConnected } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, GDriveReelConfig } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
@@ -1180,10 +1180,12 @@ function safeWaitUntil(promise: Promise<any>): void {
 async function executeRssCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
-    const results = await dedupeService.pollAllActiveSources();
+    const targetPageId = (req.query.pageId as string) || (req.query.page as string);
+    const results = await dedupeService.pollAllActiveSources(targetPageId);
     res.json({
       success: true,
       job: 'rss_poll',
+      pageId: targetPageId || 'all',
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - startTime,
       results,
@@ -1199,20 +1201,40 @@ async function executePublishCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
     const db = getDatabase();
-    let job = await queue.fetchNextJob();
+    const targetPageId = (req.query.pageId as string) || (req.query.page as string);
+    let job = await queue.fetchNextJob(targetPageId);
 
     if (!job) {
-      // If queue is empty, check for unposted articles to publish immediately
+      // If queue is empty, check for unposted articles for this specific page or active pages
       const articlesCol = db.collection<NewsArticle>('news_articles');
       const pagesCol = db.collection<FacebookPage>('facebook_pages');
       const jobsCol = db.collection<Job>('jobs');
+      const sourcesCol = db.collection<RssSource>('rss_sources');
 
-      const page = await pagesCol.findOne({ isActive: true });
+      let pageQuery: any = { isActive: true };
+      if (targetPageId && targetPageId !== 'all') {
+        pageQuery = { _id: targetPageId, isActive: true };
+      }
+      let page = await pagesCol.findOne(pageQuery);
+      if (!page && targetPageId && targetPageId !== 'all') {
+        page = await pagesCol.findOne({ _id: targetPageId });
+      }
+
       if (page) {
-        let article = await articlesCol.findOne({ status: { $ne: 'published' } }, { sort: { createdAt: -1 } });
+        const pageSources = await sourcesCol.find({ pageId: page._id }).toArray();
+        const sourceIds = pageSources.map(s => s._id);
+
+        let articleQuery: any = { status: { $ne: 'published' } };
+        if (sourceIds.length > 0) {
+          articleQuery.sourceId = { $in: sourceIds };
+        }
+        let article = await articlesCol.findOne(articleQuery, { sort: { createdAt: -1 } });
         if (!article) {
           const failedLog = await db.collection<PostLog>('post_logs').findOne(
-            { $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }] },
+            {
+              pageId: page._id,
+              $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }]
+            },
             { sort: { createdAt: -1 } }
           );
           if (failedLog?.articleId) {
@@ -1221,6 +1243,8 @@ async function executePublishCron(req: Request, res: Response) {
         }
 
         if (article) {
+          const matchedSource = pageSources.find(s => s._id === article?.sourceId);
+          const templateId = matchedSource?.templateId || (isEnglishText(article.title) ? 'template-trendingnews-breaking' : 'template-canva-bdnews');
           const jobId = crypto.randomUUID();
           job = {
             _id: jobId,
@@ -1231,7 +1255,7 @@ async function executePublishCron(req: Request, res: Response) {
               articleId: article._id,
               sourceId: article.sourceId,
               pageId: page._id,
-              templateId: 'template-canva-bdnews',
+              templateId,
             },
             status: 'pending',
             attempts: 0,
@@ -1241,7 +1265,7 @@ async function executePublishCron(req: Request, res: Response) {
             updatedAt: new Date(),
           };
           await jobsCol.insertOne(job as any);
-          console.log(`[Publish Cron] Created immediate job ${jobId} for article "${article.title}"`);
+          console.log(`[Publish Cron] Created immediate job ${jobId} for article "${article.title}" on page "${page.name}"`);
         }
       }
     }
@@ -1250,14 +1274,15 @@ async function executePublishCron(req: Request, res: Response) {
       res.json({
         success: true,
         job: 'facebook_publish',
+        pageId: targetPageId || 'all',
         processed: false,
         durationMs: Date.now() - startTime,
-        message: 'Queue is empty and all articles have been published.',
+        message: targetPageId ? `Queue is empty and all articles published for page ${targetPageId}.` : 'Queue is empty and all articles have been published.',
       });
       return;
     }
 
-    console.log(`[Publish Cron] Executing job ${job._id}...`);
+    console.log(`[Publish Cron] Executing job ${job._id} for page ${job.pageId}...`);
     const jobPromise = worker.processJob(job);
 
     if (req.query.async === 'true' && process.env.VERCEL) {
@@ -1267,6 +1292,7 @@ async function executePublishCron(req: Request, res: Response) {
         job: 'facebook_publish',
         async: true,
         jobId: job._id,
+        pageId: job.pageId,
         durationMs: Date.now() - startTime,
         message: 'Job dispatched to background worker via Vercel waitUntil.',
       });
@@ -1283,6 +1309,7 @@ async function executePublishCron(req: Request, res: Response) {
       job: 'facebook_publish',
       processed: true,
       jobId: job._id,
+      pageId: job.pageId,
       log: latestLog,
       durationMs: Date.now() - startTime,
       error: !isSuccess ? (latestLog?.errorMessage || 'Reel or post failed to upload') : undefined,
@@ -1297,10 +1324,20 @@ async function executePublishCron(req: Request, res: Response) {
 async function executeGdriveCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
-    const result = await gdriveReelService.publishAllDueChannels();
+    const pageId = (req.query.pageId as string) || (req.query.page as string);
+    const channelId = (req.query.channelId as string) || (req.query.channel as string);
+    const force = req.query.force !== 'false';
+
+    const result = await gdriveReelService.publishAllDueChannels({
+      force,
+      channelId,
+      pageId,
+    });
     res.json({
       success: true,
       job: 'gdrive_reels',
+      pageId: pageId || 'all',
+      channelId: channelId || 'all',
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - startTime,
       result,
@@ -1567,7 +1604,19 @@ apiRouter.all(['/cron/cleanup', '/cron/maintain', '/cron/repair'], async (req: R
   await executeCleanupCron(req, res);
 });
 
-// 7. Universal Gateway Endpoint (/api/cron)
+// 7. Unified Pipeline Endpoint (Polls RSS for page & immediately publishes)
+apiRouter.all(['/cron/pipeline', '/cron/page-rss'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  const targetPageId = (req.query.pageId as string) || (req.query.page as string);
+  try {
+    await dedupeService.pollAllActiveSources(targetPageId);
+  } catch (err: any) {
+    console.warn('[Pipeline Cron] Note polling RSS:', err.message);
+  }
+  await executePublishCron(req, res);
+});
+
+// 8. Universal Gateway Endpoint (/api/cron)
 apiRouter.all('/cron', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
 
@@ -1580,6 +1629,13 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
   }
   if (jobParam === 'gdrive' || jobParam === 'gdrive-reels' || jobParam === 'drive') {
     return executeGdriveCron(req, res);
+  }
+  if (jobParam === 'pipeline' || jobParam === 'page-rss') {
+    const targetPageId = (req.query.pageId as string) || (req.query.page as string);
+    try {
+      await dedupeService.pollAllActiveSources(targetPageId);
+    } catch {}
+    return executePublishCron(req, res);
   }
   if (jobParam === 'stories' || jobParam === 'story') {
     return executeStoriesCron(req, res);
@@ -1598,77 +1654,17 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
     const baseUrl = `${protocol}://${host}`;
     const cronSecret = process.env.CRON_SECRET;
     const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+    const defs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
 
     return res.json({
       status: 'active',
-      name: 'BD News 24/7 Multi-Process Distinct Cron Webhooks',
+      name: 'Multi-Page Distinct Cron Webhooks (RSS & Google Drive)',
       timestamp: new Date().toISOString(),
       cronSecretConfigured: Boolean(cronSecret),
       authInstructions: cronSecret
         ? 'Pass "Authorization: Bearer <secret>" or "x-cron-secret: <secret>" header, or append "?secret=<secret>" to URLs.'
         : 'CRON_SECRET is not set in environment; webhooks are open for triggers.',
-      endpoints: [
-        {
-          id: 'rss',
-          name: '1. RSS Ingestion & Enqueueing',
-          path: '/api/cron/rss',
-          fullUrl: `${baseUrl}/api/cron/rss${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '*/10 * * * *',
-          scheduleHuman: 'Every 10 minutes',
-          description: 'Polls all active Bangla RSS feeds, scrapes articles, and queues new jobs.',
-        },
-        {
-          id: 'publish',
-          name: '2. Facebook Reels & Posts Publishing',
-          path: '/api/cron/publish',
-          fullUrl: `${baseUrl}/api/cron/publish${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '*/15 * * * *',
-          scheduleHuman: 'Every 15 minutes',
-          description: 'Processes the next pending job in queue, renders Skia card/video, and publishes to Facebook.',
-        },
-        {
-          id: 'gdrive',
-          name: '3. Google Drive Multi-Channel Reels',
-          path: '/api/cron/gdrive-reels',
-          fullUrl: `${baseUrl}/api/cron/gdrive-reels${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '*/30 * * * *',
-          scheduleHuman: 'Every 30 minutes',
-          description: 'Scans Google Drive channels, downloads scheduled video reels, and posts to Facebook.',
-        },
-        {
-          id: 'stories',
-          name: '4. Facebook 24-Hour Stories',
-          path: '/api/cron/stories',
-          fullUrl: `${baseUrl}/api/cron/stories${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '0 * * * *',
-          scheduleHuman: 'Every 1 hour (at minute 0)',
-          description: 'Renders Canva-style JPG news poster and publishes to Facebook Page Stories.',
-        },
-        {
-          id: 'youtube',
-          name: '5. YouTube Shorts Auto-Upload',
-          path: '/api/cron/youtube',
-          fullUrl: `${baseUrl}/api/cron/youtube${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '15 * * * *',
-          scheduleHuman: 'Every 1 hour (at minute 15)',
-          description: 'Renders and uploads latest news video to YouTube Shorts with viral tags.',
-        },
-        {
-          id: 'cleanup',
-          name: '6. Self-Healing Queue Maintenance',
-          path: '/api/cron/cleanup',
-          fullUrl: `${baseUrl}/api/cron/cleanup${secretSuffix}`,
-          method: 'GET / POST',
-          recommendedSchedule: '0 */6 * * *',
-          scheduleHuman: 'Every 6 hours',
-          description: 'Unlocks stuck jobs (>15 min) and resets unposted articles for self-healing queue.',
-        },
-      ],
+      endpoints: defs,
     });
   }
 
@@ -2601,7 +2597,183 @@ apiRouter.get('/cron-jobs/:id/history', async (req: Request, res: Response) => {
   }
 });
 
-// 8.1.9. One-Click Setup / Sync All 6 Automation Webhooks
+interface WebhookDefinition {
+  slug: string;
+  title: string;
+  path: string;
+  fullUrl: string;
+  preset: string;
+  method: number;
+  desc: string;
+  pageId?: string;
+  pageName?: string;
+  channelId?: string;
+  type: 'rss' | 'publish' | 'gdrive' | 'system';
+  customMinutes?: number[];
+}
+
+async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: string): Promise<WebhookDefinition[]> {
+  const db = getDatabase();
+  const pagesCol = db.collection<FacebookPage>('facebook_pages');
+  const sourcesCol = db.collection<RssSource>('rss_sources');
+  const gdriveCol = db.collection<GDriveReelConfig>('gdrive_reel_configs');
+
+  const allPages = await pagesCol.find({ isActive: true }).toArray();
+  const allSources = await sourcesCol.find({ isActive: true }).toArray();
+  const allGdriveChannels = await gdriveCol.find({}).toArray();
+  const activeGdrive = allGdriveChannels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
+
+  const defs: WebhookDefinition[] = [];
+
+  const buildUrl = (path: string) => {
+    if (!secretSuffix) return `${baseUrl}${path}`;
+    const separator = path.includes('?') ? '&' : '?';
+    return `${baseUrl}${path}${secretSuffix.replace('?', separator)}`;
+  };
+
+  // 1. Global RSS Poller (Ingests & queues articles)
+  defs.push({
+    slug: 'rss',
+    title: '1. RSS Ingestion (All Feeds)',
+    path: '/api/cron/rss',
+    fullUrl: buildUrl('/api/cron/rss'),
+    preset: '10m',
+    method: 0,
+    desc: 'Polls all active Bangla & English RSS feeds and queues new articles',
+    type: 'rss',
+  });
+
+  // 2. Identify RSS Pages vs Google Drive Pages
+  const gdrivePageIds = new Set(activeGdrive.map((c) => c.pageId).filter(Boolean));
+  const rssPageIds = new Set(allSources.map((s) => s.pageId).filter(Boolean));
+
+  // Determine RSS target pages: pages explicitly mapped to RSS feeds, or active pages not dedicated to Drive
+  const rssTargetPages = allPages.filter((p) => rssPageIds.has(p._id) || !gdrivePageIds.has(p._id));
+
+  if (rssTargetPages.length > 0) {
+    for (const page of rssTargetPages) {
+      defs.push({
+        slug: `publish_${page._id}`,
+        title: `2. FB Publisher - ${page.name}`,
+        path: `/api/cron/publish?pageId=${page._id}`,
+        fullUrl: buildUrl(`/api/cron/publish?pageId=${page._id}`),
+        preset: '15m',
+        method: 0,
+        desc: `Dispatches queued articles & renders cards/reels specifically for ${page.name}`,
+        pageId: page._id,
+        pageName: page.name,
+        type: 'publish',
+      });
+    }
+  } else {
+    defs.push({
+      slug: 'publish',
+      title: '2. Facebook Publisher (Global Queue)',
+      path: '/api/cron/publish',
+      fullUrl: buildUrl('/api/cron/publish'),
+      preset: '15m',
+      method: 0,
+      desc: 'Dispatches next pending queued job to active Facebook pages',
+      type: 'publish',
+    });
+  }
+
+  // 3. For each active Google Drive Channel / Page (Dedicated distinct cron per Drive page)
+  if (activeGdrive.length > 0) {
+    for (const channel of activeGdrive) {
+      const matchedPage = allPages.find((p) => p._id === channel.pageId);
+      const pageLabel = matchedPage?.name || channel.pageName || channel.name || 'Drive Page';
+      const path = channel.pageId
+        ? `/api/cron/gdrive-reels?pageId=${channel.pageId}`
+        : `/api/cron/gdrive-reels?channelId=${channel._id}`;
+
+      defs.push({
+        slug: `gdrive_${channel._id}`,
+        title: `3. GDrive Reels - ${pageLabel}`,
+        path,
+        fullUrl: buildUrl(path),
+        preset: channel.scheduleIntervalHours === 1 ? '1h' : '30m',
+        method: 0,
+        desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${pageLabel}`,
+        pageId: channel.pageId,
+        pageName: pageLabel,
+        channelId: channel._id,
+        type: 'gdrive',
+      });
+    }
+  } else {
+    defs.push({
+      slug: 'gdrive',
+      title: '3. Google Drive Reels (All Due)',
+      path: '/api/cron/gdrive-reels',
+      fullUrl: buildUrl('/api/cron/gdrive-reels'),
+      preset: '30m',
+      method: 0,
+      desc: 'Scans Google Drive channels and publishes video reels to Facebook',
+      type: 'gdrive',
+    });
+  }
+
+  // 4. Stories, YouTube Shorts, & System Maintenance
+  defs.push({
+    slug: 'stories',
+    title: '4. Facebook Stories',
+    path: '/api/cron/stories',
+    fullUrl: buildUrl('/api/cron/stories'),
+    preset: '1h',
+    method: 0,
+    desc: 'Uploads 1080x1080 visual poster to Facebook Page Stories',
+    type: 'system',
+  });
+
+  defs.push({
+    slug: 'youtube',
+    title: '5. YouTube Shorts',
+    path: '/api/cron/youtube',
+    fullUrl: buildUrl('/api/cron/youtube'),
+    preset: '1h_15',
+    customMinutes: [15],
+    method: 0,
+    desc: 'Auto-uploads vertical news reels to YouTube Shorts',
+    type: 'system',
+  });
+
+  defs.push({
+    slug: 'cleanup',
+    title: '6. Self Cleaning Maintenance',
+    path: '/api/cron/cleanup',
+    fullUrl: buildUrl('/api/cron/cleanup'),
+    preset: '6h',
+    customMinutes: [45],
+    method: 0,
+    desc: 'Self-healing queue repair and maintenance',
+    type: 'system',
+  });
+
+  return defs;
+}
+
+// 8.1.9. Get Dynamic Distinct Webhook Endpoints
+apiRouter.get('/cron-jobs/system-webhooks', async (req: Request, res: Response) => {
+  try {
+    const rawBaseUrl = (req.query.baseUrl as string) || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+    const cronSecret = process.env.CRON_SECRET;
+    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+    const defs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
+    res.json({
+      success: true,
+      baseUrl,
+      cronSecretConfigured: Boolean(cronSecret),
+      endpoints: defs,
+      webhooks: defs,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8.1.10. One-Click Setup / Sync All Distinct Webhooks to cron-job.org
 apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
   try {
     const rawBaseUrl = req.body.baseUrl || `${req.protocol}://${req.get('host')}`;
@@ -2609,58 +2781,7 @@ apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
     const cronSecret = process.env.CRON_SECRET;
     const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
 
-    const webhookDefs = [
-      {
-        slug: 'rss',
-        title: 'RSS Ingestion',
-        path: '/api/cron/rss',
-        preset: '10m',
-        method: 0,
-        desc: 'Bangla & English RSS Feeds Ingestion',
-      },
-      {
-        slug: 'publish',
-        title: 'Facebook Publisher',
-        path: '/api/cron/publish',
-        preset: '15m',
-        method: 0,
-        desc: 'Facebook Posts & Reels Dispatcher',
-      },
-      {
-        slug: 'gdrive',
-        title: 'Google Drive Reels',
-        path: '/api/cron/gdrive-reels',
-        preset: '30m',
-        method: 0,
-        desc: 'Google Drive Multi-Channel Reels',
-      },
-      {
-        slug: 'stories',
-        title: 'FB Stories',
-        path: '/api/cron/stories',
-        preset: '1h',
-        method: 0,
-        desc: 'Facebook 24-Hour Stories',
-      },
-      {
-        slug: 'youtube',
-        title: 'Youtube Shorts',
-        path: '/api/cron/youtube',
-        preset: '1h_15',
-        customMinutes: [15],
-        method: 0,
-        desc: 'YouTube Shorts Auto-Uploader',
-      },
-      {
-        slug: 'cleanup',
-        title: 'Self Cleaning',
-        path: '/api/cron/cleanup',
-        preset: '6h',
-        customMinutes: [45],
-        method: 0,
-        desc: 'Self-Healing Queue Maintenance',
-      },
-    ];
+    const webhookDefs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
 
     // Fetch existing jobs from cron-job.org
     const existing = await callCronJobApi('/jobs');
@@ -2669,8 +2790,8 @@ apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
     const results: any[] = [];
 
     for (const def of webhookDefs) {
-      const fullUrl = `${baseUrl}${def.path}${secretSuffix}`;
-      // Find matching job by path in url or title match
+      const fullUrl = def.fullUrl;
+      // Find matching job by exact path in url or title match
       const matched = existingJobs.find(
         (j: any) =>
           (j.url && j.url.includes(def.path)) ||
@@ -2726,7 +2847,7 @@ apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
       success: true,
       baseUrl,
       results,
-      message: `Successfully synchronized ${results.length} distinct webhooks on cron-job.org`,
+      message: `Successfully synchronized ${results.length} distinct webhooks on cron-job.org for all configured pages`,
     });
   } catch (err: any) {
     res.status(err.status || 500).json({
