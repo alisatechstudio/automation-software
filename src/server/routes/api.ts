@@ -1019,6 +1019,37 @@ apiRouter.post('/gdrive-reels/publish-all-due', async (req: Request, res: Respon
   }
 });
 
+// 11. Delete or trash specific file in Google Drive
+apiRouter.delete('/gdrive-reels/files/:fileId', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const result = await gdriveReelService.deleteDriveFile(fileId);
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 12. Google Drive OAuth & Write Status
+apiRouter.get('/gdrive-reels/auth/status', async (req: Request, res: Response) => {
+  try {
+    const globalApiKey = await gdriveReelService.getGlobalApiKey();
+    const oauthToken = await gdriveReelService.getGoogleOAuthToken();
+    res.json({
+      success: true,
+      hasApiKey: Boolean(globalApiKey),
+      hasOAuth: Boolean(oauthToken),
+      canDeleteFiles: Boolean(oauthToken),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Legacy / Single Channel Compatibility Endpoints ---
 apiRouter.get('/gdrive-reels/status', async (req: Request, res: Response) => {
   try {
@@ -2315,16 +2346,17 @@ apiRouter.get('/youtube/logs', async (req: Request, res: Response) => {
   }
 });
 
-apiRouter.get('/youtube/auth/url', async (req: Request, res: Response) => {
+apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Request, res: Response) => {
   const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
   const host = req.get('host');
   const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
   const db = getDatabase();
   const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
   const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
-  const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
+  const originParam = (req.query.origin as string) || (req.path.includes('gdrive') ? 'gdrive' : 'youtube');
+  const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive');
 
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${originParam}`;
 
   res.json({
     authUrl,
@@ -2333,16 +2365,19 @@ apiRouter.get('/youtube/auth/url', async (req: Request, res: Response) => {
 });
 
 apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
+  const stateParam = (req.query.state as string) || 'youtube';
+  const targetTab = stateParam === 'gdrive' ? 'gdrive-reels' : 'youtube';
+
   try {
     const errorParam = req.query.error as string;
     if (errorParam) {
-      console.warn('[YouTube OAuth Callback] Google returned error:', errorParam);
-      return res.redirect(`/?tab=youtube&auth_error=${encodeURIComponent(errorParam)}`);
+      console.warn('[Google OAuth Callback] Google returned error:', errorParam);
+      return res.redirect(`/?tab=${targetTab}&auth_error=${encodeURIComponent(errorParam)}`);
     }
 
     const code = req.query.code as string;
     if (!code) {
-      return res.redirect('/?tab=youtube&auth_error=missing_code');
+      return res.redirect(`/?tab=${targetTab}&auth_error=missing_code`);
     }
 
     const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
@@ -2352,10 +2387,10 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     await ytClient.initCredentials();
     await ytClient.exchangeCodeForTokens(code, redirectUri);
 
-    res.redirect('/?tab=youtube&auth=success');
+    res.redirect(`/?tab=${targetTab}&auth=success`);
   } catch (err: any) {
-    console.error('[YouTube OAuth Callback] Exchange error:', err.message);
-    res.redirect(`/?tab=youtube&auth_error=${encodeURIComponent(err.message)}`);
+    console.error('[Google OAuth Callback] Exchange error:', err.message);
+    res.redirect(`/?tab=${targetTab}&auth_error=${encodeURIComponent(err.message)}`);
   }
 });
 

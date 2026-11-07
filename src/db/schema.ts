@@ -211,6 +211,8 @@ export interface GDriveReelConfig {
   postedVideoNames: string[]; // List of file names published
   lastPostedAt?: Date | null;
   lastPostedFile?: string | null;
+  deleteAfterPosting?: boolean; // If true, delete/trash video from Google Drive after successful posting
+  deleteAction?: 'trash' | 'permanent'; // 'trash' (moves to Drive trash, 30d safety) or 'permanent'
   createdAt: Date;
   updatedAt: Date;
 }

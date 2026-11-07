@@ -3,6 +3,7 @@ import cron, { ScheduledTask } from 'node-cron';
 import { getDatabase } from '../../db/index.js';
 import { GDriveReelConfig, FacebookPage, ReelLog } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
+import { YouTubeClient } from '../youtube/client.js';
 import { generateViralReelHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -34,11 +35,13 @@ const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv'];
 
 export class GDriveReelService {
   private fbClient: FacebookGraphClient;
+  private ytClient: YouTubeClient;
   private cronTask: ScheduledTask | null = null;
   private publishingChannels = new Set<string>();
 
   constructor() {
     this.fbClient = new FacebookGraphClient();
+    this.ytClient = new YouTubeClient();
   }
 
   /**
@@ -139,6 +142,8 @@ export class GDriveReelService {
       postedVideoNames: [],
       lastPostedAt: null,
       lastPostedFile: null,
+      deleteAfterPosting: true,
+      deleteAction: 'trash',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -221,6 +226,8 @@ export class GDriveReelService {
       postedVideoNames: existing?.postedVideoNames || [],
       lastPostedAt: existing?.lastPostedAt || null,
       lastPostedFile: existing?.lastPostedFile || null,
+      deleteAfterPosting: data.deleteAfterPosting !== undefined ? Boolean(data.deleteAfterPosting) : (existing?.deleteAfterPosting ?? true),
+      deleteAction: data.deleteAction || existing?.deleteAction || 'trash',
       createdAt: existing?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -404,6 +411,8 @@ export class GDriveReelService {
     cleanTitle?: string;
     videoId?: string;
     postId?: string;
+    deletedFromDrive?: boolean;
+    deleteError?: string;
     error?: string;
   }> {
     if (this.publishingChannels.has(channelId)) {
@@ -485,6 +494,8 @@ export class GDriveReelService {
     cleanTitle?: string;
     videoId?: string;
     postId?: string;
+    deletedFromDrive?: boolean;
+    deleteError?: string;
     error?: string;
   }> {
     if (this.publishingChannels.has(channelId)) {
@@ -553,6 +564,8 @@ export class GDriveReelService {
     cleanTitle?: string;
     videoId?: string;
     postId?: string;
+    deletedFromDrive?: boolean;
+    deleteError?: string;
     error?: string;
   }> {
     const db = getDatabase();
@@ -656,12 +669,31 @@ export class GDriveReelService {
 
       console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}" to "${page.name}"! Video ID: ${videoId}`);
 
+      // 7. Auto-delete or trash video from Google Drive after successful posting
+      let deletedFromDrive = false;
+      let deleteError: string | undefined;
+      const shouldDelete = conf.deleteAfterPosting !== false; // Default true per user request
+
+      if (shouldDelete) {
+        console.log(`[GDriveReelService] 🗑️ Auto-deleting "${video.name}" (${video.id}) from Google Drive...`);
+        const delRes = await this.deleteDriveFile(video.id, apiKey, conf);
+        deletedFromDrive = delRes.success;
+        deleteError = delRes.error;
+        if (delRes.success) {
+          console.log(`✓ [GDriveReelService] Successfully removed "${video.name}" (${video.id}) from Google Drive (${delRes.action})`);
+        } else {
+          console.warn(`⚠️ [GDriveReelService] Note deleting "${video.name}" from Google Drive: ${delRes.error}`);
+        }
+      }
+
       return {
         success: true,
         filename: video.name,
         cleanTitle: video.cleanTitle,
         videoId,
         postId,
+        deletedFromDrive,
+        deleteError,
       };
     } catch (err: any) {
       console.error(`[GDriveReelService] Failed to publish Reel "${video.name}":`, err.message);
@@ -672,6 +704,140 @@ export class GDriveReelService {
         error: err.message,
       };
     }
+  }
+
+  /**
+   * Retrieves active Google OAuth access token if available
+   */
+  public async getGoogleOAuthToken(): Promise<string | null> {
+    try {
+      const db = getDatabase();
+      const sRef = await db.collection('settings').findOne({ _id: 'GDRIVE_REFRESH_TOKEN' as any });
+      if (sRef?.value) {
+        const sId = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' as any });
+        const sSec = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' as any });
+        const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
+        const clientSecret = sSec?.value || process.env.YOUTUBE_CLIENT_SECRET || '';
+        if (clientId && clientSecret) {
+          const res = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: sRef.value,
+              grant_type: 'refresh_token',
+            }).toString(),
+          });
+          const data = (await res.json()) as any;
+          if (data.access_token) return data.access_token;
+        }
+      }
+
+      const configured = await this.ytClient.initCredentials();
+      if (configured) {
+        return await this.ytClient.getAccessToken();
+      }
+    } catch (e: any) {
+      console.warn('[GDriveReelService] Note fetching Google OAuth token:', e.message);
+    }
+    return null;
+  }
+
+  /**
+   * Deletes or moves a file to trash in Google Drive
+   */
+  public async deleteDriveFile(
+    fileId: string,
+    apiKeyInput?: string,
+    channelCtx?: GDriveReelConfig
+  ): Promise<{ success: boolean; action?: 'trash' | 'permanent'; error?: string }> {
+    const globalKey = await this.getGlobalApiKey();
+    const apiKey = (apiKeyInput || channelCtx?.apiKey || globalKey || '').trim();
+    const oauthToken = await this.getGoogleOAuthToken();
+    const action = channelCtx?.deleteAction || 'trash';
+
+    // 1. If Google OAuth token is available
+    if (oauthToken) {
+      try {
+        if (action === 'permanent') {
+          const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${oauthToken}` },
+          });
+          if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
+            return { success: true, action: 'permanent' };
+          }
+        }
+
+        // Standard move to Trash (safest & instantly removes file from folder scan)
+        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${oauthToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ trashed: true }),
+        });
+
+        if (patchRes.ok) {
+          return { success: true, action: 'trash' };
+        }
+
+        // Fallback to permanent DELETE
+        const delFallback = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${oauthToken}` },
+        });
+
+        if (delFallback.ok || delFallback.status === 204 || delFallback.status === 404) {
+          return { success: true, action: 'permanent' };
+        }
+
+        const errData = (await patchRes.json().catch(() => ({}))) as any;
+        return {
+          success: false,
+          error: errData?.error?.message || `Google Drive deletion returned HTTP ${patchRes.status}`,
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+
+    // 2. If only API Key is available
+    if (apiKey) {
+      try {
+        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trashed: true }),
+        });
+
+        if (patchRes.ok) {
+          return { success: true, action: 'trash' };
+        }
+
+        const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}`, {
+          method: 'DELETE',
+        });
+
+        if (delRes.ok || delRes.status === 204 || delRes.status === 404) {
+          return { success: true, action: 'permanent' };
+        }
+
+        return {
+          success: false,
+          error: 'Google Drive API requires Google OAuth (Google Sign-In) to delete files. API Key provides read-only access. Connect Google Account to enable file deletion.',
+        };
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+
+    return {
+      success: false,
+      error: 'No Google credentials (OAuth token or API key) available to delete file.',
+    };
   }
 
   /**

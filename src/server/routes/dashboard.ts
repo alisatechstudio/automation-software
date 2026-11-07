@@ -1007,17 +1007,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
           </div>
           <div>
-            <div class="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>Google Drive API Key</span>
-              <span id="gdrive-api-key-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Checking...</span>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+              <span>Google Drive Access</span>
+              <span id="gdrive-api-key-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">API Key: Checking...</span>
+              <span id="gdrive-oauth-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">OAuth: Checking...</span>
             </div>
-            <p class="text-[10px] text-slate-400">Shared API Key across all folders. Folders must have public read access.</p>
+            <p class="text-[10px] text-slate-400">API Key reads public folders. Google Sign-In is used to auto-delete / trash .mp4 files after posting.</p>
           </div>
         </div>
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <input type="password" id="gdrive-global-api-key" placeholder="AIzaSy... (API Key)" class="w-full sm:w-64 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <input type="password" id="gdrive-global-api-key" placeholder="AIzaSy... (API Key)" class="w-full sm:w-56 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
           <button onclick="saveGlobalGDriveApiKey()" id="btn-save-global-api-key" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition shrink-0">
-            Save
+            Save Key
+          </button>
+          <button onclick="connectGDriveOAuth()" id="btn-connect-gdrive-oauth" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shrink-0 hidden flex items-center gap-1 shadow">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+            <span>Connect Google</span>
           </button>
         </div>
       </div>
@@ -1135,6 +1140,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <label class="flex items-center gap-1.5 cursor-pointer text-xs">
                   <input type="checkbox" id="gdrive-form-active-toggle" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500">
                   <span id="gdrive-form-active-label" class="text-emerald-400 font-bold text-xs">Active</span>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                <div>
+                  <span class="text-xs font-semibold text-white block">Delete from Drive After Posting</span>
+                  <span class="text-[10px] text-slate-400">Moves .mp4 to Google Drive Trash so folder storage stays clean</span>
+                </div>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs shrink-0">
+                  <input type="checkbox" id="gdrive-form-delete-toggle" checked class="rounded bg-slate-950 border-slate-700 text-rose-500 focus:ring-rose-500">
+                  <span id="gdrive-form-delete-label" class="text-rose-400 font-bold text-xs">Auto-Delete</span>
                 </label>
               </div>
 
@@ -1916,9 +1932,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
-      if (event && event.currentTarget && event.currentTarget.classList) {
-        event.currentTarget.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
-        event.currentTarget.classList.remove('text-slate-400', 'border-transparent');
+      const matchedBtn = (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList) 
+        ? event.currentTarget 
+        : document.querySelector('.tab-btn[onclick*="\'' + tabId + '\'"]');
+      if (matchedBtn) {
+        matchedBtn.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
+        matchedBtn.classList.remove('text-slate-400', 'border-transparent');
       }
       
       const targetTab = document.getElementById('tab-' + tabId);
@@ -3233,6 +3252,28 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full ' + (activeChannels > 0 ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400');
         }
 
+        // Check Google OAuth status for Drive auto-delete
+        try {
+          const authRes = await safeFetchJson('/api/gdrive-reels/auth/status');
+          const oauthPill = document.getElementById('gdrive-oauth-status-pill');
+          const connectBtn = document.getElementById('btn-connect-gdrive-oauth');
+          if (authRes.ok && authRes.data) {
+            if (authRes.data.hasOAuth) {
+              if (oauthPill) {
+                oauthPill.innerText = '✓ Google Sign-In (Auto-Delete Ready)';
+                oauthPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
+              }
+              if (connectBtn) connectBtn.classList.add('hidden');
+            } else {
+              if (oauthPill) {
+                oauthPill.innerText = '⚠️ Connect Account for Auto-Delete';
+                oauthPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800';
+              }
+              if (connectBtn) connectBtn.classList.remove('hidden');
+            }
+          }
+        } catch (e) {}
+
         gdriveChannelsPage = 1;
         renderGDriveChannelsPage(1);
 
@@ -3269,6 +3310,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       container.innerHTML = pageChannels.map(c => {
         const isSelected = c._id === activeGDriveChannelId;
         const postedCount = c.postedVideoIds ? c.postedVideoIds.length : 0;
+        const autoDeleteBadge = (c.deleteAfterPosting !== false)
+          ? '<span class="text-rose-400 font-medium">🗑️ Auto-Delete</span>'
+          : '<span class="text-slate-500">Keep Files</span>';
 
         return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +
@@ -3286,6 +3330,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '</div>' +
           '<div class="text-[10px] font-mono text-slate-400 py-1 border-y border-slate-900 flex justify-between">' +
             '<span>⏱️ Every ' + (c.scheduleIntervalHours || 2) + 'h</span>' +
+            autoDeleteBadge +
             '<span class="text-purple-400">✓ ' + postedCount + ' Posted</span>' +
           '</div>' +
           '<div class="flex items-center gap-1.5 pt-1.5">' +
@@ -3361,6 +3406,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           ? '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold">Re-Post</button>'
           : '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black shadow">Post</button>';
 
+        const deleteBtn = '<button onclick="onGDriveVideoDeleteClick(' + globalIdx + ')" class="p-1 rounded bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 transition ml-1" title="Delete / Trash from Drive">🗑️</button>';
+
         return '<tr class="hover:bg-slate-900/60 transition">' +
           '<td class="py-2 px-3 max-w-[200px] truncate">' +
             '<div class="font-bold text-slate-200 text-xs truncate" title="' + v.cleanTitle + '">' + v.cleanTitle + '</div>' +
@@ -3368,11 +3415,35 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '</td>' +
           '<td class="py-2 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
           '<td class="py-2 px-2">' + statusBadge + '</td>' +
-          '<td class="py-2 px-3 text-right">' + publishBtn + '</td>' +
+          '<td class="py-2 px-3 text-right whitespace-nowrap">' + publishBtn + deleteBtn + '</td>' +
         '</tr>';
       }).join('');
 
       renderPagination('gdrive-videos-pagination', page, totalPages, total, 'changeGDriveVideoPage', GDRIVE_PAGE_SIZE);
+    }
+
+    async function onGDriveVideoDeleteClick(idx) {
+      if (!cachedGDriveVideos[idx]) return;
+      const file = cachedGDriveVideos[idx];
+
+      if (!confirm('Move "' + (file.cleanTitle || file.name) + '" to Google Drive Trash?\n\n(This will delete the .mp4 file from Google Drive and remove it from the queue)')) return;
+
+      showToast('Moving file to Google Drive Trash...');
+
+      try {
+        const url = '/api/gdrive-reels/files/' + encodeURIComponent(file.id) + (activeGDriveChannelId ? '?channelId=' + encodeURIComponent(activeGDriveChannelId) : '');
+        const res = await safeFetchJson(url, { method: 'DELETE' });
+        if (res.ok && res.data?.success) {
+          showToast('✓ File moved to Google Drive Trash');
+          if (activeGDriveChannelId) {
+            await selectGDriveChannel(activeGDriveChannelId);
+          }
+        } else {
+          showToast(res.data?.error || res.error || 'Failed to delete file from Drive', true);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      }
     }
 
     async function onGDriveVideoActionClick(idx) {
@@ -3439,6 +3510,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-interval-select').value = '2';
       document.getElementById('gdrive-form-order-select').value = 'oldest_first';
       document.getElementById('gdrive-form-active-toggle').checked = true;
+      document.getElementById('gdrive-form-delete-toggle').checked = true;
       document.getElementById('gdrive-form-mode-viral').checked = true;
       toggleFormCaptionBox();
 
@@ -3462,6 +3534,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-first-comment').value = channel.firstCommentText || '';
       document.getElementById('gdrive-form-custom-caption').value = channel.customCaption || '';
       document.getElementById('gdrive-form-active-toggle').checked = Boolean(channel.isActive);
+      document.getElementById('gdrive-form-delete-toggle').checked = channel.deleteAfterPosting !== false;
 
       if (channel.captionStrategy === 'custom') {
         document.getElementById('gdrive-form-mode-custom').checked = true;
@@ -3498,6 +3571,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         scheduleIntervalHours: parseInt(document.getElementById('gdrive-form-interval-select')?.value || '2', 10) || 2,
         orderStrategy: document.getElementById('gdrive-form-order-select')?.value || 'oldest_first',
         isActive: document.getElementById('gdrive-form-active-toggle')?.checked || false,
+        deleteAfterPosting: document.getElementById('gdrive-form-delete-toggle')?.checked ?? true,
+        deleteAction: 'trash',
         captionStrategy: document.getElementById('gdrive-form-mode-custom')?.checked ? 'custom' : 'viral_hashtags',
         customCaption: document.getElementById('gdrive-form-custom-caption')?.value || '',
         firstCommentText: document.getElementById('gdrive-form-first-comment')?.value.trim() || ''
@@ -3740,6 +3815,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
+    async function connectGDriveOAuth() {
+      showToast('Starting Google Sign-In for Drive Auto-Delete...');
+      const res = await safeFetchJson('/api/gdrive-reels/auth/url?origin=gdrive');
+      if (res.ok && res.data?.authUrl) {
+        window.location.href = res.data.authUrl;
+      } else {
+        showToast('Google Sign-In failed to start', true);
+      }
+    }
+
     function copyRedirectUri() {
       const uri = window.location.origin + '/api/youtube/auth/callback';
       navigator.clipboard.writeText(uri).then(() => {
@@ -3760,6 +3845,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       switchTab('youtube');
       if (urlParams.get('auth') === 'success') {
         setTimeout(() => showToast('🎉 YouTube Connected!'), 500);
+      }
+    } else if (urlParams.get('tab') === 'gdrive-reels') {
+      switchTab('gdrive-reels');
+      if (urlParams.get('auth') === 'success') {
+        setTimeout(() => showToast('🎉 Google Drive Connected (Auto-Delete Ready)!'), 500);
       }
     }
   </script>
