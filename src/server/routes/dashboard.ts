@@ -377,6 +377,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </div>
         </div>
 
+        <div class="flex items-center justify-between gap-2 flex-wrap pt-1 pb-1">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="filterQueuePage('all', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition text-[11px]">All Pages (<span id="q-count-all">0</span>)</button>
+            <button onclick="filterQueuePage('1526917347161119', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition text-[11px]">Trending News World (<span id="q-count-tnw">0</span>)</button>
+            <button onclick="filterQueuePage('1405135646008133', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition text-[11px]">BD News 24/7 (<span id="q-count-bd">0</span>)</button>
+          </div>
+        </div>
+
         <div class="glass-panel rounded-xl overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-300">
@@ -2349,6 +2357,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     let queueJobsData = [];
     let queuePage = 1;
     const QUEUE_PAGE_SIZE = 10;
+    let queuePageFilter = 'all';
+
+    function filterQueuePage(pageId, btn) {
+      queuePageFilter = pageId;
+      document.querySelectorAll('.queue-filter-btn').forEach(b => {
+        b.className = 'queue-filter-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition text-[11px]';
+      });
+      if (btn) {
+        btn.className = 'queue-filter-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition text-[11px]';
+      }
+      queuePage = 1;
+      renderQueuePage(1);
+    }
 
     let logsData = [];
     let logsPage = 1;
@@ -2362,13 +2383,32 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     function renderQueuePage(page) {
       const tbody = document.getElementById('queue-table-body');
       if (!tbody) return;
-      const total = queueJobsData.length;
+
+      const tnwCount = queueJobsData.filter(j => j.pageId === '1526917347161119' || j.page_id === '1526917347161119' || (j.page_name && j.page_name.includes('Trending'))).length;
+      const bdCount = queueJobsData.filter(j => j.pageId === '1405135646008133' || j.page_id === '1405135646008133' || (j.page_name && j.page_name.includes('BD News'))).length;
+      const elAll = document.getElementById('q-count-all');
+      const elTnw = document.getElementById('q-count-tnw');
+      const elBd = document.getElementById('q-count-bd');
+      if (elAll) elAll.innerText = queueJobsData.length;
+      if (elTnw) elTnw.innerText = tnwCount;
+      if (elBd) elBd.innerText = bdCount;
+
+      let filteredJobs = queueJobsData;
+      if (queuePageFilter !== 'all') {
+        filteredJobs = filteredJobs.filter(j =>
+          j.pageId === queuePageFilter ||
+          j.page_id === queuePageFilter ||
+          (j.page_name && j.page_name.toLowerCase().includes(queuePageFilter.toLowerCase()))
+        );
+      }
+
+      const total = filteredJobs.length;
       const totalPages = Math.ceil(total / QUEUE_PAGE_SIZE);
       const start = (page - 1) * QUEUE_PAGE_SIZE;
-      const pageJobs = queueJobsData.slice(start, start + QUEUE_PAGE_SIZE);
+      const pageJobs = filteredJobs.slice(start, start + QUEUE_PAGE_SIZE);
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Queue is currently empty.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Queue is currently empty for this selection.</td></tr>';
         renderPagination('queue-pagination', 1, 0, 0, 'changeQueuePage', QUEUE_PAGE_SIZE);
         return;
       }
@@ -2388,7 +2428,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px]">' + j.attempts + '/' + j.max_attempts + '</td>' +
           '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + new Date(j.run_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</td>' +
           '<td class="px-3.5 py-2 text-right">' +
-            '<button onclick="retryJob(\\\'' + j.id + '\\\')" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700 transition active:scale-95">Run</button>' +
+            '<button data-id="' + j.id + '" onclick="retryJob(this.dataset.id)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700 transition active:scale-95">Run</button>' +
           '</td>' +
         '</tr>'
       ).join('');

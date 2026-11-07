@@ -1221,7 +1221,9 @@ async function executePublishCron(req: Request, res: Response) {
       }
 
       if (page) {
-        const pageSources = await sourcesCol.find({ pageId: page._id }).toArray();
+        const pageSources = await sourcesCol.find({
+          $or: [{ pageId: page._id }, { page_id: page._id }]
+        }).toArray();
         const sourceIds = pageSources.map(s => s._id);
 
         let articleQuery: any = { status: { $ne: 'published' } };
@@ -1800,10 +1802,14 @@ apiRouter.get('/queue', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const status = req.query.status as string;
+    const pageId = req.query.pageId as string;
 
     const matchStage: Record<string, any> = {};
     if (status) {
       matchStage.status = status;
+    }
+    if (pageId && pageId !== 'all') {
+      matchStage.$or = [{ pageId: pageId }, { page_id: pageId }];
     }
 
     const jobs = await db
@@ -1836,6 +1842,8 @@ apiRouter.get('/queue', async (req: Request, res: Response) => {
             run_at: '$runAt',
             created_at: '$createdAt',
             last_error: '$lastError',
+            pageId: '$pageId',
+            page_id: '$pageId',
             article_title: { $arrayElemAt: ['$articleDoc.title', 0] },
             article_link: { $arrayElemAt: ['$articleDoc.link', 0] },
             page_name: { $arrayElemAt: ['$pageDoc.name', 0] },

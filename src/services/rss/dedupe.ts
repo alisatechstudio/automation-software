@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getDatabase } from '../../db/index.js';
-import { NewsArticle, RssSource, Job } from '../../db/schema.js';
+import { NewsArticle, RssSource, Job, Setting } from '../../db/schema.js';
 import { ParsedArticle, RssParserService } from './parser.js';
 import { config } from '../../config/env.js';
 
@@ -22,18 +22,40 @@ export class ArticleDedupeService {
   }
 
   /**
-   * Polls a single RSS source, filters by max age, dedupes against MongoDB,
+   * Polls a single RSS source, filters by max age, dedupes against database,
    * inserts new articles, and schedules jobs in FIFO order (oldest first).
    */
   public async pollSource(source: RssSource): Promise<IngestionResult> {
     const db = getDatabase();
     const articlesCol = db.collection<NewsArticle>('news_articles');
     const jobsCol = db.collection<Job>('jobs');
+    const settingsCol = db.collection<Setting>('settings');
 
     const fetchedItems = await this.parserService.fetchAndParse(source.url);
 
+    // 1. Determine dynamic max article age in hours from settings or env
+    let maxAgeHours = config.MAX_ARTICLE_AGE_HOURS || 24;
+    try {
+      const ageSetting = await settingsCol.findOne({ _id: 'MAX_ARTICLE_AGE_HOURS' });
+      if (ageSetting && ageSetting.value) {
+        const parsed = parseInt(ageSetting.value, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          maxAgeHours = parsed;
+        }
+      }
+    } catch {}
+
+    // Check count of existing ingested articles for this source
+    const existingCount = await articlesCol.countDocuments({ sourceId: source._id });
+
+    // Onboarding grace window: if a feed is newly connected (0 existing articles)
+    // or if maxAgeHours is narrow, allow up to 168 hours (7 days) so existing feed articles populate the queue
+    if (existingCount === 0 && maxAgeHours < 168) {
+      maxAgeHours = 168;
+    }
+
     const now = new Date();
-    const maxAgeMs = config.MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000;
+    const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
     const cutoffTime = new Date(now.getTime() - maxAgeMs);
 
     // 1. Sort items OLDEST FIRST as required
@@ -43,6 +65,9 @@ export class ArticleDedupeService {
     let skippedDuplicate = 0;
     let skippedTooOld = 0;
     let queuedJobs = 0;
+
+    const targetPageId = source.pageId || (source as any).page_id || '';
+    const targetTemplateId = source.templateId || (source as any).template_id || 'template-landscape-standard';
 
     for (const item of fetchedItems) {
       // Age filter
@@ -71,7 +96,7 @@ export class ArticleDedupeService {
         link: item.link,
         title: item.title,
         description: item.description || '',
-        category: item.category || 'সাধারণ',
+        category: item.category || 'Special Report',
         pubDate: item.pubDate,
         imageUrl: item.imageUrl || null,
         status: 'queued',
@@ -82,12 +107,12 @@ export class ArticleDedupeService {
         _id: jobId,
         type: 'process_article',
         articleId,
-        pageId: source.pageId,
+        pageId: targetPageId,
         payload: {
           articleId,
           sourceId: source._id,
-          pageId: source.pageId,
-          templateId: source.templateId,
+          pageId: targetPageId,
+          templateId: targetTemplateId,
         },
         status: 'pending',
         attempts: 0,
@@ -116,19 +141,38 @@ export class ArticleDedupeService {
   }
 
   /**
-   * Polls all active RSS sources in MongoDB, optionally filtered by target page ID
+   * Polls all active RSS sources in database, optionally filtered by target page ID
    */
   public async pollAllActiveSources(pageId?: string): Promise<IngestionResult[]> {
     const db = getDatabase();
     const sourcesCol = db.collection<RssSource>('rss_sources');
-    const filter: any = { isActive: true };
+    const filter: any = {
+      $or: [
+        { isActive: true },
+        { isActive: { $ne: false } },
+        { is_active: true },
+        { is_active: { $ne: false } },
+      ],
+    };
     if (pageId && pageId !== 'all') {
-      filter.pageId = pageId;
+      filter.$and = [
+        {
+          $or: [
+            { pageId: pageId },
+            { page_id: pageId },
+          ],
+        },
+      ];
     }
     const activeSources = await sourcesCol.find(filter).toArray();
 
     const results: IngestionResult[] = [];
     for (const source of activeSources) {
+      // Normalize source fields
+      source.pageId = source.pageId || (source as any).page_id;
+      source.templateId = source.templateId || (source as any).template_id;
+      source.isActive = source.isActive !== undefined ? source.isActive : (source as any).is_active;
+
       try {
         console.log(`[RssPoller] Polling source "${source.name}" (${source.url})...`);
         const result = await this.pollSource(source);
