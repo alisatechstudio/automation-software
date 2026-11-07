@@ -271,16 +271,18 @@ export class QueueWorker {
             reelVideoId = res.videoId;
             reelPostId = res.postId;
 
-            if (article.link && reelPostId) {
+            if (article.link && (reelVideoId || reelPostId)) {
               try {
                 const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
                 const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
                 const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+                const targetObjId = reelVideoId || reelPostId!;
                 const { commentId } = await this.fbClient.publishComment(
-                  reelPostId,
+                  targetObjId,
                   page.accessToken,
                   commentText,
-                  config.DRY_RUN
+                  config.DRY_RUN,
+                  reelPostId || undefined
                 );
                 reelCommentId = commentId;
                 console.log(`✓ [QueueWorker] First comment posted to Reel! (Comment ID: ${commentId})`);
@@ -974,13 +976,14 @@ export class QueueWorker {
       );
 
       // News URL in First Comment
-      if (article.link && postId) {
+      if (article.link && (videoId || postId)) {
         try {
           const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
           const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
           const commentText = this.fbClient.formatComment(article.link, commentTemplate);
-          await this.fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
-          console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${postId}!`);
+          const targetObjId = videoId || postId;
+          await this.fbClient.publishComment(targetObjId, page.accessToken, commentText, config.DRY_RUN, postId);
+          console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${targetObjId}!`);
         } catch (cErr: any) {
           console.warn(`[QueueWorker] Could not post first comment on Reel:`, cErr.message);
         }

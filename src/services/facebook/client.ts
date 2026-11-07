@@ -44,7 +44,12 @@ export class FacebookGraphClient {
     newsUrl: string,
     template: string = config.DEFAULT_COMMENT_FORMAT
   ): string {
-    return template.replace('{url}', newsUrl.trim()).trim();
+    const cleanUrl = (newsUrl || '').trim();
+    if (!cleanUrl) return '';
+    if (template && template.includes('{url}')) {
+      return template.replace(/\{url\}/g, cleanUrl).trim();
+    }
+    return template ? `${template.trim()} ${cleanUrl}` : `বিস্তারিত পড়ুন: ${cleanUrl}`;
   }
 
   /**
@@ -94,13 +99,16 @@ export class FacebookGraphClient {
   }
 
   /**
-   * Publishes a comment with the news link to the created Facebook post
+   * Publishes a comment with the news link to the created Facebook post or video reel.
+   * Features intelligent candidate ID resolution (handles both composite page_post and native video IDs),
+   * plus exponential retry backoff while Facebook finishes processing new video uploads.
    */
   public async publishComment(
     targetPostId: string,
     accessToken: string,
     commentText: string,
-    dryRun: boolean = config.DRY_RUN
+    dryRun: boolean = config.DRY_RUN,
+    alternateId?: string
   ): Promise<{ commentId: string }> {
     if (dryRun) {
       const mockCommentId = `dryrun_comment_${Date.now()}`;
@@ -109,26 +117,73 @@ export class FacebookGraphClient {
       return { commentId: mockCommentId };
     }
 
-    const url = `https://graph.facebook.com/${this.apiVersion}/${targetPostId}/comments`;
+    // Prepare candidate target IDs:
+    // 1. alternateId (e.g. raw videoId if targetPostId was composite page_video)
+    // 2. Direct ID as passed
+    // 3. Sub-ID after underscore if targetPostId is composite pageId_videoId
+    const candidates: string[] = [];
+    const addCandidate = (id?: string | null) => {
+      if (id && typeof id === 'string') {
+        const clean = id.trim();
+        if (clean && !candidates.includes(clean)) candidates.push(clean);
+      }
+    };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: commentText,
-        access_token: accessToken,
-      }),
-    });
-
-    const data = await response.json() as any;
-
-    if (!response.ok || data.error) {
-      this.handleGraphError(data.error, `Comment publish on ${targetPostId} failed`);
+    addCandidate(alternateId);
+    addCandidate(targetPostId);
+    if (targetPostId && targetPostId.includes('_')) {
+      const parts = targetPostId.split('_');
+      addCandidate(parts[parts.length - 1]);
+    }
+    if (alternateId && alternateId.includes('_')) {
+      const parts = alternateId.split('_');
+      addCandidate(parts[parts.length - 1]);
     }
 
-    return { commentId: data.id };
+    let lastError: any = null;
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      for (const candidateId of candidates) {
+        try {
+          const url = `https://graph.facebook.com/${this.apiVersion}/${candidateId}/comments`;
+          console.log(`[FacebookClient] Attempting to publish first comment on ${candidateId} (attempt ${attempt}/${maxAttempts})...`);
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: commentText,
+              access_token: accessToken,
+            }),
+          });
+
+          const data = (await response.json()) as any;
+
+          if (response.ok && data.id && !data.error) {
+            console.log(`✓ [FacebookClient] First comment published successfully on ${candidateId}! Comment ID: ${data.id}`);
+            return { commentId: data.id };
+          }
+
+          lastError = data.error || { message: `HTTP ${response.status}: ${JSON.stringify(data)}` };
+          console.warn(`[FacebookClient] Comment attempt on ${candidateId} note: ${lastError.message || JSON.stringify(lastError)}`);
+        } catch (netErr: any) {
+          lastError = netErr;
+          console.warn(`[FacebookClient] Network error posting comment to ${candidateId}:`, netErr.message);
+        }
+      }
+
+      if (attempt < maxAttempts) {
+        const waitMs = attempt * 3000;
+        console.log(`[FacebookClient] Waiting ${waitMs / 1000}s for Facebook Graph indexing before retrying comment...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+    }
+
+    this.handleGraphError(lastError, `Comment publish on ${targetPostId} failed after ${maxAttempts} attempts`);
+    return { commentId: '' };
   }
 
   /**

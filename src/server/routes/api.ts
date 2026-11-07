@@ -715,19 +715,25 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
 
     // News URL in First Comment
     let commentId: string | null = null;
-    let targetLink: string | null = null;
-    if (finalArticleId) {
+    let targetLink: string = (req.body.link || req.body.newsUrl || req.body.url || '').trim();
+    if (!targetLink && finalArticleId) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: finalArticleId });
-      targetLink = art?.link || null;
+      targetLink = art?.link || '';
     }
-    if (targetLink && postId) {
+    if (!targetLink && targetHeadline) {
+      const art = await db.collection<NewsArticle>('news_articles').findOne({ title: targetHeadline });
+      if (art?.link) targetLink = art.link;
+    }
+
+    const commentTargetId = videoId || postId;
+    if (targetLink && commentTargetId) {
       try {
         const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
         const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
         const commentText = fbClient.formatComment(targetLink, commentTemplate);
-        const commentRes = await fbClient.publishComment(postId, page.accessToken, commentText, config.DRY_RUN);
+        const commentRes = await fbClient.publishComment(commentTargetId, page.accessToken, commentText, config.DRY_RUN, postId);
         commentId = commentRes.commentId;
-        console.log(`✓ [Reels API] Added news link as first comment to Reel post ${postId}!`);
+        console.log(`✓ [Reels API] Added news link as first comment to Reel (${commentTargetId})!`);
       } catch (commentErr: any) {
         console.warn(`[Reels API] Could not post first comment on Reel:`, commentErr.message);
       }

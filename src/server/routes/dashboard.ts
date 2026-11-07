@@ -948,6 +948,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <input type="url" id="reel-image-input" onchange="updateReelFramePreview()" placeholder="https://... (Leave empty to use studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
           </div>
 
+          <!-- News Article URL for First Comment -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
+              <span>News Article Link (প্রথম কমেন্টে খবরের লিংক)</span>
+              <span class="text-[10px] font-mono text-emerald-400">First Comment URL</span>
+            </label>
+            <input type="url" id="reel-link-input" placeholder="https://bdnews.site/... (সংবাদের লিংক লিখুন)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+            <input type="hidden" id="reel-article-id-input" value="">
+          </div>
+
           <!-- Target Facebook Page -->
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Target Facebook Page</label>
@@ -2518,10 +2528,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const title = item.articleTitle || item.payload?.articleTitle || item.title || '';
       const category = item.category || item.payload?.category || 'বিশেষ খবর';
       const img = item.imageUrl || item.payload?.imageUrl || '';
+      const link = item.link || item.payload?.link || item.articleLink || '';
+      const articleId = item._id || item.articleId || item.payload?.articleId || '';
 
       if (title) document.getElementById('reel-headline-input').value = title;
       if (category) document.getElementById('reel-category-input').value = category;
       if (img) document.getElementById('reel-image-input').value = img;
+      if (document.getElementById('reel-link-input')) document.getElementById('reel-link-input').value = link;
+      if (document.getElementById('reel-article-id-input')) document.getElementById('reel-article-id-input').value = articleId;
       updateReelFramePreview();
     }
 
@@ -2607,6 +2621,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const headline = document.getElementById('reel-headline-input').value.trim();
       const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input').value.trim();
+      const link = document.getElementById('reel-link-input')?.value.trim() || '';
+      const articleId = document.getElementById('reel-article-id-input')?.value.trim() || '';
       const pageId = document.getElementById('reel-page-select').value;
       const theme = document.getElementById('reel-theme-select').value || 'auto-category';
       const dur = parseInt(document.getElementById('reel-duration-select')?.value || '18', 10) || 18;
@@ -2631,11 +2647,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         const res = await safeFetchJson('/api/reels/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ headline, category, imageUrl, pageId, theme, duration: dur })
+          body: JSON.stringify({
+            headline,
+            category,
+            imageUrl,
+            link,
+            articleId,
+            pageId,
+            theme,
+            duration: dur
+          })
         });
 
         if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully published ' + dur + 's Reel to ' + (res.data.pageName || 'Facebook') + '!');
+          showToast('✓ Successfully published ' + dur + 's Reel with first comment to ' + (res.data.pageName || 'Facebook') + '!');
           statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
           loadReelLogs();
         } else {
