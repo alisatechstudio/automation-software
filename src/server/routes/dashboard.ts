@@ -2608,14 +2608,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
               '<div class="flex items-center justify-between">' +
                 '<span class="text-cyan-400 font-bold">📰 RSS / Post Cron</span>' +
-                '<button onclick="copyCronUrl(\\\'/api/cron/publish?pageId=' + p.id + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+                '<button data-path="/api/cron/publish?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
               '</div>' +
               '<div class="text-[9px] text-slate-400 truncate">/api/cron/publish?pageId=' + p.id + '</div>' +
             '</div>' +
             '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
               '<div class="flex items-center justify-between">' +
                 '<span class="text-emerald-400 font-bold">🎬 GDrive Reels Cron</span>' +
-                '<button onclick="copyCronUrl(\\\'/api/cron/gdrive-reels?pageId=' + p.id + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+                '<button data-path="/api/cron/gdrive-reels?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
               '</div>' +
               '<div class="text-[9px] text-slate-400 truncate">/api/cron/gdrive-reels?pageId=' + p.id + '</div>' +
             '</div>' +
@@ -3194,8 +3194,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '</div>' +
           '<div class="flex items-center gap-1.5">' +
             '<input type="text" readonly value="' + escapeHtml(pathUrl) + '" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none" onclick="this.select()">' +
-            '<button onclick="copyCronUrl(\\\'' + escapeHtml(def.path) + '\\\', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>' +
-            '<button onclick="testCronJob(\\\'' + escapeHtml(def.path) + '\\\', \\\'' + testResId + '\\\', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 shrink-0 transition">Test</button>' +
+            '<button data-path="' + escapeHtml(def.path) + '" onclick="copyCronUrl(this.dataset.path, this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>' +
+            '<button data-path="' + escapeHtml(def.path) + '" data-target="' + testResId + '" onclick="testCronJob(this.dataset.path, this.dataset.target, this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 shrink-0 transition">Test</button>' +
           '</div>' +
           '<div id="' + testResId + '" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>' +
         '</div>';
@@ -4327,7 +4327,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '<div class="mt-2 pt-2 border-t border-slate-900 flex flex-col gap-1">' +
             '<div class="flex items-center justify-between text-[9px] text-slate-400">' +
               '<span class="font-mono text-emerald-400 font-semibold">⚡ Distinct Cron Webhook:</span>' +
-              '<button onclick="copyCronUrl(\\\'' + cronPath + '\\\', this)" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 border border-emerald-700/50 transition">Copy URL</button>' +
+              '<button data-path="' + escapeHtml(cronPath) + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 border border-emerald-700/50 transition">Copy URL</button>' +
             '</div>' +
             '<input type="text" readonly value="' + (window.location.origin + cronPath) + '" class="w-full bg-slate-900/90 border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 select-all focus:outline-none" onclick="this.select()">' +
           '</div>' +

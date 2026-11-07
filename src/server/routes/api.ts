@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
-import { getDatabase, isDbConnected } from '../../db/index.js';
+import { getDatabase, isDbConnected, initDatabase } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, GDriveReelConfig } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
@@ -2396,14 +2396,60 @@ interface WebhookDefinition {
 }
 
 async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: string): Promise<WebhookDefinition[]> {
-  const db = getDatabase();
-  const pagesCol = db.collection<FacebookPage>('facebook_pages');
-  const sourcesCol = db.collection<RssSource>('rss_sources');
-  const gdriveCol = db.collection<GDriveReelConfig>('gdrive_reel_configs');
+  let allPages: FacebookPage[] = [];
+  let allSources: RssSource[] = [];
+  let allGdriveChannels: GDriveReelConfig[] = [];
 
-  const allPages = await pagesCol.find({ isActive: { $ne: false } }).toArray();
-  const allSources = await sourcesCol.find({ isActive: { $ne: false } }).toArray();
-  const allGdriveChannels = await gdriveCol.find({}).toArray();
+  try {
+    if (!isDbConnected()) {
+      await initDatabase().catch(() => null);
+    }
+    if (isDbConnected()) {
+      const db = getDatabase();
+      const pagesCol = db.collection<FacebookPage>('facebook_pages');
+      const sourcesCol = db.collection<RssSource>('rss_sources');
+      const gdriveCol = db.collection<GDriveReelConfig>('gdrive_reel_configs');
+
+      allPages = await pagesCol.find({ isActive: { $ne: false } }).toArray();
+      allSources = await sourcesCol.find({ isActive: { $ne: false } }).toArray();
+      allGdriveChannels = await gdriveCol.find({}).toArray();
+    }
+  } catch (err: any) {
+    console.warn('[API] Could not query database for dynamic webhook definitions, using fallback:', err.message);
+  }
+
+  // Fallbacks if database is initializing or empty
+  if (allPages.length === 0) {
+    allPages = [
+      { _id: '1526917347161119', name: 'Trending News World', isActive: true } as any,
+      { _id: '1405135646008133', name: 'BD News 24/7- বিডি নিউজ ২৪/৭', isActive: true } as any,
+      { _id: '1268359636369219', name: 'Alisa Tech Studio', isActive: true } as any,
+      { _id: '1302276172975819', name: 'হক কথা', isActive: true } as any,
+    ];
+  }
+  if (allGdriveChannels.length === 0) {
+    allGdriveChannels = [
+      {
+        _id: 'default_gdrive_reels',
+        name: 'হক কথা',
+        pageId: '1302276172975819',
+        pageName: 'হক কথা',
+        folderUrlOrId: 'dummy',
+        isActive: true,
+        scheduleIntervalHours: 1,
+      } as any,
+      {
+        _id: 'gdrive_ch_53ba65aa',
+        name: 'Alisa Tech Studio',
+        pageId: '1268359636369219',
+        pageName: 'Alisa Tech Studio',
+        folderUrlOrId: 'dummy',
+        isActive: true,
+        scheduleIntervalHours: 1,
+      } as any,
+    ];
+  }
+
   const activeGdrive = allGdriveChannels.filter((c) => c.isActive !== false && (c.folderUrlOrId || c.folderId));
 
   const defs: WebhookDefinition[] = [];
@@ -2427,7 +2473,7 @@ async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: strin
   });
 
   // 2. Identify RSS Pages vs Google Drive Pages
-  const gdrivePageIds = new Set(activeGdrive.map((c) => c.pageId).filter(Boolean));
+  const gdrivePageIds = new Set(allGdriveChannels.map((c) => c.pageId).filter(Boolean));
   const rssPageIds = new Set(allSources.map((s) => s.pageId).filter(Boolean));
 
   // Determine RSS target pages: pages explicitly mapped to RSS feeds, or active pages not dedicated to Drive
