@@ -3293,8 +3293,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
         const safeTitle = escapeHtml(job.title);
         const safeUrl = escapeHtml(job.url);
-        const escapedTitleForArg = safeTitle.replace(/'/g, "\\'");
-        const escapedUrlForArg = safeUrl.replace(/'/g, "\\'");
 
         html += '<tr class="hover:bg-slate-900/40 transition group">' +
           '<td class="py-3 px-3 text-center align-top">' +
@@ -3313,7 +3311,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '</div>' +
             '<div class="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-400">' +
               '<span class="truncate max-w-xs sm:max-w-sm text-cyan-400/90" title="' + safeUrl + '">' + safeUrl + '</span>' +
-              '<button type="button" onclick="copyCronDirect(\'' + escapedUrlForArg + '\', this)" class="text-slate-500 hover:text-slate-200 p-0.5 rounded transition shrink-0" title="Copy URL">📋</button>' +
+              '<button type="button" onclick="copyCronJobUrl(' + job.jobId + ', this)" class="text-slate-500 hover:text-slate-200 p-0.5 rounded transition shrink-0" title="Copy URL">📋</button>' +
               '<a href="' + safeUrl + '" target="_blank" class="text-slate-500 hover:text-slate-200 p-0.5 rounded transition shrink-0" title="Open in new tab">↗</a>' +
             '</div>' +
           '</td>' +
@@ -3330,10 +3328,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '</td>' +
           '<td class="py-3 px-3 align-top text-right">' +
             '<div class="flex items-center justify-end gap-1.5">' +
-              '<button type="button" onclick="runCronJob(' + job.jobId + ', \'' + escapedUrlForArg + '\', ' + (job.requestMethod || 0) + ', this)" class="px-2 py-1 text-[10px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 transition active:scale-95" title="Trigger webhook right now">⚡ Run</button>' +
-              '<button type="button" onclick="viewCronJobHistory(' + job.jobId + ', \'' + escapedTitleForArg + '\', \'' + escapedUrlForArg + '\')" class="px-2 py-1 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition" title="View execution logs">Logs</button>' +
+              '<button type="button" onclick="runCronJob(' + job.jobId + ', this)" class="px-2 py-1 text-[10px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 transition active:scale-95" title="Trigger webhook right now">⚡ Run</button>' +
+              '<button type="button" onclick="viewCronJobHistory(' + job.jobId + ')" class="px-2 py-1 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition" title="View execution logs">Logs</button>' +
               '<button type="button" onclick="openEditCronJobModal(' + job.jobId + ')" class="px-2 py-1 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition" title="Edit Job">Edit</button>' +
-              '<button type="button" onclick="deleteCronJob(' + job.jobId + ', \'' + escapedTitleForArg + '\')" class="px-2 py-1 text-[10px] font-semibold rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition" title="Delete Job">✕</button>' +
+              '<button type="button" onclick="deleteCronJob(' + job.jobId + ')" class="px-2 py-1 text-[10px] font-semibold rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition" title="Delete Job">✕</button>' +
             '</div>' +
           '</td>' +
         '</tr>';
@@ -3343,7 +3341,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       container.innerHTML = html;
     }
 
-    function copyCronDirect(text, btn) {
+    function copyCronJobUrl(jobId, btn) {
+      const job = allCronJobs.find(j => String(j.jobId) === String(jobId));
+      const text = job ? job.url : '';
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
           showToast('URL copied to clipboard!');
@@ -3494,7 +3494,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    async function deleteCronJob(jobId, title) {
+    async function deleteCronJob(jobId) {
+      const job = allCronJobs.find(j => String(j.jobId) === String(jobId));
+      const title = job ? (job.title || '#' + jobId) : ('#' + jobId);
       if (!confirm('Are you sure you want to delete cron job "' + title + '"?\\nThis action cannot be undone.')) {
         return;
       }
@@ -3514,7 +3516,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    async function runCronJob(jobId, url, method, btn) {
+    async function runCronJob(jobId, btn) {
+      const job = allCronJobs.find(j => String(j.jobId) === String(jobId));
+      const url = job?.url;
+      const method = job?.requestMethod || 0;
       if (btn) {
         btn.disabled = true;
         btn.innerText = '⏳';
@@ -3528,21 +3533,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         });
         if (res.data?.success) {
           showToast('✓ HTTP ' + res.data.httpStatus + ' (' + res.data.durationMs + 'ms)');
-          const target = allCronJobs.find(j => String(j.jobId) === String(jobId));
-          if (target) {
-            target.lastStatus = 1;
-            target.lastDuration = res.data.durationMs;
-            target.lastExecution = Math.floor(Date.now() / 1000);
+          if (job) {
+            job.lastStatus = 1;
+            job.lastDuration = res.data.durationMs;
+            job.lastExecution = Math.floor(Date.now() / 1000);
           }
           renderCronJobsTable();
         } else {
           const status = res.data?.httpStatus ? 'HTTP ' + res.data.httpStatus : 'Failed';
           showToast('✕ ' + status + ' (' + (res.data?.durationMs || 0) + 'ms): ' + (res.data?.error || res.data?.statusText || 'Error'), true);
-          const target = allCronJobs.find(j => String(j.jobId) === String(jobId));
-          if (target) {
-            target.lastStatus = 2;
-            target.lastDuration = res.data?.durationMs || 0;
-            target.lastExecution = Math.floor(Date.now() / 1000);
+          if (job) {
+            job.lastStatus = 2;
+            job.lastDuration = res.data?.durationMs || 0;
+            job.lastExecution = Math.floor(Date.now() / 1000);
           }
           renderCronJobsTable();
         }
@@ -3557,7 +3560,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    async function viewCronJobHistory(jobId, title, url) {
+    async function viewCronJobHistory(jobId) {
+      const job = allCronJobs.find(j => String(j.jobId) === String(jobId));
+      const title = job ? (job.title || '#' + jobId) : ('#' + jobId);
+      const url = job ? (job.url || '') : '';
       const modal = document.getElementById('modal-cron-history');
       const titleEl = document.getElementById('cron-history-modal-title');
       const subtitleEl = document.getElementById('cron-history-modal-subtitle');
