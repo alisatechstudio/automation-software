@@ -975,11 +975,11 @@ apiRouter.post('/gdrive-reels/reset-history', async (req: Request, res: Response
 });
 
 // -------------------------------------------------------------
-// VERCEL CRON WEBHOOK (/api/cron)
+// EXTERNAL CRON / VERCEL CRON WEBHOOK (/api/cron)
 // -------------------------------------------------------------
-apiRouter.get('/cron', async (req: Request, res: Response) => {
+apiRouter.all('/cron', async (req: Request, res: Response) => {
   const timestamp = new Date().toISOString();
-  console.log(`[Vercel Cron] Triggered at ${timestamp}`);
+  console.log(`[Cron Trigger] Method: ${req.method} at ${timestamp}`);
 
   const results: any = { timestamp, rss: null, gdriveReel: null };
 
