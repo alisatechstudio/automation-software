@@ -171,56 +171,6 @@ export function createServer(): Express {
     }, 600);
   });
 
-  // Vercel Cron Endpoint: Triggered by Vercel Cron schedule or external cron-job.org
-  app.all('/api/cron', async (req: Request, res: Response) => {
-    console.log('[Cron Endpoint] Triggered scheduled RSS poll & queue tick...');
-    try {
-      if (!isMongoConnected()) {
-        await initMongoDb();
-      }
-      if (!isMongoConnected()) {
-        res.status(503).json({ error: 'MongoDB not connected', details: getLastMongoError() });
-        return;
-      }
-
-      // 1. Rapid RSS ingestion (1-2s)
-      const pollResults = await dedupeService.pollAllActiveSources();
-
-      // 2. Fetch pending job
-      const job = await queue.fetchNextJob();
-
-      if (job) {
-        console.log(`[Cron] Enqueued job ${job._id} found. Initiating background process...`);
-        const jobPromise = worker.processJob(job).catch((err) => {
-          console.error('[Cron Worker] Background processing error:', err);
-        });
-
-        // Use Vercel's waitUntil to let the background job complete while returning HTTP 200 immediately
-        if (process.env.VERCEL) {
-          try {
-            waitUntil(jobPromise);
-          } catch (e) {
-            jobPromise.catch(() => {});
-          }
-        } else {
-          // If running locally, wait for it
-          await jobPromise;
-        }
-      }
-
-      // 3. Instant response: cron-job.org / Vercel receives 200 OK within 1-2s (Zero Timeout!)
-      res.json({
-        success: true,
-        message: job ? 'Job processing in background' : 'RSS polled, no pending jobs',
-        pollResults,
-        processedJobId: job ? job._id : null,
-      });
-    } catch (err: any) {
-      console.error('[Cron] Error during cron execution:', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-
   // Password-protected routes (Health check & /api/cron bypass inside authMiddleware)
   app.use(authMiddleware);
 
@@ -238,9 +188,15 @@ export function createServer(): Express {
 
     // If still not connected and accessing root or web UI, show helpful Setup Diagnostics
     if (!isMongoConnected()) {
-      if (req.path.startsWith('/api') && req.path !== '/api/cron' && !req.path.startsWith('/api/preview')) {
+      // Catalog overview does not require database
+      if (req.path === '/api/cron' && req.method === 'GET' && !req.query.job) {
+        return next();
+      }
+
+      if (req.path.startsWith('/api')) {
         res.setHeader('Cache-Control', 'no-transform');
         res.status(503).json({
+          success: false,
           error: 'Database Not Connected',
           dbType: config.DB_TYPE,
           details: getLastMongoError() || 'Database credentials not configured in .env',

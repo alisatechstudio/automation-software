@@ -7,6 +7,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     req.path === '/health' ||
     req.path === '/healthz' ||
     req.path === '/api/cron' ||
+    req.path.startsWith('/api/cron/') ||
     req.path === '/reset-server' ||
     req.path === '/reset-server.php' ||
     req.path === '/api/reset-server'

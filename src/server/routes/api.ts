@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
+import { waitUntil } from '@vercel/functions';
 import { getDatabase } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
@@ -1093,30 +1094,565 @@ apiRouter.post('/gdrive-reels/reset-history', async (req: Request, res: Response
 });
 
 // -------------------------------------------------------------
-// EXTERNAL CRON / VERCEL CRON WEBHOOK (/api/cron)
+// EXTERNAL CRON / cron-job.org DISTINCT WEBHOOKS (/api/cron/*)
 // -------------------------------------------------------------
-apiRouter.all('/cron', async (req: Request, res: Response) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[Cron Trigger] Method: ${req.method} at ${timestamp}`);
 
-  const results: any = { timestamp, rss: null, gdriveReels: null };
+/**
+ * Validates the CRON_SECRET if one is defined in environment variables.
+ * Allows authorization via:
+ * - Authorization: Bearer <secret>
+ * - x-cron-secret: <secret> header
+ * - ?secret=<secret> or ?key=<secret> query parameter
+ */
+function verifyCronAuth(req: Request, res: Response): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || cronSecret.trim() === '') {
+    return true; // No secret configured, allow open execution
+  }
 
-  // 1. Trigger RSS Poll
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0].toLowerCase() === 'bearer' && parts[1] === cronSecret) {
+      return true;
+    }
+  }
+
+  const customHeader = req.headers['x-cron-secret'];
+  if (customHeader && customHeader === cronSecret) {
+    return true;
+  }
+
+  const querySecret = (req.query.secret as string) || (req.query.key as string);
+  if (querySecret && querySecret === cronSecret) {
+    return true;
+  }
+
+  res.status(401).json({
+    success: false,
+    error: 'Unauthorized: Invalid or missing cron secret. Provide Authorization: Bearer <token>, x-cron-secret header, or ?secret=<token> query parameter.',
+  });
+  return false;
+}
+
+function safeWaitUntil(promise: Promise<any>): void {
+  if (process.env.VERCEL) {
+    try {
+      waitUntil(promise);
+    } catch {
+      promise.catch(() => {});
+    }
+  }
+}
+
+// Handler: 1. RSS Ingestion
+async function executeRssCron(req: Request, res: Response) {
+  const startTime = Date.now();
   try {
-    const rssResult = await dedupeService.pollAllActiveSources();
-    results.rss = rssResult;
+    const results = await dedupeService.pollAllActiveSources();
+    res.json({
+      success: true,
+      job: 'rss_poll',
+      timestamp: new Date().toISOString(),
+      durationMs: Date.now() - startTime,
+      results,
+    });
+  } catch (err: any) {
+    console.error('[RSS Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'rss_poll', error: err.message });
+  }
+}
+
+// Handler: 2. Facebook Post/Reels Publishing
+async function executePublishCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const db = getDatabase();
+    let job = await queue.fetchNextJob();
+
+    if (!job) {
+      // If queue is empty, check for unposted articles to publish immediately
+      const articlesCol = db.collection<NewsArticle>('news_articles');
+      const pagesCol = db.collection<FacebookPage>('facebook_pages');
+      const jobsCol = db.collection<Job>('jobs');
+
+      const page = await pagesCol.findOne({ isActive: true });
+      if (page) {
+        let article = await articlesCol.findOne({ status: { $ne: 'published' } }, { sort: { createdAt: -1 } });
+        if (!article) {
+          const failedLog = await db.collection<PostLog>('post_logs').findOne(
+            { $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }] },
+            { sort: { createdAt: -1 } }
+          );
+          if (failedLog?.articleId) {
+            article = await articlesCol.findOne({ _id: failedLog.articleId });
+          }
+        }
+
+        if (article) {
+          const jobId = crypto.randomUUID();
+          job = {
+            _id: jobId,
+            type: 'process_article',
+            articleId: article._id,
+            pageId: page._id,
+            payload: {
+              articleId: article._id,
+              sourceId: article.sourceId,
+              pageId: page._id,
+              templateId: 'template-canva-bdnews',
+            },
+            status: 'pending',
+            attempts: 0,
+            maxAttempts: 3,
+            runAt: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          await jobsCol.insertOne(job as any);
+          console.log(`[Publish Cron] Created immediate job ${jobId} for article "${article.title}"`);
+        }
+      }
+    }
+
+    if (!job) {
+      res.json({
+        success: true,
+        job: 'facebook_publish',
+        processed: false,
+        durationMs: Date.now() - startTime,
+        message: 'Queue is empty and all articles have been published.',
+      });
+      return;
+    }
+
+    console.log(`[Publish Cron] Executing job ${job._id}...`);
+    const jobPromise = worker.processJob(job);
+
+    if (req.query.async === 'true' && process.env.VERCEL) {
+      safeWaitUntil(jobPromise);
+      res.json({
+        success: true,
+        job: 'facebook_publish',
+        async: true,
+        jobId: job._id,
+        durationMs: Date.now() - startTime,
+        message: 'Job dispatched to background worker via Vercel waitUntil.',
+      });
+      return;
+    }
+
+    await jobPromise;
+    const logsCol = db.collection<PostLog>('post_logs');
+    const latestLog = await logsCol.findOne({ articleId: job.articleId }, { sort: { createdAt: -1 } });
+    const isSuccess = latestLog?.status === 'success' || latestLog?.status === 'dry_run';
+
+    res.json({
+      success: isSuccess,
+      job: 'facebook_publish',
+      processed: true,
+      jobId: job._id,
+      log: latestLog,
+      durationMs: Date.now() - startTime,
+      error: !isSuccess ? (latestLog?.errorMessage || 'Reel or post failed to upload') : undefined,
+    });
+  } catch (err: any) {
+    console.error('[Publish Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'facebook_publish', error: err.message });
+  }
+}
+
+// Handler: 3. Google Drive Multi-Channel Reels
+async function executeGdriveCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const result = await gdriveReelService.publishAllDueChannels();
+    res.json({
+      success: true,
+      job: 'gdrive_reels',
+      timestamp: new Date().toISOString(),
+      durationMs: Date.now() - startTime,
+      result,
+    });
+  } catch (err: any) {
+    console.error('[GDrive Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'gdrive_reels', error: err.message });
+  }
+}
+
+// Handler: 4. Facebook 24-Hour Stories
+async function executeStoriesCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const db = getDatabase();
+    const page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    if (!page) {
+      res.status(400).json({ success: false, job: 'facebook_stories', error: 'No active Facebook Page found' });
+      return;
+    }
+
+    const recentStoryLogs = await db
+      .collection<StoryLog>('story_logs')
+      .find({ status: { $in: ['success', 'dry_run'] } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .toArray();
+    const recentArticleIds = recentStoryLogs.map((s: StoryLog) => s.articleId).filter(Boolean);
+
+    let targetArticle = await db.collection<NewsArticle>('news_articles').findOne(
+      { _id: { $nin: recentArticleIds as string[] } },
+      { sort: { pubDate: -1, createdAt: -1 } }
+    );
+    if (!targetArticle) {
+      targetArticle = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1, createdAt: -1 } });
+    }
+
+    if (!targetArticle) {
+      res.json({
+        success: true,
+        job: 'facebook_stories',
+        processed: false,
+        durationMs: Date.now() - startTime,
+        message: 'No articles available to generate Facebook Story.',
+      });
+      return;
+    }
+
+    console.log(`[Stories Cron] Rendering 1080x1080 card for "${targetArticle.title}"...`);
+    const renderResult = await canvasRenderer.render({
+      templateId: 'template-canva-bdnews',
+      headline: targetArticle.title,
+      category: targetArticle.category || 'বিশেষ খবর',
+      imageUrl: targetArticle.imageUrl || undefined,
+    });
+
+    const fbClient = new FacebookGraphClient();
+    console.log(`[Stories Cron] Publishing Photo Story to page "${page.name}"...`);
+    const { photoId, storyId } = await fbClient.publishPhotoStory(
+      page._id,
+      page.accessToken,
+      renderResult.imageBuffer,
+      config.DRY_RUN
+    );
+
+    const durationMs = Date.now() - startTime;
+    await db.collection<StoryLog>('story_logs').insertOne({
+      _id: crypto.randomUUID(),
+      articleId: targetArticle._id,
+      articleTitle: targetArticle.title,
+      pageId: page._id,
+      pageName: page.name,
+      fbPhotoId: photoId,
+      fbStoryId: storyId,
+      renderedImagePath: renderResult.outputPath || null,
+      durationMs,
+      status: config.DRY_RUN ? 'dry_run' : 'success',
+      createdAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      job: 'facebook_stories',
+      processed: true,
+      headline: targetArticle.title,
+      pageName: page.name,
+      photoId,
+      storyId,
+      durationMs,
+    });
+  } catch (err: any) {
+    console.error('[Stories Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'facebook_stories', error: err.message });
+  }
+}
+
+// Handler: 5. YouTube Shorts Auto-Upload
+async function executeYoutubeCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const db = getDatabase();
+    await ytClient.initCredentials();
+    if (!ytClient.isConfigured()) {
+      res.json({
+        success: false,
+        job: 'youtube_shorts',
+        configured: false,
+        message: 'YouTube client credentials not configured or authenticated in Settings.',
+      });
+      return;
+    }
+
+    const autoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
+    if (autoSetting?.value === 'false') {
+      res.json({
+        success: false,
+        job: 'youtube_shorts',
+        enabled: false,
+        message: 'AUTO_POST_YOUTUBE is disabled in Settings.',
+      });
+      return;
+    }
+
+    const uploadedLogs = await db
+      .collection<YouTubeUploadLog>('youtube_upload_logs')
+      .find({ status: { $in: ['success', 'dry_run'] } })
+      .toArray();
+    const uploadedArticleIds = uploadedLogs.map((l: YouTubeUploadLog) => l.articleId).filter(Boolean);
+
+    let targetArticle = await db.collection<NewsArticle>('news_articles').findOne(
+      { _id: { $nin: uploadedArticleIds as string[] } },
+      { sort: { pubDate: -1, createdAt: -1 } }
+    );
+    if (!targetArticle) {
+      targetArticle = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1, createdAt: -1 } });
+    }
+
+    if (!targetArticle) {
+      res.json({
+        success: true,
+        job: 'youtube_shorts',
+        processed: false,
+        durationMs: Date.now() - startTime,
+        message: 'No articles available to upload to YouTube.',
+      });
+      return;
+    }
+
+    console.log(`[YouTube Cron] Uploading short for article "${targetArticle.title}"...`);
+    const result = await worker.uploadShortForArticle(targetArticle._id);
+
+    res.json({
+      success: result.success,
+      job: 'youtube_shorts',
+      processed: true,
+      articleTitle: targetArticle.title,
+      articleId: targetArticle._id,
+      durationMs: Date.now() - startTime,
+      result,
+    });
+  } catch (err: any) {
+    console.error('[YouTube Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'youtube_shorts', error: err.message });
+  }
+}
+
+// Handler: 6. Self-Healing Queue Maintenance & Reset
+async function executeCleanupCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const db = getDatabase();
+    // 1. Unstick jobs stuck in 'processing' status > 15 minutes
+    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const stuckRes = await db.collection<Job>('jobs').updateMany(
+      {
+        status: 'processing',
+        updatedAt: { $lt: fifteenMinsAgo },
+      },
+      {
+        $set: {
+          status: 'pending',
+          updatedAt: new Date(),
+          lastError: 'Job execution timed out; reset to pending by self-healing cleanup cron',
+        },
+      }
+    );
+
+    // 2. Reset unposted articles whose logs falsely said success with empty fbPostId
+    const unpostedLogs = await db.collection<PostLog>('post_logs').find({
+      $and: [
+        { status: 'success' },
+        { $or: [{ fbPostId: null }, { fbPostId: '' }] },
+      ],
+    }).toArray();
+    const articleIds = Array.from(new Set(unpostedLogs.map((l: PostLog) => l.articleId).filter(Boolean)));
+    if (unpostedLogs.length > 0) {
+      await db.collection('post_logs').updateMany(
+        { _id: { $in: unpostedLogs.map((l) => l._id) as any } },
+        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
+      );
+      await db.collection('reel_logs').updateMany(
+        { fbPostId: { $in: [null, ''] }, status: 'success' },
+        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
+      );
+    }
+    if (articleIds.length > 0) {
+      await db.collection('news_articles').updateMany(
+        { _id: { $in: articleIds as any } },
+        { $set: { status: 'pending' } }
+      );
+    }
+
+    res.json({
+      success: true,
+      job: 'cleanup',
+      durationMs: Date.now() - startTime,
+      unlockedStuckJobs: stuckRes.modifiedCount,
+      resetUnpostedArticles: articleIds.length,
+      message: `Self-healing cleanup complete: unlocked ${stuckRes.modifiedCount} stuck jobs, reset ${articleIds.length} unposted articles`,
+    });
+  } catch (err: any) {
+    console.error('[Cleanup Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'cleanup', error: err.message });
+  }
+}
+
+// -------------------------------------------------------------
+// DISTINCT CRON-JOB.ORG ENDPOINTS
+// -------------------------------------------------------------
+
+// 1. RSS Ingestion Endpoint
+apiRouter.all(['/cron/rss', '/cron/poll', '/cron/ingest'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executeRssCron(req, res);
+});
+
+// 2. Facebook Post/Reels Publishing Endpoint
+apiRouter.all(['/cron/publish', '/cron/queue', '/cron/post'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executePublishCron(req, res);
+});
+
+// 3. Google Drive Multi-Channel Reels Endpoint
+apiRouter.all(['/cron/gdrive-reels', '/cron/gdrive', '/cron/drive'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executeGdriveCron(req, res);
+});
+
+// 4. Facebook Stories Endpoint
+apiRouter.all(['/cron/stories', '/cron/story'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executeStoriesCron(req, res);
+});
+
+// 5. YouTube Shorts Endpoint
+apiRouter.all(['/cron/youtube', '/cron/shorts'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executeYoutubeCron(req, res);
+});
+
+// 6. Queue Maintenance & Cleanup Endpoint
+apiRouter.all(['/cron/cleanup', '/cron/maintain', '/cron/repair'], async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+  await executeCleanupCron(req, res);
+});
+
+// 7. Universal Gateway Endpoint (/api/cron)
+apiRouter.all('/cron', async (req: Request, res: Response) => {
+  if (!verifyCronAuth(req, res)) return;
+
+  const jobParam = ((req.query.job as string) || '').toLowerCase().trim();
+  if (jobParam === 'rss' || jobParam === 'poll' || jobParam === 'ingest') {
+    return executeRssCron(req, res);
+  }
+  if (jobParam === 'publish' || jobParam === 'queue' || jobParam === 'post') {
+    return executePublishCron(req, res);
+  }
+  if (jobParam === 'gdrive' || jobParam === 'gdrive-reels' || jobParam === 'drive') {
+    return executeGdriveCron(req, res);
+  }
+  if (jobParam === 'stories' || jobParam === 'story') {
+    return executeStoriesCron(req, res);
+  }
+  if (jobParam === 'youtube' || jobParam === 'shorts') {
+    return executeYoutubeCron(req, res);
+  }
+  if (jobParam === 'cleanup' || jobParam === 'maintain' || jobParam === 'repair') {
+    return executeCleanupCron(req, res);
+  }
+
+  // If GET without a specific job, return full distinct cron catalog
+  if (req.method === 'GET') {
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+    const cronSecret = process.env.CRON_SECRET;
+    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+
+    return res.json({
+      status: 'active',
+      name: 'BD News 24/7 Multi-Process Distinct Cron Webhooks',
+      timestamp: new Date().toISOString(),
+      cronSecretConfigured: Boolean(cronSecret),
+      authInstructions: cronSecret
+        ? 'Pass "Authorization: Bearer <secret>" or "x-cron-secret: <secret>" header, or append "?secret=<secret>" to URLs.'
+        : 'CRON_SECRET is not set in environment; webhooks are open for triggers.',
+      endpoints: [
+        {
+          id: 'rss',
+          name: '1. RSS Ingestion & Enqueueing',
+          path: '/api/cron/rss',
+          fullUrl: `${baseUrl}/api/cron/rss${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '*/10 * * * *',
+          scheduleHuman: 'Every 10 minutes',
+          description: 'Polls all active Bangla RSS feeds, scrapes articles, and queues new jobs.',
+        },
+        {
+          id: 'publish',
+          name: '2. Facebook Reels & Posts Publishing',
+          path: '/api/cron/publish',
+          fullUrl: `${baseUrl}/api/cron/publish${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '*/15 * * * *',
+          scheduleHuman: 'Every 15 minutes',
+          description: 'Processes the next pending job in queue, renders Skia card/video, and publishes to Facebook.',
+        },
+        {
+          id: 'gdrive',
+          name: '3. Google Drive Multi-Channel Reels',
+          path: '/api/cron/gdrive-reels',
+          fullUrl: `${baseUrl}/api/cron/gdrive-reels${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '*/30 * * * *',
+          scheduleHuman: 'Every 30 minutes',
+          description: 'Scans Google Drive channels, downloads scheduled video reels, and posts to Facebook.',
+        },
+        {
+          id: 'stories',
+          name: '4. Facebook 24-Hour Stories',
+          path: '/api/cron/stories',
+          fullUrl: `${baseUrl}/api/cron/stories${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '0 * * * *',
+          scheduleHuman: 'Every 1 hour (at minute 0)',
+          description: 'Renders Canva-style JPG news poster and publishes to Facebook Page Stories.',
+        },
+        {
+          id: 'youtube',
+          name: '5. YouTube Shorts Auto-Upload',
+          path: '/api/cron/youtube',
+          fullUrl: `${baseUrl}/api/cron/youtube${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '15 * * * *',
+          scheduleHuman: 'Every 1 hour (at minute 15)',
+          description: 'Renders and uploads latest news video to YouTube Shorts with viral tags.',
+        },
+        {
+          id: 'cleanup',
+          name: '6. Self-Healing Queue Maintenance',
+          path: '/api/cron/cleanup',
+          fullUrl: `${baseUrl}/api/cron/cleanup${secretSuffix}`,
+          method: 'GET / POST',
+          recommendedSchedule: '0 */6 * * *',
+          scheduleHuman: 'Every 6 hours',
+          description: 'Unlocks stuck jobs (>15 min) and resets unposted articles for self-healing queue.',
+        },
+      ],
+    });
+  }
+
+  // If POST without ?job=..., run backward-compatible safe pass
+  const results: any = { timestamp: new Date().toISOString(), legacyPass: true };
+  try {
+    results.rss = await dedupeService.pollAllActiveSources();
   } catch (e: any) {
     results.rssError = e.message;
   }
-
-  // 2. Trigger Google Drive Reel automation for all due channels
   try {
-    const gdriveResult = await gdriveReelService.publishAllDueChannels();
-    results.gdriveReels = gdriveResult;
+    results.gdriveReels = await gdriveReelService.publishAllDueChannels();
   } catch (e: any) {
     results.gdriveError = e.message;
   }
-
   res.json({ success: true, ...results });
 });
 
@@ -1552,7 +2088,7 @@ apiRouter.post('/queue/reset-unposted', async (req: Request, res: Response) => {
       ],
     }).toArray();
 
-    const articleIds = Array.from(new Set(unpostedLogs.map((l) => l.articleId).filter(Boolean)));
+    const articleIds = Array.from(new Set(unpostedLogs.map((l: PostLog) => l.articleId).filter(Boolean)));
 
     if (unpostedLogs.length > 0) {
       await db.collection('post_logs').updateMany(

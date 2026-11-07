@@ -8,7 +8,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BD News 24/7 - Facebook Automation 3D Control Center</title>
+  <title>BD News 24/7 - Facebook Automation Control Center</title>
   <link rel="icon" type="image/png" href="/assets/images/favicon.png">
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/assets/images/favicon.png">
@@ -48,27 +48,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             }
           },
           boxShadow: {
-            'glow-red': '0 0 30px -5px rgba(239, 68, 68, 0.35)',
-            'glow-cyan': '0 0 30px -5px rgba(6, 182, 212, 0.35)',
-            'glow-emerald': '0 0 30px -5px rgba(16, 185, 129, 0.35)',
-            'glow-purple': '0 0 30px -5px rgba(168, 85, 247, 0.35)',
-            '3d-card': '0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-            '3d-elevate': '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 25px -5px rgba(239, 68, 68, 0.25)',
-          },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'float-slow': 'float 6s ease-in-out infinite',
-            'radar': 'radar 2s infinite linear',
-          },
-          keyframes: {
-            float: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-6px)' },
-            },
-            radar: {
-              '0%': { transform: 'scale(0.8)', opacity: '0.8' },
-              '100%': { transform: 'scale(2.2)', opacity: '0' },
-            }
+            'glow-red': '0 0 25px -5px rgba(239, 68, 68, 0.35)',
+            'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.35)',
+            'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.35)',
+            'glow-purple': '0 0 25px -5px rgba(168, 85, 247, 0.35)',
+            '3d-card': '0 12px 30px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
           }
         }
       }
@@ -84,150 +68,125 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     .bn { font-family: 'Hind Siliguri', sans-serif; }
     .mono { font-family: 'JetBrains Mono', monospace; }
 
-    /* Custom Futuristic Scrollbar */
-    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: #030712; }
     ::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, #1f2937, #374151);
+      background: #1f2937;
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
 
-    /* 3D Glassmorphism Panel */
+    /* Glassmorphism Panel */
     .glass-panel {
       background: rgba(11, 17, 32, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: all 0.25s ease;
     }
     .glass-panel:hover {
-      border-color: rgba(239, 68, 68, 0.25);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      border-color: rgba(239, 68, 68, 0.2);
     }
 
-    /* 3D Tilt Card Container */
-    .tilt-card {
-      transform-style: preserve-3d;
-      perspective: 1000px;
-      transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1);
-    }
-    .tilt-card-inner {
-      transform: translateZ(25px);
-    }
-
-    /* Animated Ambient Nebula Background */
+    /* Ambient Nebulas */
     .ambient-glow-1 {
       position: fixed;
-      top: -150px;
+      top: -120px;
       left: 15%;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, rgba(220, 38, 38, 0) 70%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
       filter: blur(80px);
       z-index: 0;
       pointer-events: none;
-      animation: float 9s ease-in-out infinite alternate;
     }
     .ambient-glow-2 {
       position: fixed;
-      bottom: -150px;
+      bottom: -120px;
       right: 10%;
-      width: 700px;
-      height: 700px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(6, 182, 212, 0) 70%);
-      filter: blur(90px);
-      z-index: 0;
-      pointer-events: none;
-      animation: float 11s ease-in-out infinite alternate-reverse;
-    }
-    .ambient-glow-3 {
-      position: fixed;
-      top: 40%;
-      right: 25%;
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, rgba(168, 85, 247, 0) 70%);
-      filter: blur(95px);
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%);
+      filter: blur(85px);
       z-index: 0;
       pointer-events: none;
     }
 
-    /* Cyber Grid Matrix Background */
+    /* Cyber Grid */
     .cyber-grid {
       position: fixed;
       inset: 0;
-      background-size: 50px 50px;
+      background-size: 40px 40px;
       background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
       mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, transparent 80%);
       -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, transparent 80%);
       z-index: 0;
       pointer-events: none;
     }
 
-    /* Tab Switch Slide Animation */
+    /* Tab Switch Animation */
     .tab-content {
-      animation: tabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: tabFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes tabFadeIn {
-      from { opacity: 0; transform: translateY(8px) scale(0.995); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col relative selection:bg-red-500 selection:text-white">
 
-  <!-- Ambient 3D Glow Orbs -->
+  <!-- Ambient Glow & Grid -->
   <div class="ambient-glow-1"></div>
   <div class="ambient-glow-2"></div>
-  <div class="ambient-glow-3"></div>
   <div class="cyber-grid"></div>
 
-  <!-- Interactive 3D Particle Canvas -->
-  <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+  <!-- Background Particles -->
+  <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-30"></canvas>
 
-  <!-- Top Glassmorphic Navbar -->
-  <header class="border-b border-slate-800/80 bg-slate-950/75 backdrop-blur-2xl sticky top-0 z-50 transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  <!-- Compact Top Navbar (Height 56px / h-14) -->
+  <header class="border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
       
       <!-- Logo & Brand Header -->
-      <div class="flex items-center space-x-3.5 group cursor-pointer" onclick="switchTab('overview')">
+      <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchTab('overview')">
         <div class="relative">
-          <div class="absolute -inset-1 bg-gradient-to-r from-red-600 to-amber-600 rounded-full blur opacity-70 group-hover:opacity-100 transition duration-300"></div>
-          <img src="/assets/images/favicon.png" alt="BD News 24/7" class="relative w-9 h-9 rounded-full object-cover border border-red-500/80 shadow-glow-red transform group-hover:scale-105 transition-all duration-300" />
+          <div class="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-amber-600 rounded-full blur opacity-60 group-hover:opacity-90 transition duration-300"></div>
+          <img src="/assets/images/favicon.png" alt="BD News 24/7" class="relative w-8 h-8 rounded-full object-cover border border-red-500/80 shadow-glow-red" />
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="font-black text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">BD News 24/7</span>
-            <span class="px-2 py-0.5 text-[10px] font-mono tracking-wider font-bold rounded-md bg-red-950/80 text-red-400 border border-red-800/60 shadow-sm uppercase">v2.0 Pro</span>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-base tracking-tight text-white">BD News 24/7</span>
+            <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-red-950/80 text-red-400 border border-red-800/60 uppercase">v2.0 Pro</span>
           </div>
-          <p class="text-xs text-slate-400 font-medium hidden sm:block">Autonomous Meta Graph API & Visual Engine</p>
+          <p class="text-[10px] text-slate-400 font-medium hidden sm:block">Meta Automation Engine</p>
         </div>
       </div>
 
-      <!-- Action Controls & Status Indicator -->
-      <div class="flex items-center space-x-2.5 sm:space-x-3.5">
+      <!-- Action Controls -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
         <!-- Live / Sandbox Badge -->
-        <div class="relative group">
+        <div class="relative">
           <div id="status-pulse-radar" class="absolute -inset-1 rounded-full bg-emerald-500 opacity-20 animate-ping hidden"></div>
-          <span id="dry-run-badge" class="relative px-3.5 py-1.5 text-xs font-semibold rounded-full bg-slate-900 text-slate-300 border border-slate-700/80 shadow-md flex items-center gap-2">
+          <span id="dry-run-badge" class="relative px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-900 text-slate-300 border border-slate-700/80 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span>Checking Engine...</span>
+            <span>Checking...</span>
           </span>
         </div>
 
         <!-- Poll RSS Button -->
-        <button onclick="triggerPollNow()" class="group relative px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-cyan-500/50 flex items-center gap-2 transition-all duration-300 shadow-md hover:shadow-glow-cyan active:scale-95">
-          <svg class="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <button onclick="triggerPollNow()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-cyan-500/50 flex items-center gap-1.5 transition active:scale-95 shadow-sm">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           <span class="hidden sm:inline">Poll RSS</span>
         </button>
 
-        <!-- Publish Next Article Button (Hero CTA) -->
-        <button onclick="publishNextNow()" class="group relative px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white flex items-center gap-2 transition-all duration-300 shadow-glow-red hover:shadow-3d-elevate transform active:scale-95 border border-red-400/30">
-          <svg class="w-3.5 h-3.5 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        <!-- Publish Now Button -->
+        <button onclick="publishNextNow()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white flex items-center gap-1.5 transition active:scale-95 shadow-glow-red border border-red-400/30">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
           <span>Publish Now</span>
         </button>
       </div>
@@ -235,211 +194,193 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
   </header>
 
-  <!-- Navigation Glass Tabs -->
-  <div class="border-b border-slate-800/80 bg-slate-950/40 backdrop-blur-md sticky top-20 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1.5 sm:space-x-2 overflow-x-auto py-1.5 no-scrollbar">
-      <button onclick="switchTab('overview')" class="tab-btn active px-3 py-1.5 text-xs font-semibold rounded-lg text-red-400 bg-red-950/40 border border-red-800/50 shadow-inner flex items-center gap-2 transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+  <!-- Compact Sticky Navigation Tabs Bar -->
+  <div class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-14 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex space-x-1 sm:space-x-1.5 overflow-x-auto py-1.5 no-scrollbar">
+      <button onclick="switchTab('overview')" class="tab-btn active px-3 py-1.5 text-xs font-semibold rounded-lg text-red-400 bg-red-950/40 border border-red-800/50 shadow-inner flex items-center gap-1.5 transition whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         Overview
       </button>
-      <button onclick="switchTab('queue')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      <button onclick="switchTab('queue')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
         Queue & Logs
       </button>
-      <button onclick="switchTab('sources')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+      <button onclick="switchTab('sources')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
         RSS Sources
       </button>
-      <button onclick="switchTab('pages')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        Facebook Pages
+      <button onclick="switchTab('pages')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Pages
       </button>
-      <button onclick="switchTab('groups')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        <span>Groups (গ্রুপ শেয়ার)</span>
+      <button onclick="switchTab('groups')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Groups
       </button>
-      <button onclick="switchTab('reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-        <span>🎬 Reels (রিলস)</span>
+      <button onclick="switchTab('reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        Reels Studio
       </button>
-      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-        <span>☁️ Google Drive Reels</span>
-        <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30 font-mono">24/7 Vercel</span>
+      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+        Drive Reels
       </button>
-      <button onclick="switchTab('youtube')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        <span>📺 YouTube (ইউটিউব শর্টস)</span>
+      <button onclick="switchTab('youtube')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        YouTube Shorts
       </button>
-      <button onclick="switchTab('preview')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-        Template Preview
+      <button onclick="switchTab('preview')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Preview
       </button>
-      <button onclick="switchTab('settings')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <button onclick="switchTab('settings')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
       </button>
     </div>
   </div>
 
   <!-- Main Content Stage -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex-1 w-full relative z-10">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex-1 w-full relative z-10 space-y-4">
 
     <!-- 1. OVERVIEW TAB -->
-    <div id="tab-overview" class="tab-content space-y-4 sm:space-y-5">
+    <div id="tab-overview" class="tab-content space-y-4">
       
-      <!-- 3D Holographic Stat Cards Grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <!-- 4 Stat Cards Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         <!-- Card 1: Pending Queue -->
-        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
-          <div class="tilt-card-inner">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-400/90 font-mono">Pending Jobs</span>
-              <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
-                <svg class="w-5 h-5 animate-spin" style="animation-duration: 8s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400 font-mono">Pending Jobs</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <svg class="w-4 h-4 animate-spin" style="animation-duration: 8s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <div id="stat-pending" class="text-3xl sm:text-4xl font-extrabold mt-3 text-white tracking-tight font-mono">0</div>
-            <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-              Awaiting automatic schedule
-            </div>
+          </div>
+          <div id="stat-pending" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            Awaiting schedule
           </div>
         </div>
 
         <!-- Card 2: Published Successfully -->
-        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
-          <div class="tilt-card-inner">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400/90 font-mono">Published Live</span>
-              <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">Published Live</span>
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <div id="stat-published" class="text-3xl sm:text-4xl font-extrabold mt-3 text-white tracking-tight font-mono">0</div>
-            <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Live on Meta Facebook Page
-            </div>
+          </div>
+          <div id="stat-published" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Live on Facebook
           </div>
         </div>
 
         <!-- Card 3: Active RSS Feeds -->
-        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all"></div>
-          <div class="tilt-card-inner">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-cyan-400/90 font-mono">Active Feeds</span>
-              <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </div>
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 font-mono">Active Feeds</span>
+            <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <div id="stat-sources" class="text-3xl sm:text-4xl font-extrabold mt-3 text-white tracking-tight font-mono">0</div>
-            <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-              bdnews.site / News sources
-            </div>
+          </div>
+          <div id="stat-sources" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            RSS news sources
           </div>
         </div>
 
         <!-- Card 4: Connected Facebook Pages -->
-        <div class="tilt-card glass-panel rounded-2xl p-4 sm:p-5 relative overflow-hidden group cursor-pointer" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
-          <div class="tilt-card-inner">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-purple-400/90 font-mono">Connected Pages</span>
-              <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-              </div>
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400 font-mono">Connected Pages</span>
+            <div class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             </div>
-            <div id="stat-pages" class="text-3xl sm:text-4xl font-extrabold mt-3 text-white tracking-tight font-mono">0</div>
-            <div class="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-              BD News 24/7 Official
-            </div>
+          </div>
+          <div id="stat-pages" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            Target Facebook Pages
           </div>
         </div>
 
       </div>
 
-      <!-- Core Engine Status & Architecture Flow -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Engine Specs & Pipeline Overview Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
         <!-- Engine Status -->
-        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-white flex items-center gap-2.5">
-              <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </span>
-              Engine Specifications & Safeguards
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Engine Specifications
             </h3>
-            <span class="text-[11px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">Operational</span>
+            <span class="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60">Operational</span>
           </div>
 
-          <div class="space-y-3.5 text-xs sm:text-sm text-slate-300">
-            <div class="flex justify-between items-center py-2 border-b border-slate-800/80">
-              <span class="text-slate-400">Headless Renderer:</span>
-              <span class="font-mono text-xs text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/50">Playwright Chromium + Canva Replica</span>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Renderer:</span>
+              <span class="font-mono text-[11px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40">Playwright Chromium + Canva</span>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-slate-800/80">
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
               <span class="text-slate-400">Bangla Typography:</span>
-              <span class="text-emerald-400 font-semibold flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Noto Sans Bengali & Hind Siliguri (Active)
-              </span>
+              <span class="text-emerald-400 font-medium">Noto Sans Bengali & Hind Siliguri</span>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-slate-800/80">
-              <span class="text-slate-400">Database Engine:</span>
-              <span class="text-purple-400 font-mono text-xs font-semibold">MongoDB Atlas (Vercel Serverless Pool)</span>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Database:</span>
+              <span class="text-purple-400 font-mono text-[11px]">MongoDB Atlas Serverless</span>
             </div>
-            <div class="flex justify-between items-center py-2 border-b border-slate-800/80">
-              <span class="text-slate-400">Anti-Spam Human Jitter:</span>
-              <span class="text-amber-300 font-mono text-xs">Dynamic Jitter Enabled (Safe Post Delivery)</span>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Anti-Spam Jitter:</span>
+              <span class="text-amber-300 font-mono text-[11px]">Dynamic Jitter Enabled</span>
             </div>
-            <div class="flex justify-between items-center py-2">
-              <span class="text-slate-400">Meta Privacy Policy:</span>
-              <a href="/privacy" target="_blank" class="text-rose-400 hover:text-rose-300 font-mono text-xs underline flex items-center gap-1">
-                /privacy (Live Compliant) ↗
-              </a>
+            <div class="flex justify-between items-center py-1.5">
+              <span class="text-slate-400">Meta Compliance:</span>
+              <a href="/privacy" target="_blank" class="text-rose-400 hover:text-rose-300 font-mono text-[11px] underline">/privacy (Live Compliant) ↗</a>
             </div>
           </div>
         </div>
 
-        <!-- 3D Pipeline Blueprint Flow -->
-        <div class="glass-panel rounded-2xl p-6 relative overflow-hidden">
-          <h3 class="text-base font-bold text-white mb-5 flex items-center gap-2">
-            <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-            Automated Pipeline Blueprint
-          </h3>
+        <!-- Pipeline Steps -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              Automated Pipeline Blueprint
+            </h3>
+            <span class="text-[10px] font-mono text-slate-400">5 Continuous Steps</span>
+          </div>
           
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-cyan-900/40 hover:border-cyan-500/50 transition">
-              <div class="text-cyan-400 font-bold mb-1">Step 1: RSS Ingestion</div>
-              <div class="text-slate-400 text-[11px]">GUID dedupe, title extraction, and age filtering.</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+              <div class="text-cyan-400 font-bold mb-0.5 text-[11px]">1. RSS Ingestion</div>
+              <div class="text-slate-400 text-[10px]">GUID dedupe & age filter</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-purple-900/40 hover:border-purple-500/50 transition">
-              <div class="text-purple-400 font-bold mb-1">Step 2: Queue Matrix</div>
-              <div class="text-slate-400 text-[11px]">FIFO schedule with backoff retry safeguards.</div>
+            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+              <div class="text-purple-400 font-bold mb-0.5 text-[11px]">2. Queue Matrix</div>
+              <div class="text-slate-400 text-[10px]">FIFO schedule & retries</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-amber-900/40 hover:border-amber-500/50 transition">
-              <div class="text-amber-400 font-bold mb-1">Step 3: 3D Canva Renderer</div>
-              <div class="text-slate-400 text-[11px]">Auto-fit Bengali typography into high-res banner.</div>
+            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+              <div class="text-amber-400 font-bold mb-0.5 text-[11px]">3. Canva Banner</div>
+              <div class="text-slate-400 text-[10px]">Auto-fit Bengali card</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-emerald-900/40 hover:border-emerald-500/50 transition">
-              <div class="text-emerald-400 font-bold mb-1">Step 4: Facebook Publishing</div>
-              <div class="text-slate-400 text-[11px]">Direct photo upload & clean caption without links.</div>
+            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+              <div class="text-emerald-400 font-bold mb-0.5 text-[11px]">4. FB Publishing</div>
+              <div class="text-slate-400 text-[10px]">Clean photo & caption</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-950/70 border border-blue-900/40 hover:border-blue-500/50 transition col-span-1 sm:col-span-2 flex items-center justify-between">
+            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 col-span-1 sm:col-span-2 flex items-center justify-between">
               <div>
-                <div class="text-blue-400 font-bold mb-0.5">Step 5: First-Comment Engagement</div>
-                <div class="text-slate-400 text-[11px]">Instant post comment containing clean verified article URL.</div>
+                <div class="text-blue-400 font-bold mb-0.5 text-[11px]">5. First-Comment Link</div>
+                <div class="text-slate-400 text-[10px]">Instant comment with verified news article link</div>
               </div>
-              <span class="text-lg">💬</span>
+              <span class="text-base">💬</span>
             </div>
           </div>
         </div>
@@ -449,39 +390,46 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 2. QUEUE & LOGS TAB -->
-    <div id="tab-queue" class="tab-content hidden space-y-4 sm:space-y-5">
+    <div id="tab-queue" class="tab-content hidden space-y-4">
       
       <!-- Queue Section -->
-      <div>
-        <div class="flex justify-between items-center mb-4">
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
           <div>
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
               Active Queue Execution Pipeline
             </h2>
-            <p class="text-xs text-slate-400">Scheduled articles waiting for Facebook dispatch</p>
+            <p class="text-[11px] text-slate-400">Scheduled articles waiting for Facebook dispatch</p>
           </div>
-          <button onclick="loadQueue()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-600 transition flex items-center gap-1.5 shadow-sm active:scale-95">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Refresh
-          </button>
+          <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-cyan-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-300">
+              <span class="text-slate-500">Cron:</span>
+              <span class="font-bold">/api/cron/publish</span>
+              <button onclick="copyCronUrl('/api/cron/publish', this)" class="text-[10px] text-cyan-400 hover:text-white px-1.5 py-0.5 rounded bg-cyan-950 hover:bg-cyan-800 border border-cyan-700/50 transition">Copy</button>
+            </div>
+            <button onclick="loadQueue()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 active:scale-95 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl">
+        <div class="glass-panel rounded-xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-300">
-              <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/90 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
                 <tr>
-                  <th class="px-5 py-3.5">Status</th>
-                  <th class="px-5 py-3.5">News Headline</th>
-                  <th class="px-5 py-3.5">Target Page</th>
-                  <th class="px-5 py-3.5">Attempts</th>
-                  <th class="px-5 py-3.5">Schedule Time</th>
-                  <th class="px-5 py-3.5 text-right">Action</th>
+                  <th class="px-3.5 py-2.5">Status</th>
+                  <th class="px-3.5 py-2.5">Headline</th>
+                  <th class="px-3.5 py-2.5">Page</th>
+                  <th class="px-3.5 py-2.5">Attempts</th>
+                  <th class="px-3.5 py-2.5">Schedule</th>
+                  <th class="px-3.5 py-2.5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody id="queue-table-body" class="divide-y divide-slate-800/60 font-sans">
-                <tr><td colspan="6" class="px-5 py-8 text-center text-slate-500 font-mono text-xs">Loading queue pipeline...</td></tr>
+                <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Loading queue pipeline...</td></tr>
               </tbody>
             </table>
           </div>
@@ -490,35 +438,35 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       </div>
 
       <!-- Execution Logs Section -->
-      <div>
-        <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="space-y-2 pt-2">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Recent Execution Logs & Facebook Telemetry
+              Execution Logs & FB Telemetry
             </h3>
-            <p class="text-xs text-slate-400">Click on any FB Post ID to inspect directly on Facebook</p>
+            <p class="text-[11px] text-slate-400">Click any Facebook Post ID to inspect directly</p>
           </div>
-          <button onclick="resetUnpostedArticles()" id="btn-reset-unposted" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-amber-600/20 text-slate-300 hover:text-amber-400 border border-slate-700/80 hover:border-amber-500/50 transition active:scale-95 flex items-center gap-1.5 self-start sm:self-auto" title="Fix and re-queue any articles whose publication had empty post IDs">
+          <button onclick="resetUnpostedArticles()" id="btn-reset-unposted" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-400 border border-slate-700 transition active:scale-95 flex items-center gap-1.5 self-start sm:self-auto" title="Re-queue unposted items">
             <span>🔄</span>
-            <span>Re-queue Unposted Articles</span>
+            <span>Re-queue Unposted</span>
           </button>
         </div>
 
-        <div class="glass-panel rounded-2xl overflow-hidden shadow-2xl">
+        <div class="glass-panel rounded-xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-300">
-              <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/90 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
                 <tr>
-                  <th class="px-5 py-3.5">Status</th>
-                  <th class="px-5 py-3.5">Article Title</th>
-                  <th class="px-5 py-3.5">Facebook Post ID</th>
-                  <th class="px-5 py-3.5">Execution Duration</th>
-                  <th class="px-5 py-3.5">Published At</th>
+                  <th class="px-3.5 py-2.5">Status</th>
+                  <th class="px-3.5 py-2.5">Article Title</th>
+                  <th class="px-3.5 py-2.5">Facebook Post ID</th>
+                  <th class="px-3.5 py-2.5">Duration</th>
+                  <th class="px-3.5 py-2.5">Published At</th>
                 </tr>
               </thead>
               <tbody id="logs-table-body" class="divide-y divide-slate-800/60 font-sans">
-                <tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-mono text-xs">Loading publication history...</td></tr>
+                <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Loading logs history...</td></tr>
               </tbody>
             </table>
           </div>
@@ -529,52 +477,56 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 3. RSS SOURCES TAB -->
-    <div id="tab-sources" class="tab-content hidden space-y-4 sm:space-y-5">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div id="tab-sources" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         <!-- Add Source Form -->
-        <div class="glass-panel p-6 rounded-2xl h-fit">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center font-bold">📡</div>
-            <h3 class="text-base font-bold text-white">Add RSS Feed Source</h3>
+        <div class="glass-panel p-4 sm:p-5 rounded-xl h-fit space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+            <div class="w-7 h-7 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center font-bold text-xs">📡</div>
+            <h3 class="text-sm font-bold text-white">Add RSS Source</h3>
           </div>
           
-          <form id="add-source-form" onsubmit="handleAddSource(event)" class="space-y-4">
+          <form id="add-source-form" onsubmit="handleAddSource(event)" class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Source Name</label>
-              <input type="text" id="source-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Source Name</label>
+              <input type="text" id="source-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">RSS Feed URL</label>
-              <input type="url" id="source-url" required placeholder="https://bdnews.site/rss.php" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition font-mono text-xs">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">RSS URL</label>
+              <input type="url" id="source-url" required placeholder="https://bdnews.site/rss.php" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition font-mono">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Destination Facebook Page</label>
-              <select id="source-page" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Target Page</label>
+              <select id="source-page" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
                 <option value="">Select Connected Page</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Design Template</label>
-              <select id="source-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Design Template</label>
+              <select id="source-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
                 <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
                 <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
                 <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
                 <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
               </select>
             </div>
-            <button type="submit" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm shadow-glow-red transition active:scale-95">Save Source</button>
+            <button type="submit" class="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Source</button>
           </form>
         </div>
 
         <!-- Sources List -->
-        <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-bold text-white">Configured Feed Pipelines</h3>
-            <span class="text-xs text-slate-500 font-mono">Continuous Auto-Ingest</span>
+        <div class="lg:col-span-2 glass-panel rounded-xl p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white">Configured Feed Pipelines</h3>
+            <div class="flex items-center gap-1.5 bg-slate-950/80 border border-red-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300">
+              <span class="text-slate-500">Cron:</span>
+              <span class="font-bold">/api/cron/rss</span>
+              <button onclick="copyCronUrl('/api/cron/rss', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
+            </div>
           </div>
-          <div id="sources-list" class="space-y-2.5">
-            <div class="text-sm text-slate-500 font-mono">Loading sources...</div>
+          <div id="sources-list" class="space-y-2">
+            <div class="text-xs text-slate-500 font-mono">Loading sources...</div>
           </div>
           <div id="sources-pagination"></div>
         </div>
@@ -583,141 +535,133 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
     <!-- 4. FACEBOOK PAGES TAB -->
-    <div id="tab-pages" class="tab-content hidden space-y-4 sm:space-y-5">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div id="tab-pages" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         <!-- Add Page Form -->
-        <div class="glass-panel p-6 rounded-2xl h-fit">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">f</div>
-            <h3 class="text-base font-bold text-white">Connect Facebook Page</h3>
+        <div class="glass-panel p-4 sm:p-5 rounded-xl h-fit space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+            <div class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">f</div>
+            <h3 class="text-sm font-bold text-white">Connect Facebook Page</h3>
           </div>
           
-          <form id="add-page-form" onsubmit="handleAddPage(event)" class="space-y-4">
+          <form id="add-page-form" onsubmit="handleAddPage(event)" class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Page ID</label>
-              <input type="text" id="page-id" required placeholder="e.g. 1405135646008133" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-mono transition">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Page Name / Label</label>
-              <input type="text" id="page-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page ID</label>
+              <input type="text" id="page-id" required placeholder="e.g. 1405135646008133" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 font-mono transition">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Page Access Token</label>
-              <textarea id="page-token" rows="3" required placeholder="EAA..." class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"></textarea>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page Name</label>
+              <input type="text" id="page-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition">
             </div>
-            <div class="flex gap-2.5">
-              <button type="button" onclick="testPageToken()" class="w-1/2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-700 transition active:scale-95">Test Token</button>
-              <button type="submit" class="w-1/2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-xs font-bold text-white shadow-glow-red transition active:scale-95">Save Page</button>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page Access Token</label>
+              <textarea id="page-token" rows="3" required placeholder="EAA..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 transition"></textarea>
             </div>
-            <div id="token-test-result" class="text-xs p-3.5 rounded-xl bg-slate-950 border border-slate-800 hidden font-mono"></div>
+            <div class="flex gap-2">
+              <button type="button" onclick="testPageToken()" class="w-1/2 py-2 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-700 transition active:scale-95">Test</button>
+              <button type="submit" class="w-1/2 py-2 px-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-xs font-bold text-white shadow-glow-red transition active:scale-95">Save</button>
+            </div>
+            <div id="token-test-result" class="text-xs p-2.5 rounded-lg bg-slate-950 border border-slate-800 hidden font-mono"></div>
           </form>
         </div>
 
-        <!-- Pages List & Meta Live Mode Guidance -->
-        <div class="lg:col-span-2 glass-panel rounded-2xl p-6 space-y-5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-              Connected Facebook Target Pages
+        <!-- Pages List -->
+        <div class="lg:col-span-2 glass-panel rounded-xl p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              Connected Target Pages
             </h3>
-            <a href="/privacy" target="_blank" class="text-xs text-rose-400 hover:text-rose-300 font-mono underline">View Privacy Policy ↗</a>
+            <a href="/privacy" target="_blank" class="text-xs text-rose-400 hover:text-rose-300 font-mono underline">Privacy Policy ↗</a>
           </div>
           
-          <!-- Live Visibility Tips Banner -->
-          <div class="p-4 bg-slate-950/90 border border-slate-800/90 rounded-xl text-xs space-y-2 text-slate-300 shadow-inner">
-            <div class="font-bold text-amber-400 flex items-center gap-2">
-              <span class="text-base">💡</span> Meta Graph API Operational Tips:
+          <!-- Tips Banner -->
+          <div class="p-3 bg-slate-950/80 border border-slate-800/80 rounded-lg text-xs text-slate-300 space-y-1">
+            <div class="font-bold text-amber-400 flex items-center gap-1.5 text-[11px]">
+              <span>💡</span> Meta Live Mode Active
             </div>
-            <ul class="list-disc list-inside space-y-1 text-slate-400 pl-1 leading-relaxed">
-              <li><strong class="text-slate-200">Live Mode Active:</strong> Your Meta App is now switched to <strong>Live mode</strong>. Published posts are instantly visible to the public!</li>
-              <li><strong class="text-slate-200">Page Identity:</strong> Tokens are verified to publish natively as <strong>BD News 24/7</strong> on the public Page timeline.</li>
-            </ul>
+            <p class="text-[11px] text-slate-400">Tokens are verified to post natively on the Page feed and stories with full public visibility.</p>
           </div>
 
-          <div id="pages-list" class="space-y-3.5">
-            <div class="text-sm text-slate-500 font-mono">Loading connected pages...</div>
+          <div id="pages-list" class="space-y-2">
+            <div class="text-xs text-slate-500 font-mono">Loading connected pages...</div>
           </div>
+          <div id="pages-pagination"></div>
         </div>
 
       </div>
     </div>
 
-    <!-- 4.5. FACEBOOK GROUPS AUTO-SHARE TAB -->
-    <div id="tab-groups" class="tab-content hidden space-y-4 sm:space-y-5">
+    <!-- 5. FACEBOOK GROUPS AUTO-SHARE TAB -->
+    <div id="tab-groups" class="tab-content hidden space-y-4">
       
       <!-- Header Banner & Action Button -->
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-emerald-500/20 shadow-glow-emerald">
-        <div class="space-y-2">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Smart Audience Targeting
+      <div class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-emerald-500/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-extrabold text-white">Facebook Groups Auto-Share</h2>
+            <span class="text-[10px] text-emerald-400 font-bengali bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">গ্রুপ অটো-শেয়ার</span>
           </div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <span>Facebook Groups Auto-Sharing</span>
-            <span class="text-sm font-normal text-emerald-400 font-bengali bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-800/40">গ্রুপ অটো-শেয়ার</span>
-          </h2>
-          <p class="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            স্বয়ংক্রিয়ভাবে আপনার পেজে প্রকাশিত সংবাদ পোস্ট ক্যাটাগরি ও কিওয়ার্ড মিলিয়ে প্রাসঙ্গিক ফেসবুক গ্রুপে শেয়ার করুন। প্রতি গ্রুপে অ্যান্টি-স্প্যাম নিরাপদ ডিলে নিশ্চিত করা হয়।
-          </p>
+          <p class="text-xs text-slate-400 mt-0.5">স্বয়ংক্রিয়ভাবে প্রকাশিত সংবাদ প্রাসঙ্গিক ফেসবুক গ্রুপে নিরাপদে শেয়ার করুন।</p>
         </div>
 
-        <!-- Add Group Button -->
-        <button onclick="openAddGroupModal()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center gap-2.5 shadow-lg shadow-emerald-950/60 transition-all duration-300 transform hover:scale-105 active:scale-95 border border-emerald-400/30 whitespace-nowrap">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          <span>Add Facebook Group (গ্রুপ যুক্ত করুন)</span>
+        <button onclick="openAddGroupModal()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95 border border-emerald-400/30 whitespace-nowrap self-start sm:self-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Add Facebook Group</span>
         </button>
       </div>
 
       <!-- Quick Stats Row -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-slate-400">Total Configured</div>
-          <div id="stat-groups-total" class="text-2xl font-black text-white mt-1">0</div>
-          <div class="text-[11px] text-slate-500 mt-1">Registered targets</div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-slate-400">Total Configured</div>
+          <div id="stat-groups-total" class="text-xl font-black text-white mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Target groups</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-emerald-400">Auto-Share Active</div>
-          <div id="stat-groups-active" class="text-2xl font-black text-emerald-400 mt-1">0</div>
-          <div class="text-[11px] text-slate-500 mt-1">Broadcasting live</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-emerald-400">Auto-Share Active</div>
+          <div id="stat-groups-active" class="text-xl font-black text-emerald-400 mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Active broadcasting</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-cyan-400">Total Executed Shares</div>
-          <div id="stat-groups-shares" class="text-2xl font-black text-cyan-400 mt-1">0</div>
-          <div class="text-[11px] text-slate-500 mt-1">Posts shared to groups</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-cyan-400">Total Shares</div>
+          <div id="stat-groups-shares" class="text-xl font-black text-cyan-400 mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Shared posts</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-amber-400">Anti-Spam Safeguard</div>
-          <div class="text-2xl font-black text-amber-400 mt-1">5s Safe Jitter</div>
-          <div class="text-[11px] text-slate-500 mt-1">Meta rate-limit protected</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-amber-400">Anti-Spam Safeguard</div>
+          <div class="text-xl font-black text-amber-400 mt-1">5s Safe Jitter</div>
+          <div class="text-[10px] text-slate-500">Rate-limit protected</div>
         </div>
       </div>
 
-      <!-- Configured Groups List / Grid -->
-      <div class="space-y-4">
+      <!-- Configured Groups Container -->
+      <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-200 flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            Active Facebook Group Targets
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Active Group Targets
           </h3>
-          <span class="text-xs font-mono text-slate-400">Auto-matches Category & Keywords</span>
+          <span class="text-[10px] font-mono text-slate-400">Category & Keyword Matching</span>
         </div>
 
-        <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="text-sm text-slate-500 font-mono col-span-full py-8 text-center glass-panel rounded-2xl">
+        <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="text-xs text-slate-500 font-mono col-span-full py-6 text-center glass-panel rounded-xl">
             Loading configured Facebook groups...
           </div>
         </div>
+        <div id="groups-pagination"></div>
       </div>
 
       <!-- Recent Group Share Logs Table -->
-      <div class="glass-panel rounded-2xl p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <span class="text-base">📋</span>
-            <span>Recent Group Share Logs (সর্বশেষ গ্রুপ শেয়ার হিস্ট্রি)</span>
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📋</span>
+            <span>Recent Group Share Logs</span>
           </h3>
-          <button onclick="loadGroupShares()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1.5 transition">
+          <button onclick="loadGroupShares()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1 transition">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Refresh
           </button>
@@ -726,13 +670,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs font-mono">
             <thead>
-              <tr class="border-b border-slate-800 text-slate-400">
-                <th class="pb-3 font-semibold">Article Headline</th>
-                <th class="pb-3 font-semibold">Target Group</th>
-                <th class="pb-3 font-semibold">FB Post ID</th>
-                <th class="pb-3 font-semibold">Duration</th>
-                <th class="pb-3 font-semibold">Time</th>
-                <th class="pb-3 font-semibold">Status</th>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Headline</th>
+                <th class="py-2 pr-3 font-semibold">Group</th>
+                <th class="py-2 pr-3 font-semibold">FB Post ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Time</th>
+                <th class="py-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody id="group-shares-table-body" class="divide-y divide-slate-800/60 text-slate-300">
@@ -742,277 +686,200 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </tbody>
           </table>
         </div>
+        <div id="group-shares-pagination"></div>
       </div>
 
     </div>
 
-    <!-- 5. TEMPLATE PREVIEW TAB -->
-    <div id="tab-preview" class="tab-content hidden space-y-4 sm:space-y-5">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <!-- Controls -->
-        <div class="lg:col-span-5 glass-panel p-6 rounded-2xl space-y-4 h-fit">
-          <div class="flex items-center gap-2 mb-2">
-            <div class="w-8 h-8 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold">🎨</div>
-            <h3 class="text-base font-bold text-white">Live Canva & Bangla Preview</h3>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Template Style</label>
-            <select id="preview-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
-              <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
-              <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
-              <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Category Badge</label>
-            <input type="text" id="preview-category" value="বিশেষ খবর" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn focus:outline-none focus:border-red-500 transition">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Headline (Bangla Auto-Fit Test)</label>
-            <textarea id="preview-headline" rows="4" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn leading-relaxed focus:outline-none focus:border-red-500 transition">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">News Image URL (Optional)</label>
-            <input type="url" id="preview-image" placeholder="https://... (Leave empty to test placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 transition">
-          </div>
-          <button onclick="renderPreview()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-glow-red transition active:scale-95">
-            <span id="preview-spinner" class="hidden animate-spin">⚪</span>
-            Render Live Preview
-          </button>
-        </div>
-
-        <!-- 3D Preview Stage -->
-        <div class="lg:col-span-7 glass-panel p-6 rounded-2xl flex flex-col items-center justify-center min-h-[540px]">
-          <div class="relative group">
-            <div class="absolute -inset-2 bg-gradient-to-r from-red-600/30 via-rose-600/20 to-amber-600/30 rounded-2xl blur-xl opacity-60 group-hover:opacity-90 transition duration-500"></div>
-            
-            <div id="preview-container" class="relative w-[340px] h-[340px] sm:w-[480px] sm:h-[480px] aspect-square bg-slate-950 rounded-2xl border border-slate-800/80 flex items-center justify-center overflow-hidden shadow-2xl">
-              <div id="preview-placeholder" class="text-slate-500 text-sm text-center px-6 leading-relaxed">
-                <span class="text-3xl block mb-2">🖼️</span>
-                Click <strong>"Render Live Preview"</strong> to view the Canva replica template with Bengali auto-fit
-              </div>
-              <iframe id="preview-frame" class="w-[1080px] h-[1080px] origin-top-left border-0 hidden" style="transform: scale(0.444);" sandbox="allow-scripts allow-same-origin"></iframe>
-              <img id="preview-img" class="w-full h-full object-contain hidden" alt="Preview Result" />
-            </div>
-          </div>
-          
-          <div id="preview-meta" class="mt-4 text-xs font-mono text-slate-400">Ready for rendering</div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- 6. REELS TAB (1080x1080 MP4 News Reels Studio) -->
-    <div id="tab-reels" class="tab-content hidden space-y-4 sm:space-y-5">
+    <!-- 6. REELS STUDIO TAB -->
+    <div id="tab-reels" class="tab-content hidden space-y-4">
       
       <!-- Top Banner & Quick Controls -->
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-rose-500/20 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div class="space-y-1 relative z-10">
-          <div class="flex items-center gap-2.5 flex-wrap">
-            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-rose-950/80 text-rose-400 border border-rose-800/60 uppercase">15 SECONDS • 20 FPS • AAC BROADCAST AUDIO</span>
-            <span class="px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 uppercase">🎬 REELS-ONLY ACTIVE (POSTER DISABLED)</span>
+      <div class="glass-panel p-4 rounded-xl border border-rose-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+              <span>🎬 Reels & Stories Studio</span>
+              <span class="text-[10px] font-normal text-slate-400 font-mono hidden sm:inline">(রিলস ফিডে • পোস্টার স্টোরিজে)</span>
+            </h2>
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
           </div>
-          <h2 class="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <span>🎬 BD News 24/7 Reels & Stories Studio</span>
-            <span class="text-xs font-normal text-slate-400 font-mono hidden sm:inline">(রিলস ফিডে • পোস্টার স্টোরিজে)</span>
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-            ১৫ সেকেন্ডের ফুল মোশন ভিডিও রিল প্রকাশিত হবে সরাসরি <strong>পেজ ফিড ও রিলসে</strong>, আর প্রিমিয়াম জেপিজি নিউজ কার্ডটি পোস্ট হবে <strong>২৪ ঘণ্টার পেজ স্টোরিজে (ফিডে নয়)</strong>।
-          </p>
+          <p class="text-xs text-slate-300">১৫-২০ সেকেন্ডের মোশন রিল পেজ ফিডে এবং জেপিজি কার্ড পেজ স্টোরিজে স্বয়ংক্রিয়ভাবে পাবলিশ হয়।</p>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-shrink-0">
-          <!-- Poster to Stories Only Toggle Card -->
-          <div class="w-full sm:w-auto bg-slate-950/80 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
-            <div class="text-left">
-              <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>Poster to Stories (Not Feed)</span>
-                <span id="stories-poster-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800">ACTIVE</span>
-              </div>
-              <div class="text-[11px] text-slate-400">পোস্টার স্টোরিজে যাবে, ফিডে নয়</div>
-            </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Stories Cron Pill -->
+          <div class="hidden md:flex items-center gap-1.5 bg-slate-950/80 border border-purple-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-purple-300">
+            <span class="text-slate-500">Stories Cron:</span>
+            <span class="font-bold">/api/cron/stories</span>
+            <button onclick="copyCronUrl('/api/cron/stories', this)" class="text-[10px] text-purple-400 hover:text-white px-1.5 py-0.5 rounded bg-purple-950 hover:bg-purple-800 border border-purple-700/50 transition">Copy</button>
+          </div>
+
+          <!-- Stories Toggle -->
+          <div class="bg-slate-950/80 border border-purple-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 shadow">
+            <div class="text-[11px] font-semibold text-white">Poster to Stories</div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" id="toggle-post-stories" checked onchange="handlePostStoriesToggle(this.checked)" class="sr-only peer">
-              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-600"></div>
             </label>
           </div>
 
-          <!-- Auto-Post Reels Toggle Card -->
-          <div class="w-full sm:w-auto bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between sm:justify-start gap-4 shadow-xl">
-            <div class="text-left">
-              <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>Auto-Publish Reels</span>
-                <span id="reels-auto-badge" class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">ACTIVE</span>
-              </div>
-              <div class="text-[11px] text-slate-400">প্রতিটি নিউজের সাথে রিল পোস্ট</div>
-            </div>
+          <!-- Auto-Reels Toggle -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2 shadow">
+            <div class="text-[11px] font-semibold text-white">Auto-Publish Reels</div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" id="toggle-auto-reels" checked onchange="handleAutoReelsToggle(this.checked)" class="sr-only peer">
-              <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-rose-600"></div>
             </label>
           </div>
         </div>
       </div>
 
-      <!-- Quick Metrics Row -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-rose-400">Total Published Reels</div>
-          <div id="stat-reels-count" class="text-2xl font-black text-white mt-1">0</div>
-          <div class="text-[11px] text-slate-500 mt-1">Facebook Reels posted</div>
+      <!-- Metrics Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-rose-400">Published Reels</div>
+          <div id="stat-reels-count" class="text-xl font-black text-white mt-0.5">0</div>
+          <div class="text-[10px] text-slate-500">Facebook Reels</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-cyan-400">Reel Duration</div>
-          <div class="text-2xl font-black text-cyan-400 mt-1">18 Seconds</div>
-          <div class="text-[11px] text-slate-500 mt-1">432 frames @ 24 FPS (15-20s)</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-cyan-400">Reel Duration</div>
+          <div class="text-xl font-black text-cyan-400 mt-0.5">18 Seconds</div>
+          <div class="text-[10px] text-slate-500">15-20s Broadcast sweet spot</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-amber-400">Audio Soundtrack</div>
-          <div class="text-2xl font-black text-amber-400 mt-1">Studio AAC</div>
-          <div class="text-[11px] text-slate-500 mt-1">13 Category Soundscapes (18s)</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-amber-400">Audio Soundtrack</div>
+          <div class="text-xl font-black text-amber-400 mt-0.5">Studio AAC</div>
+          <div class="text-[10px] text-slate-500">13 Category soundscapes</div>
         </div>
-        <div class="glass-panel p-5 rounded-xl border border-slate-800">
-          <div class="text-xs font-mono uppercase text-purple-400">Distribution Mode</div>
-          <div class="text-lg font-black text-purple-400 mt-1">Reels ➜ Feed</div>
-          <div class="text-[11px] text-slate-400 mt-1">JPG Poster ➜ Stories (Not Feed)</div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-purple-400">Distribution Mode</div>
+          <div class="text-base font-black text-purple-400 mt-0.5">Reels ➔ Feed</div>
+          <div class="text-[10px] text-slate-500">Poster ➔ Stories (24h)</div>
         </div>
       </div>
 
-      <!-- 3D Interactive Reel Studio Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <!-- Interactive Reel Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
         <!-- Controls & Input Form -->
-        <div class="lg:col-span-6 glass-panel p-6 sm:p-7 rounded-2xl space-y-5 border border-slate-800/80">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold">🎬</div>
-              <h3 class="text-base font-bold text-white">Reel Generator & Publisher</h3>
+        <div class="lg:col-span-6 glass-panel p-4 sm:p-5 rounded-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-1.5">
+              <div class="w-6 h-6 rounded-md bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎬</div>
+              <h3 class="text-sm font-bold text-white">Reel Generator & Publisher</h3>
             </div>
-            <span class="text-xs font-mono text-slate-500">Live Meta Graph API</span>
+            <span class="text-[10px] font-mono text-slate-400">Live Meta Graph API</span>
           </div>
 
-          <!-- Select Article from Database -->
+          <!-- Select Article -->
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Select From Recent Articles</label>
-            <select id="reel-article-select" onchange="onReelArticleSelected()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
-              <option value="">-- Choose an article or type custom below --</option>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Select From Recent Articles</label>
+            <select id="reel-article-select" onchange="onReelArticleSelected()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+              <option value="">-- Choose article or enter custom below --</option>
             </select>
           </div>
 
-          <!-- Reel Visual Design Theme Selector -->
+          <!-- Theme Selector -->
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
-              <span>Reel Visual Design (রিল ডিজাইন টেমপ্লেট)</span>
-              <span id="reel-theme-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono flex items-center justify-between">
+              <span>Visual Theme</span>
+              <span id="reel-theme-badge" class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
             </label>
-            <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-semibold">
-              <option value="auto-category" selected>⚡ Auto-Category (ক্যাটাগরি অনুযায়ী অটোমেটিক থিম ও সাউন্ড)</option>
-              <option value="rolling">🔄 Rolling Rotation (সবগুলো ঘুরিয়ে ঘুরিয়ে)</option>
-              <optgroup label="13 News Categories (ক্যাটাগরি ভিত্তিক টেমপ্লেট)">
-                <option value="cat-bangladesh">🇧🇩 বাংলাদেশ (জাতীয় সংবাদ - গাঢ় সবুজ ও লাল)</option>
-                <option value="cat-politics">🏛️ রাজনীতি (পলিটিক্স - রয়্যাল বার্গান্ডি ও গোল্ড)</option>
-                <option value="cat-economy">📈 অর্থনীতি (ব্যবসা ও বাণিজ্য - মিডনাইট ব্লু ও টিল)</option>
-                <option value="cat-international">🌐 আন্তর্জাতিক (বিশ্ব সংবাদ - সানসেট ভায়োলেট মেশ)</option>
+            <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-medium">
+              <option value="auto-category" selected>⚡ Auto-Category (ক্যাটাগরি অনুযায়ী থিম ও সাউন্ড)</option>
+              <option value="rolling">🔄 Rolling Rotation (ঘুরিয়ে ঘুরিয়ে)</option>
+              <optgroup label="13 News Categories">
+                <option value="cat-bangladesh">🇧🇩 বাংলাদেশ (জাতীয় - গাঢ় সবুজ ও লাল)</option>
+                <option value="cat-politics">🏛️ রাজনীতি (পলিটিক্স - বার্গান্ডি ও গোল্ড)</option>
+                <option value="cat-economy">📈 অর্থনীতি (ব্যবসা - মিডনাইট ব্লু ও টিল)</option>
+                <option value="cat-international">🌐 আন্তর্জাতিক (বিশ্ব সংবাদ - ভায়োলেট)</option>
                 <option value="cat-sports">⚽ খেলাধুলা (স্পোর্টস - স্যাফায়ার ও অরেঞ্জ)</option>
-                <option value="cat-technology">💻 তথ্যপ্রযুক্তি (টেকনোলজি - সাইবার সায়ান)</option>
+                <option value="cat-technology">💻 তথ্যপ্রযুক্তি (টেক - সাইবার সায়ান)</option>
                 <option value="cat-entertainment">🎬 বিনোদন (শোবিজ - গ্ল্যামার ম্যাজেন্টা)</option>
-                <option value="cat-opinion">✍️ মতামত (সম্পাদকীয় ও কলাম - স্লিক চারকোল)</option>
-                <option value="cat-religion">🕌 ধর্ম (ইসলাম ও ধর্মীয় সংবাদ - গোল্ডেন এমারেল্ড)</option>
-                <option value="cat-education">🎓 শিক্ষা (ক্যাম্পাস ও পড়াশোনা - স্কাই ব্লু)</option>
-                <option value="cat-job">💼 চাকরি (নিয়োগ ও ক্যারিয়ার - সাকসেস টিল)</option>
-                <option value="cat-lifestyle">🌿 জীবনযাপন (স্বাস্থ্য ও লাইফস্টাইল - কোরাল)</option>
-                <option value="cat-todays-match">🔥 আজকের খেলা / বিশেষ সংবাদ (হাই এলার্ট)</option>
+                <option value="cat-opinion">✍️ মতামত (সম্পাদকীয় - স্লিক চারকোল)</option>
+                <option value="cat-religion">🕌 ধর্ম (ইসলাম - গোল্ডেন এমারেল্ড)</option>
+                <option value="cat-education">🎓 শিক্ষা (ক্যাম্পাস - স্কাই ব্লু)</option>
+                <option value="cat-job">💼 চাকরি (ক্যারিয়ার - সাকসেস টিল)</option>
+                <option value="cat-lifestyle">🌿 জীবনযাপন (লাইফস্টাইল - কোরাল)</option>
+                <option value="cat-todays-match">🔥 আজকের খেলা (হাই এলার্ট)</option>
               </optgroup>
-              <optgroup label="Studio Classic Themes (অন্যান্য টেমপ্লেট)">
-                <option value="viral-gradient">🔥 Viral Social Mesh (ভাইরাল সোশ্যাল গ্র্যাডিয়েন্ট - 1080x1080)</option>
-                <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica Studio - 1080x1080)</option>
-                <option value="breaking-bold">⚡ Breaking News TV Flash (ব্রেকিং নিউজ টিভি এলার্ট - 1080x1080)</option>
-                <option value="dark-cinema">🌐 Cinematic Dark Cyber (বিবিসি / রয়টার্স স্টাইল - 1080x1080)</option>
-                <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16 মোবাইল ফুলস্ক্রিন - 1080x1920)</option>
+              <optgroup label="Classic Studio">
+                <option value="viral-gradient">🔥 Viral Social Mesh (1080x1080)</option>
+                <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica)</option>
+                <option value="breaking-bold">⚡ Breaking News TV Flash</option>
+                <option value="dark-cinema">🌐 Cinematic Dark Cyber</option>
+                <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16)</option>
               </optgroup>
             </select>
-            <p id="reel-theme-desc" class="text-[11px] text-slate-400 mt-1">Smart AI Matching: Automatically detects bdnews.site category and applies tailored visual theme and audio profile</p>
+            <p id="reel-theme-desc" class="text-[10px] text-slate-400 mt-1 truncate">Smart AI Matching: Automatically applies tailored theme & sound</p>
           </div>
 
-          <!-- Category Badge -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Category Badge (ক্যাটেগরি)</label>
-            <input type="text" id="reel-category-input" value="বিশেষ খবর" oninput="updateReelFramePreview()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
+          <!-- Category Badge & Headline -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Category</label>
+              <input type="text" id="reel-category-input" value="বিশেষ খবর" oninput="updateReelFramePreview()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Image URL (Optional)</label>
+              <input type="url" id="reel-image-input" onchange="updateReelFramePreview()" placeholder="https://... (Empty for studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+            </div>
           </div>
 
-          <!-- Bengali Headline -->
+          <!-- Headline -->
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Bengali Headline (বাংলা শিরোনাম) <span class="text-rose-400">*</span></label>
-            <textarea id="reel-headline-input" rows="3" oninput="updateReelFramePreviewDebounced()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Bengali Headline <span class="text-rose-400">*</span></label>
+            <textarea id="reel-headline-input" rows="2" oninput="updateReelFramePreviewDebounced()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
           </div>
 
-          <!-- Image URL -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Article Image URL (Optional)</label>
-            <input type="url" id="reel-image-input" onchange="updateReelFramePreview()" placeholder="https://... (Leave empty to use studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+          <!-- Link & Page -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Article Link (1st Comment)</label>
+              <input type="url" id="reel-link-input" placeholder="https://bdnews.site/..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+              <input type="hidden" id="reel-article-id-input" value="">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Page</label>
+              <select id="reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+                <option value="all">Active Default Page (BD News 24/7)</option>
+              </select>
+            </div>
           </div>
 
-          <!-- News Article URL for First Comment -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
-              <span>News Article Link (প্রথম কমেন্টে খবরের লিংক)</span>
-              <span class="text-[10px] font-mono text-emerald-400">First Comment URL</span>
-            </label>
-            <input type="url" id="reel-link-input" placeholder="https://bdnews.site/... (সংবাদের লিংক লিখুন)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
-            <input type="hidden" id="reel-article-id-input" value="">
-          </div>
-
-          <!-- Target Facebook Page -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Target Facebook Page</label>
-            <select id="reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
-              <option value="all">Active Default Page (BD News 24/7)</option>
-            </select>
-          </div>
-
-          <!-- Reel Video Duration -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
-              <span>Reel Duration (ভিডিও দৈর্ঘ্য)</span>
-              <span class="text-[10px] font-mono text-cyan-400">15-20s Sweet Spot</span>
-            </label>
-            <select id="reel-duration-select" onchange="onReelDurationChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-semibold">
-              <option value="18" selected>⏱️ 18 Seconds (Recommended: 15-20s Broadcast)</option>
-              <option value="15">⏱️ 15 Seconds (Standard Reel)</option>
-              <option value="20">⏱️ 20 Seconds (Extended Reel)</option>
-              <option value="16">⏱️ 16 Seconds</option>
-            </select>
-          </div>
-
-          <!-- Viral Reels Hashtags (Algorithm Optimized) -->
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
-              <span>Viral Reels Hashtags (ভাইরাল হ্যাশট্যাগ)</span>
-              <span class="text-[10px] font-mono text-amber-400 flex items-center gap-1">
-                <span>🔥 10-14 Meta Viral Tags</span>
-                <button type="button" onclick="refreshViralHashtags()" class="text-rose-400 hover:text-rose-300 underline font-sans ml-1 text-xs">অটো রিফ্রেশ</button>
-              </span>
-            </label>
-            <textarea id="reel-hashtags-input" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-amber-300/90 leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="#reels #fbreels #viralreels ...">#MedicalAdmission #MBBS #MedicalExam #Education #Campus #Admission #BreakingNews #BanglaNews #Bangladesh #reels #fbreels #viralreels</textarea>
-            <p class="text-[10px] text-slate-500 mt-1">মেটা অ্যালগরিদম ও ট্রেন্ডিং টপিক অনুযায়ী স্বয়ংক্রিয়ভাবে সর্বোত্তম ১০-১৪টি ভাইরাল হ্যাশট্যাগ তৈরি হয়েছে।</p>
+          <!-- Duration & Viral Hashtags -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Duration</label>
+              <select id="reel-duration-select" onchange="onReelDurationChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+                <option value="18" selected>⏱️ 18s (Broadcast)</option>
+                <option value="15">⏱️ 15s (Standard)</option>
+                <option value="20">⏱️ 20s (Extended)</option>
+                <option value="16">⏱️ 16s</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono flex items-center justify-between">
+                <span>Viral Hashtags</span>
+                <button type="button" onclick="refreshViralHashtags()" class="text-rose-400 hover:text-rose-300 underline text-[10px]">অটো রিফ্রেশ</button>
+              </label>
+              <input type="text" id="reel-hashtags-input" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-amber-300/90 focus:outline-none focus:border-rose-500 transition" value="#MedicalAdmission #MBBS #Education #BreakingNews #BanglaNews #fbreels #viralreels">
+            </div>
           </div>
 
           <!-- Actions -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
-            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md">
-              <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>Preview Reel</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow">
+              <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Preview</span>
             </button>
-            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-3 px-3 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-              <span>Publish Reel (Feed)</span>
+            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-2 px-3 rounded-lg bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span>Publish Reel</span>
             </button>
-            <button onclick="publishStoryNow()" id="btn-publish-story" class="py-3 px-3 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700/80 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-lg">
-              <span>📸 Post to Stories</span>
+            <button onclick="publishStoryNow()" id="btn-publish-story" class="py-2 px-3 rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-700/80 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow">
+              <span>📸 Post Stories</span>
             </button>
           </div>
 
@@ -1020,71 +887,69 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         </div>
 
         <!-- 3D Video Player Showcase -->
-        <div class="lg:col-span-6 glass-panel p-6 sm:p-7 rounded-2xl flex flex-col items-center justify-center border border-slate-800/80">
-          <div class="flex items-center justify-between w-full mb-4">
-            <span class="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-2">
+        <div class="lg:col-span-6 glass-panel p-4 sm:p-5 rounded-xl flex flex-col items-center justify-center">
+          <div class="flex items-center justify-between w-full mb-2">
+            <span class="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-              Studio Video Player (1080x1080)
+              Studio Player
             </span>
-            <span id="reel-duration-badge" class="text-[11px] font-mono text-slate-500">18s • 24fps • AAC</span>
+            <span id="reel-duration-badge" class="text-[10px] font-mono text-slate-500">18s • 24fps • AAC</span>
           </div>
 
-          <div id="reel-player-box" class="relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300">
+          <div id="reel-player-box" class="relative w-full max-w-[340px] aspect-square bg-slate-950 rounded-xl border border-slate-800 shadow-xl flex items-center justify-center overflow-hidden group">
             
             <!-- Video Element -->
             <video id="reel-video-player" controls playsinline loop class="w-full h-full object-contain bg-black hidden"></video>
 
-            <!-- Instant Static Frame Preview -->
-            <img id="reel-frame-img" class="w-full h-full object-contain bg-black hidden cursor-pointer" onclick="renderReelPreview()" title="Click to render animated motion reel" alt="Reel Snapshot Preview" />
+            <!-- Frame Preview -->
+            <img id="reel-frame-img" class="w-full h-full object-contain bg-black hidden cursor-pointer" onclick="renderReelPreview()" title="Click to render video" alt="Reel Preview" />
 
             <!-- Placeholder -->
-            <div id="reel-player-placeholder" class="text-center p-6 space-y-3">
-              <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-3xl shadow-glow-red">
-                🎬
-              </div>
-              <p class="text-sm font-semibold text-slate-200">No Reel Generated Yet</p>
-              <p class="text-xs text-slate-500 max-w-xs">Click <strong>"Generate & Preview"</strong> to render an 18-second broadcast MP4 reel with Bengali typography and category sound.</p>
+            <div id="reel-player-placeholder" class="text-center p-4 space-y-2">
+              <div class="w-12 h-12 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-2xl shadow-glow-red">🎬</div>
+              <p class="text-xs font-semibold text-slate-200">Reel Ready for Render</p>
+              <p class="text-[11px] text-slate-500 max-w-xs">Click <strong>"Preview"</strong> to render broadcast MP4 with Bengali typography and audio.</p>
             </div>
 
             <!-- Spinner Overlay -->
-            <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
-              <div class="w-10 h-10 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering 432 frames with Canvas & FFmpeg (18s)...</p>
+            <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2 hidden z-20">
+              <div class="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering frames...</p>
             </div>
           </div>
 
-          <div class="mt-4 flex items-center justify-between w-full max-w-[420px] text-xs font-mono text-slate-400">
-            <span>Broadcast News Theme AAC</span>
-            <a id="reel-download-link" href="#" target="_blank" class="text-rose-400 hover:text-rose-300 underline hidden">Direct MP4 Download</a>
+          <div class="mt-2 flex items-center justify-between w-full max-w-[340px] text-[11px] font-mono text-slate-400">
+            <span>Studio AAC Soundtrack</span>
+            <a id="reel-download-link" href="#" target="_blank" class="text-rose-400 hover:text-rose-300 underline hidden">Direct MP4</a>
           </div>
         </div>
 
       </div>
 
       <!-- Recent Reels History Table -->
-      <div class="glass-panel rounded-2xl p-6 space-y-4 border border-slate-800/80">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <span class="text-base">📋</span>
-            <span>Recent Facebook Reels History (সর্বশেষ প্রকাশিত রিলস)</span>
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📋</span>
+            <span>Recent Facebook Reels History</span>
           </h3>
-          <button onclick="loadReelLogs()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1.5 transition">
+          <button onclick="loadReelLogs()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1 transition">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Refresh Logs
+            Refresh
           </button>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs font-mono">
             <thead>
-              <tr class="border-b border-slate-800 text-slate-400">
-                <th class="pb-3 font-semibold">Article Headline</th>
-                <th class="pb-3 font-semibold">Target Page</th>
-                <th class="pb-3 font-semibold">Template</th>
-                <th class="pb-3 font-semibold">FB Reel / Video ID</th>
-                <th class="pb-3 font-semibold">Render Time</th>
-                <th class="pb-3 font-semibold">Published At</th>
-                <th class="pb-3 font-semibold">Status</th>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Headline</th>
+                <th class="py-2 pr-3 font-semibold">Page</th>
+                <th class="py-2 pr-3 font-semibold">Template</th>
+                <th class="py-2 pr-3 font-semibold">Reel ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Published</th>
+                <th class="py-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody id="reels-table-body" class="divide-y divide-slate-800/60 text-slate-300">
@@ -1099,226 +964,209 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     </div>
 
-
-    <!-- 6.4. GOOGLE DRIVE MULTI-CHANNEL REELS TAB -->
-    <div id="tab-gdrive-reels" class="tab-content hidden space-y-4 sm:space-y-5">
+    <!-- 7. GOOGLE DRIVE MULTI-CHANNEL REELS TAB -->
+    <div id="tab-gdrive-reels" class="tab-content hidden space-y-4">
       
       <!-- Header Banner -->
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden">
-        <div class="absolute -right-12 -top-12 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">Multi-Page Cloud 24/7 Automation</span>
-              <span id="gdrive-global-status-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Connecting...</span>
-            </div>
-            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <svg class="w-7 h-7 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-              Google Drive Multi-Channel Reels Automation
-            </h2>
-            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
-              একাধিক গুগল ড্রাইভ ফোল্ডার থেকে বিভিন্ন ফেসবুক পেজে রিলস স্বয়ংক্রিয়ভাবে শিডিউল ও আপলোড করুন। cron-job.org বা Vercel Cron-এর মাধ্যমে ২৪/৭ সম্পূর্ণ ক্লাউডে চলবে (আপনার কম্পিউটার বন্ধ থাকলেও পোস্ট হবে)।
-            </p>
+      <div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">Multi-Channel Cloud Automation</span>
+            <span id="gdrive-global-status-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Connecting...</span>
           </div>
+          <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            Google Drive Multi-Channel Reels
+          </h2>
+          <p class="text-xs text-slate-300 mt-0.5 max-w-2xl">
+            একাধিক ড্রাইভ ফোল্ডার থেকে পেজগুলোতে রিলস ২৪/৭ স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড করুন।
+          </p>
+        </div>
 
-          <div class="flex flex-wrap items-center gap-2.5">
-            <button onclick="showAddChannelForm()" class="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg transition active:scale-95">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-              <span>+ Add Drive Folder Channel</span>
-            </button>
-            <button onclick="runAllDueChannelsNow()" class="py-2.5 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition active:scale-95" title="Trigger post for all due channels right now">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <span>Run All Due Now</span>
-            </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-emerald-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-emerald-300">
+            <span class="text-slate-500">Cron:</span>
+            <span class="font-bold">/api/cron/gdrive-reels</span>
+            <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="text-[10px] text-emerald-400 hover:text-white px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-700/50 transition">Copy</button>
           </div>
+          <button onclick="showAddChannelForm()" class="py-1.5 px-3 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow transition active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Add Channel</span>
+          </button>
+          <button onclick="runAllDueChannelsNow()" class="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold text-xs flex items-center gap-1 transition active:scale-95" title="Trigger post for all due channels right now">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Run Due Now</span>
+          </button>
         </div>
       </div>
 
-      <!-- Global Shared API Key Banner -->
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      <!-- Shared API Key Banner -->
+      <div class="glass-panel p-3.5 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
           </div>
           <div>
-            <div class="text-xs font-bold text-white flex items-center gap-2">
-              <span>Google Drive API Key (গ্লোবাল কি)</span>
-              <span id="gdrive-api-key-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>Google Drive API Key</span>
+              <span id="gdrive-api-key-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Checking...</span>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5">একটিমাত্র API Key আপনার সব ফোল্ডার ও পেজে কাজ করবে। ফোল্ডার "Anyone with the link can view" রাখুন।</p>
+            <p class="text-[10px] text-slate-400">Shared API Key across all folders. Folders must have public read access.</p>
           </div>
         </div>
         <div class="flex items-center gap-2 w-full sm:w-auto">
-          <input type="password" id="gdrive-global-api-key" placeholder="AIzaSy... (Paste Google Drive API Key)" class="w-full sm:w-80 bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
-          <button onclick="saveGlobalGDriveApiKey()" id="btn-save-global-api-key" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition shrink-0">
-            Save Key
+          <input type="password" id="gdrive-global-api-key" placeholder="AIzaSy... (API Key)" class="w-full sm:w-64 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+          <button onclick="saveGlobalGDriveApiKey()" id="btn-save-global-api-key" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition shrink-0">
+            Save
           </button>
         </div>
       </div>
 
       <!-- Quick Stats Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
-          <div class="text-[11px] uppercase font-mono text-slate-400 mb-1">Total Channels</div>
-          <div id="stat-gdrive-total-channels" class="text-2xl font-black text-white font-mono">0</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Folder ➔ Page mappings</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-slate-400">Channels</div>
+          <div id="stat-gdrive-total-channels" class="text-xl font-black text-white font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Folder mappings</div>
         </div>
-        <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
-          <div class="text-[11px] uppercase font-mono text-emerald-400 mb-1">🟢 Active 24/7</div>
-          <div id="stat-gdrive-active-channels" class="text-2xl font-black text-emerald-400 font-mono">0</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Auto-posting channels</div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-emerald-400">Active 24/7</div>
+          <div id="stat-gdrive-active-channels" class="text-xl font-black text-emerald-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Auto-posting channels</div>
         </div>
-        <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
-          <div class="text-[11px] uppercase font-mono text-cyan-400 mb-1">Ready Videos</div>
-          <div id="stat-gdrive-pending-videos" class="text-2xl font-black text-cyan-400 font-mono">0</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Waiting in drive queues</div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-cyan-400">Ready Videos</div>
+          <div id="stat-gdrive-pending-videos" class="text-xl font-black text-cyan-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">In drive queues</div>
         </div>
-        <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
-          <div class="text-[11px] uppercase font-mono text-purple-400 mb-1">Total Published</div>
-          <div id="stat-gdrive-posted-videos" class="text-2xl font-black text-purple-400 font-mono">0</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Reels posted to FB</div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-purple-400">Published</div>
+          <div id="stat-gdrive-posted-videos" class="text-xl font-black text-purple-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Reels posted to FB</div>
         </div>
       </div>
 
-      <!-- Main Layout: Left Channel Cards, Right Video Explorer & Form -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Main Layout: Left Channels, Right Video Explorer & Form -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
         <!-- Channels List Column (5 Cols) -->
-        <div class="lg:col-span-5 space-y-4">
+        <div class="lg:col-span-5 space-y-3">
           <div class="flex items-center justify-between pb-1">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-              Configured Folder Channels
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              Configured Channels
             </h3>
-            <button onclick="refreshGDriveChannels()" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition" title="Refresh channels">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <button onclick="refreshGDriveChannels()" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Refresh">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
 
-          <!-- Channel Cards Container -->
-          <div id="gdrive-channels-container" class="space-y-3">
-            <div class="glass-panel p-6 text-center text-slate-500 font-mono text-xs rounded-2xl border border-slate-800">
+          <div id="gdrive-channels-container" class="space-y-2">
+            <div class="glass-panel p-4 text-center text-slate-500 font-mono text-xs rounded-xl">
               Loading Google Drive channels...
             </div>
           </div>
+          <div id="gdrive-channels-pagination"></div>
         </div>
 
-        <!-- Right Side: Channel Explorer OR Add/Edit Form (7 Cols) -->
-        <div class="lg:col-span-7 space-y-4">
+        <!-- Right Side: Channel Explorer OR Form (7 Cols) -->
+        <div class="lg:col-span-7 space-y-3">
 
-          <!-- ADD / EDIT CHANNEL FORM CARD (Hidden by default, toggleable) -->
-          <div id="gdrive-channel-form-card" class="hidden glass-panel p-5 sm:p-6 rounded-2xl border border-emerald-500/40 bg-slate-950/90 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
-              <h3 id="gdrive-form-title" class="text-sm font-bold text-white flex items-center gap-2">
-                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                <span>Add New Drive Folder Channel</span>
+          <!-- ADD / EDIT CHANNEL FORM CARD -->
+          <div id="gdrive-channel-form-card" class="hidden glass-panel p-4 sm:p-5 rounded-xl border border-emerald-500/40 bg-slate-950/90 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 id="gdrive-form-title" class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Add Drive Channel</span>
               </h3>
-              <button onclick="hideChannelForm()" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition">
+              <button onclick="hideChannelForm()" class="p-1 text-slate-400 hover:text-white">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
 
-            <form onsubmit="handleSaveGDriveChannel(event)" class="space-y-4">
+            <form onsubmit="handleSaveGDriveChannel(event)" class="space-y-3">
               <input type="hidden" id="gdrive-form-channel-id" value="">
 
-              <!-- Channel Name -->
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Channel Label / Name</label>
-                <input type="text" id="gdrive-form-channel-name" required placeholder="e.g. Sports Reels ➔ Sports Arena" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Channel Name</label>
+                <input type="text" id="gdrive-form-channel-name" required placeholder="e.g. Sports Reels" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
               </div>
 
-              <!-- Google Drive Folder Link / ID -->
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono flex items-center justify-between">
-                  <span>Google Drive Folder Link / ID <span class="text-emerald-400">*</span></span>
-                </label>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Google Drive Folder Link / ID <span class="text-emerald-400">*</span></label>
                 <div class="flex gap-2">
-                  <input type="text" id="gdrive-form-folder-input" required placeholder="https://drive.google.com/drive/folders/1ABC123... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
-                  <button type="button" onclick="testScanFormFolder()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1 shrink-0">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Test Scan
-                  </button>
+                  <input type="text" id="gdrive-form-folder-input" required placeholder="https://drive.google.com/drive/folders/... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                  <button type="button" onclick="testScanFormFolder()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition flex items-center gap-1 shrink-0">Test</button>
                 </div>
               </div>
 
-              <!-- Target Facebook Page -->
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Target Facebook Page (কোন পেজে রিলস পোস্ট হবে)</label>
-                <select id="gdrive-form-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Facebook Page</label>
+                <select id="gdrive-form-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
                   <option value="">Loading pages...</option>
                 </select>
               </div>
 
-              <!-- Schedule Interval & Order Grid -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Posting Schedule</label>
-                  <select id="gdrive-form-interval-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
-                    <option value="1">⏱️ Every 1 Hour (24 Reels / Day)</option>
-                    <option value="2" selected>⏱️ Every 2 Hours (12 Reels / Day)</option>
-                    <option value="3">⏱️ Every 3 Hours (8 Reels / Day)</option>
-                    <option value="4">⏱️ Every 4 Hours (6 Reels / Day)</option>
-                    <option value="6">⏱️ Every 6 Hours (4 Reels / Day)</option>
-                    <option value="12">⏱️ Every 12 Hours (2 Reels / Day)</option>
-                    <option value="24">⏱️ Once a Day (1 Reel / Day)</option>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Schedule Interval</label>
+                  <select id="gdrive-form-interval-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="1">⏱️ Every 1h (24/day)</option>
+                    <option value="2" selected>⏱️ Every 2h (12/day)</option>
+                    <option value="3">⏱️ Every 3h (8/day)</option>
+                    <option value="4">⏱️ Every 4h (6/day)</option>
+                    <option value="6">⏱️ Every 6h (4/day)</option>
+                    <option value="12">⏱️ Every 12h (2/day)</option>
+                    <option value="24">⏱️ Daily (1/day)</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Queue Sequence</label>
-                  <select id="gdrive-form-order-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
-                    <option value="oldest_first" selected>Oldest Files First</option>
-                    <option value="newest_first">Newest Files First</option>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Queue Sequence</label>
+                  <select id="gdrive-form-order-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="oldest_first" selected>Oldest First</option>
+                    <option value="newest_first">Newest First</option>
                     <option value="alphabetical">Alphabetical (A-Z)</option>
                     <option value="random">Random Shuffle</option>
                   </select>
                 </div>
               </div>
 
-              <!-- Active Toggle -->
-              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <div>
-                  <div class="text-xs font-bold text-white">Enable 24/7 Cloud Automation</div>
-                  <div class="text-[10px] text-slate-400">cron-job.org বা Vercel ক্রন চললে স্বয়ংক্রিয়ভাবে ভিডিও পোস্ট হবে</div>
-                </div>
-                <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-300">
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                <span class="text-xs font-semibold text-white">Enable 24/7 Cloud Automation</span>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs">
                   <input type="checkbox" id="gdrive-form-active-toggle" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500">
-                  <span id="gdrive-form-active-label" class="text-emerald-400 font-bold">Active</span>
+                  <span id="gdrive-form-active-label" class="text-emerald-400 font-bold text-xs">Active</span>
                 </label>
               </div>
 
-              <!-- Caption Strategy -->
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Caption Strategy</label>
-                <div class="space-y-1.5">
-                  <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                    <input type="radio" name="gdriveFormCaptionMode" value="viral_hashtags" id="gdrive-form-mode-viral" checked onchange="toggleFormCaptionBox()" class="text-emerald-500 focus:ring-emerald-500">
-                    <span>🔥 Auto-Generate Viral Hashtags (১০-১৪টি মেটা অপ্টিমাইজড ট্যাগ)</span>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Caption Strategy</label>
+                <div class="flex items-center gap-4 text-xs text-slate-300">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="gdriveFormCaptionMode" value="viral_hashtags" id="gdrive-form-mode-viral" checked onchange="toggleFormCaptionBox()" class="text-emerald-500">
+                    <span>🔥 Viral Hashtags</span>
                   </label>
-                  <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                    <input type="radio" name="gdriveFormCaptionMode" value="custom" id="gdrive-form-mode-custom" onchange="toggleFormCaptionBox()" class="text-emerald-500 focus:ring-emerald-500">
-                    <span>Custom Template (কাস্টম ক্যাপশন ও হ্যাশট্যাগ)</span>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="gdriveFormCaptionMode" value="custom" id="gdrive-form-mode-custom" onchange="toggleFormCaptionBox()" class="text-emerald-500">
+                    <span>Custom Caption</span>
                   </label>
                 </div>
               </div>
 
-              <!-- Custom Caption Box -->
               <div id="gdrive-form-custom-caption-box" class="hidden">
-                <textarea id="gdrive-form-custom-caption" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
+                <textarea id="gdrive-form-custom-caption" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
               </div>
 
-              <!-- First Comment -->
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">First Comment (ঐচ্ছিক ১ম কমেন্ট)</label>
-                <input type="text" id="gdrive-form-first-comment" placeholder="e.g. Follow our page for daily new reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">First Comment (Optional)</label>
+                <input type="text" id="gdrive-form-first-comment" placeholder="e.g. Follow for daily reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
               </div>
 
-              <!-- Buttons -->
-              <div class="pt-2 flex gap-2">
-                <button type="submit" id="btn-save-gdrive-channel" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-md active:scale-95">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                  <span>Save Channel Mapping</span>
+              <div class="pt-1 flex gap-2">
+                <button type="submit" id="btn-save-gdrive-channel" class="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition shadow active:scale-95">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>Save Channel</span>
                 </button>
-                <button type="button" onclick="hideChannelForm()" class="py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-800 transition">
+                <button type="button" onclick="hideChannelForm()" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs border border-slate-800 transition">
                   Cancel
                 </button>
               </div>
@@ -1327,45 +1175,44 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </div>
 
           <!-- SELECTED CHANNEL VIDEO EXPLORER CARD -->
-          <div id="gdrive-explorer-card" class="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 flex flex-col space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <div id="gdrive-explorer-card" class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 id="gdrive-explorer-title" class="text-sm font-bold text-white flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                    <span>Selected Channel Videos</span>
+                  <h3 id="gdrive-explorer-title" class="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>Channel Videos</span>
                   </h3>
-                  <span id="gdrive-explorer-page-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-300 border border-slate-700">Loading...</span>
+                  <span id="gdrive-explorer-page-badge" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-800 text-slate-300">Loading...</span>
                 </div>
-                <p id="gdrive-explorer-desc" class="text-[11px] text-slate-400 mt-0.5">গুগল ড্রাইভে থাকা ভিডিও তালিকা</p>
+                <p id="gdrive-explorer-desc" class="text-[10px] text-slate-400 mt-0.5">Google Drive video queue</p>
               </div>
 
-              <div class="flex items-center gap-2">
-                <button onclick="publishNextForSelectedChannel()" id="btn-publish-next-selected" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1.5 transition active:scale-95 shadow" title="Publish next pending video immediately">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  <span>Post Next Now</span>
+              <div class="flex items-center gap-1.5">
+                <button onclick="publishNextForSelectedChannel()" id="btn-publish-next-selected" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs transition active:scale-95 shadow flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  <span>Post Now</span>
                 </button>
-                <button onclick="rescanSelectedChannel()" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition" title="Refresh Google Drive files">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <button onclick="rescanSelectedChannel()" class="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition" title="Refresh">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 </button>
               </div>
             </div>
 
             <!-- Video Queue Table -->
-            <div class="flex-1 overflow-x-auto min-h-[300px] max-h-[460px] overflow-y-auto rounded-xl border border-slate-800/80 bg-slate-950/40">
+            <div class="overflow-x-auto rounded-lg border border-slate-800/80 bg-slate-950/40">
               <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-900/80 text-[10px] font-mono uppercase text-slate-400 sticky top-0 border-b border-slate-800">
+                <thead class="bg-slate-900/80 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th class="py-2.5 px-3">Video Title / File</th>
-                    <th class="py-2.5 px-2">Size</th>
-                    <th class="py-2.5 px-2">Status</th>
-                    <th class="py-2.5 px-3 text-right">Action</th>
+                    <th class="py-2 px-3">Video File</th>
+                    <th class="py-2 px-2">Size</th>
+                    <th class="py-2 px-2">Status</th>
+                    <th class="py-2 px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody id="gdrive-channel-videos-table-body" class="divide-y divide-slate-900">
                   <tr>
-                    <td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">
-                      Select a channel from the left to view its Google Drive videos.
+                    <td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">
+                      Select a channel from the left to view videos.
                     </td>
                   </tr>
                 </tbody>
@@ -1381,142 +1228,139 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     </div>
 
-    <!-- 6.5. YOUTUBE SHORTS TAB -->
-    <div id="tab-youtube" class="tab-content hidden space-y-4 sm:space-y-5">
+    <!-- 8. YOUTUBE SHORTS TAB -->
+    <div id="tab-youtube" class="tab-content hidden space-y-4">
       
       <!-- Header Banner -->
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl relative overflow-hidden">
-        <div class="absolute -right-12 -top-12 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">Multi-Platform Distribution</span>
-              <span id="yt-connection-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
-            </div>
-            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <svg class="w-7 h-7 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              YouTube Shorts Automation Pipeline
-            </h2>
-            <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              প্রতিটি সংবাদের ১৫-২০ সেকেন্ডের MP4 রিল ভিডিও স্বয়ংক্রিয়ভাবে আপনার ইউটিউব চ্যানেলে Shorts হিসেবে আপলোড হবে। সংবাদ লিংক স্বয়ংক্রিয়ভাবে ভিডিওর ডেসক্রিপশন এবং ১ম কমেন্টে যুক্ত হবে।
-            </p>
+      <div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">Multi-Platform Pipeline</span>
+            <span id="yt-connection-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
           </div>
+          <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            YouTube Shorts Automation
+          </h2>
+          <p class="text-xs text-slate-300 mt-0.5">
+            প্রতিটি সংবাদের ১৫-২০ সেকেন্ডের রিল ভিডিও স্বয়ংক্রিয়ভাবে YouTube Shorts হিসেবে আপলোড হয়।
+          </p>
+        </div>
 
-          <div class="flex items-center gap-3">
-            <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-xs sm:text-sm shadow-glow-red flex items-center gap-2 transition active:scale-95 border border-red-400/40">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-              <span>Upload Latest Short Now</span>
-            </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-red-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300">
+            <span class="text-slate-500">Cron:</span>
+            <span class="font-bold">/api/cron/youtube</span>
+            <button onclick="copyCronUrl('/api/cron/youtube', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
           </div>
+          <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center gap-1.5 transition active:scale-95 border border-red-400/30 self-start sm:self-auto">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span>Upload Latest Short</span>
+          </button>
         </div>
       </div>
 
-      <!-- Channel Profile & Google OAuth Setup Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Channel & OAuth Setup Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
-        <!-- Left: Channel Profile Card -->
-        <div class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between">
+        <!-- Channel Profile Card -->
+        <div class="glass-panel p-4 sm:p-5 rounded-xl flex flex-col justify-between space-y-3">
           <div>
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Connected YouTube Channel</h3>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Connected Channel</h3>
               <span id="yt-active-pill" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
             </div>
 
-            <div id="yt-channel-info" class="space-y-4">
-              <div class="flex items-center gap-3.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <img id="yt-avatar" src="/assets/images/favicon.png" alt="Avatar" class="w-12 h-12 rounded-full border border-red-500/50 object-cover" />
+            <div id="yt-channel-info" class="space-y-3">
+              <div class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
+                <img id="yt-avatar" src="/assets/images/favicon.png" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/50 object-cover" />
                 <div class="overflow-hidden">
-                  <div id="yt-channel-title" class="font-bold text-white text-sm truncate">Channel Not Connected</div>
-                  <div id="yt-channel-handle" class="text-xs text-slate-400 truncate font-mono">@bdnews24</div>
+                  <div id="yt-channel-title" class="font-bold text-white text-xs truncate">Not Connected</div>
+                  <div id="yt-channel-handle" class="text-[11px] text-slate-400 truncate font-mono">@bdnews24</div>
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-3 text-center">
-                <div class="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80">
-                  <div id="yt-sub-count" class="text-lg font-bold text-white font-mono">-</div>
-                  <div class="text-[11px] text-slate-400">Subscribers</div>
+              <div class="grid grid-cols-2 gap-2 text-center">
+                <div class="p-2.5 rounded-lg bg-slate-950/40 border border-slate-800">
+                  <div id="yt-sub-count" class="text-base font-bold text-white font-mono">-</div>
+                  <div class="text-[10px] text-slate-400">Subscribers</div>
                 </div>
-                <div class="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80">
-                  <div id="yt-video-count" class="text-lg font-bold text-white font-mono">-</div>
-                  <div class="text-[11px] text-slate-400">Total Videos</div>
+                <div class="p-2.5 rounded-lg bg-slate-950/40 border border-slate-800">
+                  <div id="yt-video-count" class="text-base font-bold text-white font-mono">-</div>
+                  <div class="text-[10px] text-slate-400">Total Videos</div>
                 </div>
               </div>
 
-              <div class="text-[11px] text-slate-400 bg-red-950/20 p-3 rounded-xl border border-red-900/30 space-y-1">
-                <div class="font-semibold text-red-300 flex items-center gap-1.5">
-                  <span>✓</span> 15-20s MP4 Ready (Vertical 9:16)
+              <div class="text-[11px] text-slate-400 bg-red-950/20 p-2.5 rounded-lg border border-red-900/30 space-y-0.5">
+                <div class="text-red-300 font-semibold flex items-center gap-1 text-[11px]">
+                  <span>✓</span> Vertical 9:16 / 1:1 Shorts Ready
                 </div>
-                <div class="font-semibold text-red-300 flex items-center gap-1.5">
-                  <span>✓</span> Category: News & Politics (#Shorts)
-                </div>
-                <div class="font-semibold text-red-300 flex items-center gap-1.5">
+                <div class="text-red-300 font-semibold flex items-center gap-1 text-[11px]">
                   <span>✓</span> First Comment News Link
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
-            <span class="text-slate-400">Auto-Upload on Publish:</span>
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-slate-400 text-xs">Auto-Upload on Publish:</span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" id="yt-auto-toggle" class="sr-only peer" checked onchange="saveYouTubeSettings()" />
-              <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-red-600"></div>
             </label>
           </div>
         </div>
 
-        <!-- Right: OAuth Credentials Setup -->
-        <div class="lg:col-span-2 glass-panel p-6 rounded-2xl relative space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              <span>🔑</span> Google OAuth 2.0 Credentials (YouTube Data API v3)
+        <!-- OAuth Credentials Setup -->
+        <div class="lg:col-span-2 glass-panel p-4 sm:p-5 rounded-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+              <span>🔑</span> Google OAuth 2.0 Credentials
             </h3>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">Token Refresh Active</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">YouTube API v3</span>
           </div>
 
-          <div class="space-y-3.5 text-xs">
+          <div class="space-y-3 text-xs">
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Google OAuth Client ID</label>
-              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="" placeholder="xxxxx.apps.googleusercontent.com" />
+              <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client ID</label>
+              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="xxxxx.apps.googleusercontent.com" />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
-                <label class="block font-semibold text-slate-300 mb-1">Client Secret (Google Cloud)</label>
-                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" value="" placeholder="Enter Client Secret" />
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Client Secret</label>
+                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Client Secret" />
               </div>
-
               <div>
-                <label class="block font-semibold text-slate-300 mb-1">OAuth Refresh Token</label>
-                <input type="password" id="yt-refresh-token" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-xl px-3.5 py-2 text-white font-mono text-xs focus:outline-none transition" placeholder="1//0gxxxxxxxxxxxxxxxxxxxx" />
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Refresh Token</label>
+                <input type="password" id="yt-refresh-token" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Refresh Token" />
               </div>
             </div>
 
-            <!-- Helpful OAuth Instructions Accordion -->
-            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-300 space-y-2">
-              <div class="font-bold text-amber-300 flex items-center gap-1.5">
-                <span>⚡</span> Refresh Token পাওয়ার সহজ পদ্ধতি (২ মিনিট):
+            <!-- Concise OAuth Instructions -->
+            <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+              <div class="font-bold text-amber-300 flex items-center gap-1 text-[11px]">
+                <span>⚡</span> Setup Guide:
               </div>
-              <ol class="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed pl-1">
-                <li>গুগল ক্লাউড কনসোলে আপনার OAuth Client এ <code class="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">https://developers.google.com/oauthplayground</code> রিডাইরেক্ট URI হিসেবে যুক্ত করুন।</li>
-                <li><a href="https://developers.google.com/oauthplayground" target="_blank" class="text-red-400 underline font-semibold">Google OAuth Playground ↗</a> ওপেন করে ডানপাশের সেটিংস গিয়ারে আপনার Client ID ও Secret বসান।</li>
-                <li>বামের লিস্ট থেকে <code class="text-emerald-300">YouTube Data API v3</code> $\rightarrow$ <code class="text-emerald-300">https://www.googleapis.com/auth/youtube.upload</code> সিলেক্ট করে সাইন ইন করুন।</li>
-                <li>"Exchange authorization code for tokens" বাটনে ক্লিক করে পাওয়া <code class="text-amber-300">Refresh token</code> কপি করে এখানে বসান।</li>
+              <ol class="list-decimal list-inside space-y-0.5 text-slate-400 pl-1 text-[11px]">
+                <li>Add redirect URI in Google Cloud: <code class="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">https://developers.google.com/oauthplayground</code></li>
+                <li>In <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-red-400 underline font-semibold">OAuth Playground ↗</a>, configure Client ID/Secret, authorize <code class="text-emerald-300">youtube.upload</code> scope.</li>
+                <li>Exchange for tokens and paste the Refresh Token here.</li>
               </ol>
             </div>
 
-            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300">
-              <span class="truncate"><span class="text-slate-400">OAuth Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">https://.../api/youtube/auth/callback</span></span>
-              <button onclick="copyRedirectUri()" class="ml-2 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 text-[10px] font-sans flex items-center gap-1 active:scale-95 transition">📋 Copy</button>
+            <div class="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300">
+              <span class="truncate"><span class="text-slate-400">Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">/api/youtube/auth/callback</span></span>
+              <button onclick="copyRedirectUri()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200 text-[10px] active:scale-95 transition">Copy</button>
             </div>
 
-            <div class="pt-2 flex flex-wrap items-center justify-between gap-3">
-              <button onclick="startGoogleOAuth()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 text-white font-bold text-xs flex items-center gap-2 shadow-glow-red transition active:scale-95 border border-red-400/40">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                <span>1-Click Google Sign-In</span>
+            <div class="pt-1 flex flex-wrap items-center justify-between gap-2">
+              <button onclick="startGoogleOAuth()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-glow-red transition active:scale-95 border border-red-400/30">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>Google Sign-In</span>
               </button>
 
-              <button onclick="saveYouTubeSettings()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition shadow-sm active:scale-95">
+              <button onclick="saveYouTubeSettings()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition active:scale-95">
                 Save & Authenticate
               </button>
             </div>
@@ -1525,30 +1369,27 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       </div>
 
-      <!-- YouTube Shorts Upload History Table -->
-      <div class="glass-panel rounded-2xl p-6 overflow-hidden">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              <span>📊</span> Recent YouTube Shorts Upload History
-            </h3>
-            <p class="text-xs text-slate-400">Log of automated and manual uploads to your YouTube channel</p>
-          </div>
-          <button onclick="loadYouTubeLogs()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition flex items-center gap-1.5">
+      <!-- YouTube Logs Table -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📊</span> Recent YouTube Shorts Upload History
+          </h3>
+          <button onclick="loadYouTubeLogs()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Refresh
           </button>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
+          <table class="w-full text-left text-xs font-mono">
             <thead>
-              <tr class="border-b border-slate-800 text-slate-400 uppercase font-mono tracking-wider">
-                <th class="pb-3 pr-4">Article Title</th>
-                <th class="pb-3 pr-4">YouTube Video ID</th>
-                <th class="pb-3 pr-4">Duration</th>
-                <th class="pb-3 pr-4">Time</th>
-                <th class="pb-3">Status</th>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Title</th>
+                <th class="py-2 pr-3 font-semibold">Video ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Time</th>
+                <th class="py-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody id="yt-table-body" class="divide-y divide-slate-800/60 text-slate-300">
@@ -1558,150 +1399,358 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </tbody>
           </table>
         </div>
+        <div id="yt-pagination"></div>
       </div>
 
     </div>
 
-    <!-- 7. SETTINGS TAB -->
-    <div id="tab-settings" class="tab-content hidden space-y-4 sm:space-y-5">
-      <div class="glass-panel p-4 sm:p-5 rounded-2xl max-w-3xl">
-        <div class="flex items-center gap-2.5 mb-6">
-          <div class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold">⚙️</div>
+    <!-- 9. TEMPLATE PREVIEW TAB -->
+    <div id="tab-preview" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Controls -->
+        <div class="lg:col-span-5 glass-panel p-4 sm:p-5 rounded-xl space-y-3 h-fit">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+            <div class="w-7 h-7 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎨</div>
+            <h3 class="text-sm font-bold text-white">Live Canva & Bangla Preview</h3>
+          </div>
+
           <div>
-            <h3 class="text-base font-bold text-white">Automation Pipeline Control Engine</h3>
-            <p class="text-xs text-slate-400">Fine-tune ingestion schedules, rate limits, and caption formatting</p>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Template Style</label>
+            <select id="preview-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
+              <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
+              <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
+              <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Category Badge</label>
+            <input type="text" id="preview-category" value="বিশেষ খবর" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn focus:outline-none focus:border-red-500 transition">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Headline (Bangla Auto-Fit)</label>
+            <textarea id="preview-headline" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn leading-relaxed focus:outline-none focus:border-red-500 transition">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Image URL (Optional)</label>
+            <input type="url" id="preview-image" placeholder="https://... (Empty for placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 transition">
+          </div>
+          <button onclick="renderPreview()" class="w-full py-2.5 px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
+            <span id="preview-spinner" class="hidden animate-spin">⚪</span>
+            <span>Render Preview</span>
+          </button>
+        </div>
+
+        <!-- 3D Preview Stage -->
+        <div class="lg:col-span-7 glass-panel p-4 sm:p-5 rounded-xl flex flex-col items-center justify-center min-h-[460px]">
+          <div class="relative group">
+            <div id="preview-container" class="relative w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] aspect-square bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center overflow-hidden shadow-2xl">
+              <div id="preview-placeholder" class="text-slate-500 text-xs text-center px-4 leading-relaxed">
+                <span class="text-3xl block mb-2">🖼️</span>
+                Click <strong>"Render Preview"</strong> to view the Canva replica card with Bengali auto-fit
+              </div>
+              <iframe id="preview-frame" class="w-[1080px] h-[1080px] origin-top-left border-0 hidden" style="transform: scale(0.388);" sandbox="allow-scripts allow-same-origin"></iframe>
+              <img id="preview-img" class="w-full h-full object-contain hidden" alt="Preview Result" />
+            </div>
+          </div>
+          <div id="preview-meta" class="mt-3 text-[11px] font-mono text-slate-400">Ready for rendering</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 10. SETTINGS TAB -->
+    <div id="tab-settings" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-3xl space-y-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+          <div class="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold text-xs">⚙️</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Pipeline Automation Settings</h3>
+            <p class="text-[11px] text-slate-400">Ingestion schedules, rate limits, and caption formatting</p>
           </div>
         </div>
 
-        <form id="settings-form" onsubmit="handleSaveSettings(event)" class="space-y-5">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <form id="settings-form" onsubmit="handleSaveSettings(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">RSS Poll Cron Expression</label>
-              <input type="text" id="setting-cron" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <span class="text-[11px] text-slate-500 mt-1 block">Standard cron syntax: */10 * * * * (Every 10 min)</span>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">RSS Poll Cron</label>
+              <input type="text" id="setting-cron" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">e.g. */10 * * * * (Every 10 min)</span>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Max Article Age (Hours)</label>
-              <input type="number" id="setting-age" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <span class="text-[11px] text-slate-500 mt-1 block">Ignore articles older than X hours</span>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Max Age (Hours)</label>
+              <input type="number" id="setting-age" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Ignore older articles</span>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Hourly Posting Rate Cap</label>
-              <input type="number" id="setting-cap" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <span class="text-[11px] text-slate-500 mt-1 block">Maximum posts allowed per hour</span>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Hourly Post Cap</label>
+              <input type="number" id="setting-cap" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Max posts allowed / hour</span>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Anti-Spam Delay Range (Seconds)</label>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Anti-Spam Delay Range (Sec)</label>
               <div class="flex items-center gap-2">
-                <input type="number" id="setting-min-delay" placeholder="Min (30)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
-                <input type="number" id="setting-max-delay" placeholder="Max (60)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <input type="number" id="setting-min-delay" placeholder="Min (30)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <input type="number" id="setting-max-delay" placeholder="Max (60)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
               </div>
-              <span class="text-[11px] text-slate-500 mt-1 block">Natural delay between consecutive posts</span>
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Natural delay between posts</span>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Default Hashtags</label>
-            <input type="text" id="setting-hashtags" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500 transition">
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Default Hashtags</label>
+            <input type="text" id="setting-hashtags" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">Facebook Photo Caption Template</label>
-            <textarea id="setting-caption-format" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 focus:outline-none focus:border-red-500 transition"></textarea>
-            <span class="text-[11px] text-slate-500 mt-1 block">Variables: {headline}, {summary}, {hashtags} (External links penalty avoided)</span>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Caption Template</label>
+            <textarea id="setting-caption-format" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition"></textarea>
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Variables: {headline}, {summary}, {hashtags}</span>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase font-mono">First Comment Format (News Link Target)</label>
-            <input type="text" id="setting-comment-format" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
-            <span class="text-[11px] text-slate-500 mt-1 block">Variables: {url}</span>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">First Comment Format</label>
+            <input type="text" id="setting-comment-format" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Variable: {url}</span>
           </div>
 
-          <div class="pt-5 border-t border-slate-800/80 flex justify-end">
-            <button type="submit" class="py-2.5 px-6 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm shadow-glow-red transition active:scale-95">Save Pipeline Configuration</button>
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="py-2 px-5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Pipeline Configuration</button>
           </div>
         </form>
+      </div>
+
+      <!-- 10b. DISTINCT CRON-JOB.ORG SCHEDULERS CARD -->
+      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-4xl space-y-4 border border-cyan-500/20 shadow-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-sm">⏱️</div>
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                cron-job.org Multi-Process Schedulers
+                <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60 font-semibold">Distinct Webhooks</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">প্রতিটি প্রসেসের জন্য আলাদা ক্রন ওয়েব হুক (টাইমআউট রোধে শূন্য কনফ্লিক্ট)</p>
+            </div>
+          </div>
+          <div id="cron-auth-badge" class="px-2.5 py-1 text-[11px] font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-300 flex items-center gap-1.5 self-start sm:self-auto">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>GET & POST Ready</span>
+          </div>
+        </div>
+
+        <!-- Architecture Warning / Explainer -->
+        <div class="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded-xl text-xs space-y-1">
+          <div class="flex items-center gap-1.5 text-cyan-300 font-bold text-[11px]">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            কেন আলাদা ক্রন ওয়েব হুক ব্যবহার করবেন?
+          </div>
+          <p class="text-slate-300 leading-relaxed text-[11px]">
+            সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। এক ক্রনে RSS স্ক্র্যাপিং, ভিডিও রেন্ডারিং, গুগল ড্রাইভ সিঙ্ক এবং ইউটিউব আপলোড একসাথে চালালে রিকোয়েস্ট টাইমআউট হয়ে ফেইল করতে পারে। নিচের <strong>৬টি আলাদা ওয়েব হুক</strong> আলাদা শিডিউলে সেট করলে প্রতিটি কাজ স্বাধীনভাবে এবং শতভাগ নির্ভুলভাবে সম্পন্ন হয়।
+          </p>
+        </div>
+
+        <!-- Endpoints Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          
+          <!-- 1. RSS Ingestion -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">1. RSS Ingestion</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Bangla RSS Feeds Ingestion</div>
+              <p class="text-[11px] text-slate-400">Prothom Alo, Kaler Kantho, BDNews24 থেকে সংবাদ সংগ্রহ ও ডিডুপ্লিকেশন</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/rss" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/rss', 'cron-res-rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-rss" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+          <!-- 2. Facebook Posts & Reels Publisher -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. FB Publisher</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Facebook Posts & Reels Dispatcher</div>
+              <p class="text-[11px] text-slate-400">কিউ থেকে পরবর্তী সংবাদ নিয়ে ক্যানভা/ভিডিও তৈরি ও পেজে পোস্ট ও প্রথম কমেন্ট</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/publish" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/publish', 'cron-res-publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-publish" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+          <!-- 3. Google Drive Multi-Channel Reels -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. Google Drive</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/30 * * * * (30m)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Google Drive Multi-Channel Reels</div>
+              <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার স্ক্যান করে নির্ধারিত রিলস ফেসবুক পেজ ও গ্রুপে শেয়ার</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/gdrive-reels" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/gdrive-reels', 'cron-res-gdrive', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-gdrive" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+          <!-- 4. Facebook 24-Hour Stories -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-600/20 text-purple-400 border border-purple-600/40 uppercase tracking-wider">4. FB Stories</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 * * * * (Hourly)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Facebook 24-Hour Stories</div>
+              <p class="text-[11px] text-slate-400">লেটেস্ট সংবাদের ১০৮০x১০৮০ কার্ড ফেসবুক পেজের স্টোরিজে আপলোড</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/stories" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/stories', 'cron-res-stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-stories" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+          <!-- 5. YouTube Shorts Auto-Upload -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40 uppercase tracking-wider">5. YouTube Shorts</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">15 * * * * (:15 min)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">YouTube Shorts Auto-Uploader</div>
+              <p class="text-[11px] text-slate-400">প্রতি ঘন্টার লেটেস্ট সংবাদের শর্ট ভিডিও ইউটিউবে ভাইরাল ট্যাগসহ আপলোড</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/youtube" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/youtube', 'cron-res-youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-youtube" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+          <!-- 6. Queue Maintenance & Cleanup -->
+          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40 uppercase tracking-wider">6. Self-Healing</span>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 */6 * * * (6 hrs)</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white">Self-Healing Queue Maintenance</div>
+              <p class="text-[11px] text-slate-400">আটকে থাকা প্রসেসিং জবস আনলক ও ফাঁকা পোস্ট আইডি রিসেট</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" readonly data-cron-path="/api/cron/cleanup" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+              <button onclick="copyCronUrl('/api/cron/cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+              <button onclick="testCronJob('/api/cron/cleanup', 'cron-res-cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/80 shrink-0 transition">Test</button>
+            </div>
+            <div id="cron-res-cleanup" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+          </div>
+
+        </div>
+
+        <!-- Master Gateway & Setup Tips -->
+        <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500 font-mono">Master Gateway:</span>
+            <code data-cron-path="/api/cron" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-cyan-400 text-[11px]">/api/cron</code>
+            <button onclick="copyCronUrl('/api/cron', this)" class="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Copy</button>
+          </div>
+          <div class="text-[11px] text-slate-500">
+            Method: <span class="text-slate-300 font-mono">GET</span> or <span class="text-slate-300 font-mono">POST</span> (Both supported on all endpoints)
+          </div>
+        </div>
       </div>
     </div>
 
   </main>
 
   <!-- Add Group Modal -->
-  <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all duration-300">
-    <div class="glass-panel w-full max-w-xl p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-2xl relative space-y-6">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">👥</div>
+  <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-5 rounded-xl border border-emerald-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-bold">👥</div>
           <div>
-            <h3 class="text-lg font-bold text-white">Add Facebook Group</h3>
-            <p class="text-xs text-slate-400">ফেসবুক গ্রুপে অটো শেয়ার কনফিগার করুন</p>
+            <h3 class="text-sm font-bold text-white">Add Facebook Group</h3>
+            <p class="text-[10px] text-slate-400">ফেসবুক গ্রুপে অটো শেয়ার কনফিগার করুন</p>
           </div>
         </div>
-        <button onclick="closeAddGroupModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">✕</button>
+        <button onclick="closeAddGroupModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
       </div>
 
-      <form id="form-add-group" onsubmit="handleSaveGroup(event)" class="space-y-4">
+      <form id="form-add-group" onsubmit="handleSaveGroup(event)" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Facebook Group ID or URL <span class="text-rose-400">*</span></label>
-          <input id="group-id-input" type="text" placeholder="e.g. 123456789012345 or https://facebook.com/groups/yourgroup" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
-          <p class="text-[11px] text-slate-500 mt-1">You can paste the full group link or numeric Group ID.</p>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Group ID or URL <span class="text-rose-400">*</span></label>
+          <input id="group-id-input" type="text" placeholder="e.g. 1234567890 or https://facebook.com/groups/..." required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Group Display Name <span class="text-rose-400">*</span></label>
-          <input id="group-name-input" type="text" placeholder="e.g. বাংলাদেশ ব্রেকিং নিউজ গ্রুপ" required class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Group Name <span class="text-rose-400">*</span></label>
+          <input id="group-name-input" type="text" placeholder="e.g. বাংলাদেশ ব্রেকিং নিউজ" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Relevant Categories / Keywords (প্রাসঙ্গিক বিষয়)</label>
-          <div class="flex flex-wrap gap-1.5 mb-2">
-            <button type="button" onclick="toggleCategoryTag(this, 'all')" class="cat-pill active px-2.5 py-1 text-xs rounded-lg border border-emerald-600 bg-emerald-950/60 text-emerald-300 font-semibold transition">সব (All Posts)</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'রাজনীতি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">রাজনীতি</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'খেলাধুলা')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">খেলাধুলা</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'জাতীয়')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">জাতীয়</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'আন্তর্জাতিক')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">আন্তর্জাতিক</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'অর্থনীতি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">অর্থনীতি</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'বিনোদন')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">বিনোদন</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'শিক্ষা')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">শিক্ষা</button>
-            <button type="button" onclick="toggleCategoryTag(this, 'প্রযুক্তি')" class="cat-pill px-2.5 py-1 text-xs rounded-lg border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">প্রযুক্তি</button>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Categories / Keywords</label>
+          <div class="flex flex-wrap gap-1 mb-1.5">
+            <button type="button" onclick="toggleCategoryTag(this, 'all')" class="cat-pill active px-2 py-0.5 text-[10px] rounded border border-emerald-600 bg-emerald-950/60 text-emerald-300 font-semibold transition">সকল (All)</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'রাজনীতি')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">রাজনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'খেলাধুলা')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">খেলাধুলা</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'জাতীয়')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">জাতীয়</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'আন্তর্জাতিক')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">আন্তর্জাতিক</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'অর্থনীতি')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">অর্থনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'বিনোদন')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">বিনোদন</button>
           </div>
-          <input id="group-categories-input" type="text" value="all" placeholder="e.g. all, রাজনীতি, ক্রিকেট (comma separated)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
-          <p class="text-[11px] text-slate-500 mt-1">If set to "all", this group will receive every news post. Otherwise, only articles matching these categories or keywords will be shared.</p>
+          <input id="group-categories-input" type="text" value="all" placeholder="e.g. all, রাজনীতি, ক্রিকেট" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Target Facebook Page</label>
-            <select id="group-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Page</label>
+            <select id="group-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
               <option value="all">All Active Pages</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">Stagger Delay (Seconds)</label>
-            <input id="group-delay-input" type="number" min="1" max="60" value="5" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Delay (Seconds)</label>
+            <input id="group-delay-input" type="number" min="1" max="60" value="5" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Optional Access Token Override</label>
-          <input id="group-token-input" type="text" placeholder="Leave empty to automatically use Page Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
-          <p class="text-[11px] text-slate-500 mt-1">By default, it uses the Page's Access Token. Provide a User Token if sharing as an admin user.</p>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Token Override (Optional)</label>
+          <input id="group-token-input" type="text" placeholder="Leave empty to use Page Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
         </div>
 
-        <div class="flex items-center justify-between pt-4 border-t border-slate-800">
-          <button type="button" onclick="closeAddGroupModal()" class="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition">Cancel</button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/60 transition transform hover:scale-105 active:scale-95">Save & Enable Auto-Share</button>
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddGroupModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs transition">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow transition active:scale-95">Save Group</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- 3D Notification Floating Toast -->
-  <div id="toast" class="fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl text-sm font-medium shadow-2xl hidden transition-all duration-500 z-50 flex items-center gap-3 backdrop-blur-xl border"></div>
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl hidden transition-all duration-300 z-50 flex items-center gap-2 backdrop-blur-xl border"></div>
 
-  <!-- Interactive Background Canvas Particles & 3D Script -->
+  <!-- Client-Side JavaScript Engine with Pagination -->
   <script>
-    // --- 3D PARTICLE CONSTELLATION CANVAS ---
+    // --- PARTICLE BACKGROUND ---
     (function initBackgroundCanvas() {
       const canvas = document.getElementById('bg-canvas');
       if (!canvas) return;
@@ -1710,27 +1759,25 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       let h = canvas.height = window.innerHeight;
 
       const particles = [];
-      const particleCount = Math.min(Math.floor(w / 30), 45);
+      const particleCount = Math.min(Math.floor(w / 35), 35);
 
       for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
           r: Math.random() * 1.5 + 0.5,
-          color: Math.random() > 0.6 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(6, 182, 212, 0.3)'
+          color: Math.random() > 0.6 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(6, 182, 212, 0.25)'
         });
       }
 
       function animate() {
         ctx.clearRect(0, 0, w, h);
-        
         for (let i = 0; i < particles.length; i++) {
           const p = particles[i];
           p.x += p.vx;
           p.y += p.vy;
-
           if (p.x < 0 || p.x > w) p.vx *= -1;
           if (p.y < 0 || p.y > h) p.vy *= -1;
 
@@ -1742,9 +1789,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           for (let j = i + 1; j < particles.length; j++) {
             const p2 = particles[j];
             const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-            if (dist < 120) {
+            if (dist < 100) {
               ctx.beginPath();
-              ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.08 * (1 - dist / 120)) + ')';
+              ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.05 * (1 - dist / 100)) + ')';
               ctx.lineWidth = 0.5;
               ctx.moveTo(p.x, p.y);
               ctx.lineTo(p2.x, p2.y);
@@ -1762,36 +1809,103 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       });
     })();
 
-    // --- 3D TILT EFFECT FOR CARDS ---
-    function handleTilt(e, card) {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const rotateX = ((y - centerY) / centerY) * -7;
-      const rotateY = ((x - centerX) / centerX) * 7;
-
-      card.style.transform = \`perspective(1000px) rotateX(\${rotateX}deg) rotateY(\${rotateY}deg) translateY(-4px) scale3d(1.02, 1.02, 1.02)\`;
-    }
-
-    function resetTilt(card) {
-      card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)';
-    }
-
     // --- TOAST NOTIFICATIONS ---
     function showToast(msg, isError = false) {
       const toast = document.getElementById('toast');
+      if (!toast) return;
       const icon = isError ? '⚠️' : '✓';
-      toast.innerHTML = \`<span class="text-base">\${icon}</span> <span>\${msg}</span>\`;
-      toast.className = 'fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl text-xs sm:text-sm font-semibold shadow-2xl transition-all duration-500 z-50 flex items-center gap-3 backdrop-blur-xl ' +
+      toast.innerHTML = '<span>' + icon + '</span> <span>' + msg + '</span>';
+      toast.className = 'fixed bottom-5 right-5 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl transition-all duration-300 z-50 flex items-center gap-2 backdrop-blur-xl border ' +
         (isError 
-          ? 'bg-red-950/90 border border-red-700/80 text-red-200 shadow-glow-red translate-y-0 opacity-100' 
-          : 'bg-emerald-950/90 border border-emerald-700/80 text-emerald-200 shadow-glow-emerald translate-y-0 opacity-100');
+          ? 'bg-red-950/90 border-red-700/80 text-red-200 shadow-glow-red' 
+          : 'bg-emerald-950/90 border-emerald-700/80 text-emerald-200 shadow-glow-emerald');
       toast.classList.remove('hidden');
-      setTimeout(() => {
-        toast.classList.add('hidden');
-      }, 4000);
+      setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+    }
+
+    // --- CRON-JOB.ORG URL HELPERS ---
+    function copyCronUrl(path, btnElement) {
+      const fullUrl = window.location.origin + path;
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        showToast('✓ Copied Webhook URL!');
+        if (btnElement) {
+          const originalText = btnElement.innerText;
+          btnElement.innerText = '✓ Copied!';
+          btnElement.classList.add('bg-emerald-600', 'text-white');
+          setTimeout(() => {
+            btnElement.innerText = originalText;
+            btnElement.classList.remove('bg-emerald-600', 'text-white');
+          }, 2000);
+        }
+      }).catch(() => {
+        prompt('Copy Webhook URL:', fullUrl);
+      });
+    }
+
+    async function testCronJob(path, resultElId, btnElement) {
+      const resultEl = document.getElementById(resultElId);
+      if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.classList.add('opacity-50');
+      }
+      if (resultEl) {
+        resultEl.classList.remove('hidden');
+        resultEl.innerHTML = '<span class="text-slate-400 animate-pulse">Running test trigger...</span>';
+      }
+
+      const startTime = performance.now();
+      try {
+        const res = await safeFetchJson(path);
+        const duration = Math.round(performance.now() - startTime);
+        if (resultEl) {
+          if (res.ok && res.data?.success) {
+            const extra = res.data.message || (res.data.job ? 'Job: ' + res.data.job : '') || 'OK';
+            resultEl.innerHTML = '<span class="text-emerald-400 font-semibold">✓ 200 OK (' + duration + 'ms)</span>: <span class="text-slate-300">' + escapeHtml(String(extra)) + '</span>';
+            showToast('✓ Test passed (' + duration + 'ms)');
+          } else {
+            const err = res.data?.error || res.error || 'Failed';
+            resultEl.innerHTML = '<span class="text-red-400 font-semibold">✕ Failed (' + duration + 'ms)</span>: <span class="text-red-300">' + escapeHtml(String(err)) + '</span>';
+            showToast('Test failed: ' + err, true);
+          }
+        }
+      } catch (e) {
+        const duration = Math.round(performance.now() - startTime);
+        if (resultEl) {
+          resultEl.innerHTML = '<span class="text-red-400 font-semibold">✕ Error (' + duration + 'ms)</span>: <span class="text-red-300">' + escapeHtml(e.message) + '</span>';
+        }
+      } finally {
+        if (btnElement) {
+          btnElement.disabled = false;
+          btnElement.classList.remove('opacity-50');
+        }
+      }
+    }
+
+    async function initCronPills() {
+      document.querySelectorAll('[data-cron-path]').forEach(el => {
+        const path = el.getAttribute('data-cron-path');
+        if (path) {
+          const fullUrl = window.location.origin + path;
+          if (el.tagName === 'INPUT') {
+            el.value = fullUrl;
+          } else {
+            el.innerText = fullUrl;
+          }
+        }
+      });
+
+      // Update auth status badge
+      try {
+        const res = await safeFetchJson('/api/cron');
+        const badge = document.getElementById('cron-auth-badge');
+        if (badge && res.ok && res.data) {
+          if (res.data.cronSecretConfigured) {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span class="text-emerald-300 font-semibold">CRON_SECRET Active (Protected)</span>';
+          } else {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span><span class="text-cyan-300">Open Access (No Secret Required)</span>';
+          }
+        }
+      } catch (e) {}
     }
 
     // --- TAB SWITCHING ---
@@ -1802,15 +1916,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
-      if (event && event.currentTarget) {
+      if (event && event.currentTarget && event.currentTarget.classList) {
         event.currentTarget.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
         event.currentTarget.classList.remove('text-slate-400', 'border-transparent');
       }
       
       const targetTab = document.getElementById('tab-' + tabId);
-      if (targetTab) {
-        targetTab.classList.remove('hidden');
-      }
+      if (targetTab) targetTab.classList.remove('hidden');
 
       if (tabId === 'overview') loadOverview();
       if (tabId === 'queue') loadQueue();
@@ -1818,11 +1930,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
       if (tabId === 'reels') loadReels();
-      if (tabId === 'gdrive-reels') {
-        const el = document.getElementById('tab-gdrive-reels');
-        if (el) el.classList.remove('hidden');
-        loadGDriveReels();
-      }
+      if (tabId === 'gdrive-reels') loadGDriveReels();
       if (tabId === 'youtube') loadYouTube();
       if (tabId === 'settings') loadSettings();
     }
@@ -1835,14 +1943,65 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         try {
           return { ok: res.ok, status: res.status, data: JSON.parse(text) };
         } catch {
-          return { ok: false, status: res.status, error: text || 'Non-JSON server response' };
+          return { ok: false, status: res.status, error: text || 'Non-JSON response' };
         }
       } catch (err) {
         return { ok: false, status: 0, error: err.message };
       }
     }
 
-    // --- OVERVIEW STATS COUNTER ---
+    // --- UNIVERSAL SLEEK PAGINATION COMPONENT ---
+    function renderPagination(containerId, currentPage, totalPages, totalItems, onPageChangeFnName, pageSize) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (!totalItems || totalItems === 0) {
+        el.innerHTML = '';
+        return;
+      }
+      const size = pageSize || 10;
+      const startItem = (currentPage - 1) * size + 1;
+      const endItem = Math.min(currentPage * size, totalItems);
+
+      if (totalPages <= 1) {
+        el.innerHTML = 
+          '<div class="flex items-center justify-between px-3.5 py-2 text-[10px] font-mono text-slate-400 bg-slate-950/70 border-t border-slate-800/80">' +
+            '<div>Showing <span class="text-slate-200 font-semibold">' + startItem + '-' + endItem + '</span> of <span class="text-slate-200 font-semibold">' + totalItems + '</span></div>' +
+            '<div class="text-slate-500">Page 1 of 1</div>' +
+          '</div>';
+        return;
+      }
+
+      const prevDisabled = currentPage <= 1;
+      const nextDisabled = currentPage >= totalPages;
+
+      let pagesHtml = '';
+      const maxButtons = 5;
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+      if (endPage - startPage < maxButtons - 1) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        if (p === currentPage) {
+          pagesHtml += '<span class="px-2 py-0.5 text-xs font-bold rounded bg-red-600 text-white shadow-sm">' + p + '</span>';
+        } else {
+          pagesHtml += '<button onclick="' + onPageChangeFnName + '(' + p + ')" class="px-2 py-0.5 text-xs font-medium rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">' + p + '</button>';
+        }
+      }
+
+      el.innerHTML =
+        '<div class="flex flex-col sm:flex-row items-center justify-between gap-1.5 px-3.5 py-2 text-[10px] font-mono text-slate-400 bg-slate-950/80 border-t border-slate-800/80">' +
+          '<div>Showing <span class="text-slate-200 font-semibold">' + startItem + '-' + endItem + '</span> of <span class="text-slate-200 font-semibold">' + totalItems + '</span></div>' +
+          '<div class="flex items-center gap-1">' +
+            '<button ' + (prevDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2 py-0.5 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage - 1) + ')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer active:scale-95"') + '>&laquo; Prev</button>' +
+            '<div class="flex items-center gap-1 mx-0.5">' + pagesHtml + '</div>' +
+            '<button ' + (nextDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2 py-0.5 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage + 1) + ')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer active:scale-95"') + '>Next &raquo;</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // --- OVERVIEW STATS ---
     async function loadOverview() {
       try {
         const res = await safeFetchJson('/api/stats');
@@ -1856,13 +2015,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           const badge = document.getElementById('dry-run-badge');
           const radar = document.getElementById('status-pulse-radar');
           if (data.dryRun) {
-            badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span>🛡️ DRY RUN ACTIVE</span>';
-            badge.className = 'relative px-3.5 py-1.5 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/40 shadow-sm flex items-center gap-2';
-            radar.classList.add('hidden');
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span><span>DRY RUN</span>';
+            badge.className = 'relative px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/40 flex items-center gap-1.5';
+            if (radar) radar.classList.add('hidden');
           } else {
-            badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>🚀 META LIVE MODE</span>';
-            badge.className = 'relative px-3.5 py-1.5 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/50 shadow-glow-emerald flex items-center gap-2';
-            radar.classList.remove('hidden');
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>META LIVE</span>';
+            badge.className = 'relative px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/50 shadow-glow-emerald flex items-center gap-1.5';
+            if (radar) radar.classList.remove('hidden');
           }
         }
       } catch (e) {
@@ -1875,170 +2034,166 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (!el) return;
       const start = parseInt(el.innerText) || 0;
       if (start === end) { el.innerText = end; return; }
-      const duration = 600;
+      const duration = 500;
       let startTime = null;
       function step(timestamp) {
         if (!startTime) startTime = timestamp;
         const progress = Math.min((timestamp - startTime) / duration, 1);
         el.innerText = Math.floor(progress * (end - start) + start);
-        if (progress < 1) {
-          requestAnimationFrame(step);
-        } else {
-          el.innerText = end;
-        }
+        if (progress < 1) requestAnimationFrame(step);
+        else el.innerText = end;
       }
       requestAnimationFrame(step);
     }
 
-    // --- POLL RSS NOW ---
+    // --- ACTIONS ---
     async function triggerPollNow() {
-      try {
-        showToast('Polling RSS feeds from sources...');
-        const res = await safeFetchJson('/api/poll-now', { method: 'POST' });
-        if (res.ok) {
-          showToast('✓ RSS polling complete! New articles queued.');
-          loadOverview();
-        } else {
-          showToast('Poll response: ' + (res.data?.error || res.error || 'Server response'), true);
-        }
-      } catch (e) {
-        showToast('Failed to poll RSS: ' + e.message, true);
+      showToast('Polling RSS feeds...');
+      const res = await safeFetchJson('/api/poll-now', { method: 'POST' });
+      if (res.ok) {
+        showToast('✓ RSS polling complete!');
+        loadOverview();
+      } else {
+        showToast(res.data?.error || res.error || 'Poll failed', true);
       }
     }
 
-    // --- PUBLISH NEXT NOW ---
     async function publishNextNow() {
-      try {
-        showToast('Publishing next article to Facebook...');
-        const res = await safeFetchJson('/api/queue/publish-next', { method: 'POST' });
-        if (res.ok && res.data.success) {
-          const log = res.data.log;
-          if (log && log.status === 'success' && log.fbPostId) {
-            showToast('✓ Successfully published: ' + (res.data.articleTitle || '').substring(0, 30) + '...');
-          } else if (log && log.errorMessage) {
-            showToast('Facebook error: ' + log.errorMessage, true);
-          } else {
-            showToast('Published to Facebook!');
-          }
-          loadOverview();
-          loadQueue();
-        } else {
-          showToast('Failed to publish: ' + (res.data?.error || res.error || 'Server error'), true);
-        }
-      } catch (e) {
-        showToast('Error publishing: ' + e.message, true);
+      showToast('Publishing next article...');
+      const res = await safeFetchJson('/api/queue/publish-next', { method: 'POST' });
+      if (res.ok && res.data.success) {
+        showToast('✓ Article published to Facebook!');
+        loadOverview();
+        loadQueue();
+      } else {
+        showToast(res.data?.error || res.error || 'Publish failed', true);
       }
     }
 
-    // --- RE-QUEUE UNPOSTED ARTICLES ---
     async function resetUnpostedArticles() {
-      if (!confirm('This will find any articles that were not posted to Facebook (missing Post IDs) and re-queue them as pending so they can be published live. Proceed?')) return;
-      try {
-        showToast('Re-queueing unposted articles...');
-        const res = await safeFetchJson('/api/queue/reset-unposted', { method: 'POST' });
-        if (res.ok && res.data.success) {
-          showToast('✓ ' + (res.data.message || 'Articles re-queued successfully!'));
-          loadOverview();
-          loadQueue();
-        } else {
-          showToast(res.data?.error || 'Failed to re-queue articles', true);
-        }
-      } catch (e) {
-        showToast('Error re-queueing articles: ' + e.message, true);
+      if (!confirm('Re-queue all articles with missing post IDs?')) return;
+      showToast('Re-queueing unposted articles...');
+      const res = await safeFetchJson('/api/queue/reset-unposted', { method: 'POST' });
+      if (res.ok && res.data.success) {
+        showToast('✓ ' + (res.data.message || 'Articles re-queued!'));
+        loadOverview();
+        loadQueue();
+      } else {
+        showToast(res.data?.error || 'Re-queue failed', true);
       }
     }
 
+    // --- QUEUE & LOGS (PAGINATED) ---
+    let queueJobsData = [];
+    let queuePage = 1;
+    const QUEUE_PAGE_SIZE = 10;
 
-    // --- GENERIC PAGINATION HELPER ---
-    function renderPagination(containerId, currentPage, totalPages, totalItems, onPageChangeFnName) {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      if (totalPages <= 1) {
-        el.innerHTML = totalItems > 0
-          ? '<div class="px-3 py-2 text-right text-[11px] text-slate-500 font-mono bg-slate-950/60 rounded-b-xl border-t border-slate-800">' + totalItems + ' total items</div>'
-          : '';
+    let logsData = [];
+    let logsPage = 1;
+    const LOGS_PAGE_SIZE = 10;
+
+    function changeQueuePage(page) {
+      queuePage = page;
+      renderQueuePage(queuePage);
+    }
+
+    function renderQueuePage(page) {
+      const tbody = document.getElementById('queue-table-body');
+      if (!tbody) return;
+      const total = queueJobsData.length;
+      const totalPages = Math.ceil(total / QUEUE_PAGE_SIZE);
+      const start = (page - 1) * QUEUE_PAGE_SIZE;
+      const pageJobs = queueJobsData.slice(start, start + QUEUE_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Queue is currently empty.</td></tr>';
+        renderPagination('queue-pagination', 1, 0, 0, 'changeQueuePage', QUEUE_PAGE_SIZE);
         return;
       }
-      const prevDisabled = currentPage <= 1;
-      const nextDisabled = currentPage >= totalPages;
-      el.innerHTML =
-        '<div class="flex items-center justify-between px-3 py-2 border-t border-slate-800 text-[11px] text-slate-400 font-mono bg-slate-950/70 rounded-b-xl">' +
-          '<div>Page <span class="text-white font-bold">' + currentPage + '</span> of <span class="text-white font-bold">' + totalPages + '</span> (' + totalItems + ' items)</div>' +
-          '<div class="flex items-center gap-1.5">' +
-            '<button ' + (prevDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage - 1) + ')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer"') + '>Prev</button>' +
-            '<span class="px-2 text-xs font-bold text-slate-300">' + currentPage + ' / ' + totalPages + '</span>' +
-            '<button ' + (nextDisabled ? 'disabled class="opacity-30 cursor-not-allowed px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-slate-500 text-xs"' : 'onclick="' + onPageChangeFnName + '(' + (currentPage + 1) + ')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs transition cursor-pointer"') + '>Next</button>' +
-          '</div>' +
-        '</div>';
+
+      tbody.innerHTML = pageJobs.map(j => 
+        '<tr class="hover:bg-slate-800/40 transition">' +
+          '<td class="px-3.5 py-2">' +
+            '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ' +
+              (j.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+               j.status === 'failed' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
+               j.status === 'processing' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
+               'bg-amber-500/10 text-amber-400 border border-amber-500/30') +
+            '">' + j.status + '</span>' +
+          '</td>' +
+          '<td class="px-3.5 py-2 font-medium text-slate-200 max-w-[240px] truncate bn" title="' + (j.article_title || '') + '">' + (j.article_title || 'Pending Ingestion') + '</td>' +
+          '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px] truncate max-w-[110px]">' + (j.page_name || 'All') + '</td>' +
+          '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px]">' + j.attempts + '/' + j.max_attempts + '</td>' +
+          '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + new Date(j.run_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</td>' +
+          '<td class="px-3.5 py-2 text-right">' +
+            '<button onclick="retryJob(\'' + j.id + '\')" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700 transition active:scale-95">Run</button>' +
+          '</td>' +
+        '</tr>'
+      ).join('');
+
+      renderPagination('queue-pagination', page, totalPages, total, 'changeQueuePage', QUEUE_PAGE_SIZE);
     }
 
-    // --- QUEUE & LOGS ---
+    function changeLogsPage(page) {
+      logsPage = page;
+      renderLogsPage(logsPage);
+    }
+
+    function renderLogsPage(page) {
+      const tbody = document.getElementById('logs-table-body');
+      if (!tbody) return;
+      const total = logsData.length;
+      const totalPages = Math.ceil(total / LOGS_PAGE_SIZE);
+      const start = (page - 1) * LOGS_PAGE_SIZE;
+      const pageLogs = logsData.slice(start, start + LOGS_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">No publication history recorded yet.</td></tr>';
+        renderPagination('logs-pagination', 1, 0, 0, 'changeLogsPage', LOGS_PAGE_SIZE);
+        return;
+      }
+
+      tbody.innerHTML = pageLogs.map(l => {
+        const isLiveSuccess = (l.status === 'success' || l.status === 'dry_run') && (l.status === 'dry_run' || !!l.fb_post_id);
+        const badgeClass = isLiveSuccess
+          ? (l.status === 'dry_run' ? 'text-blue-400 bg-blue-950/60 border border-blue-800/50' : 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/50')
+          : 'text-red-400 bg-red-950/60 border border-red-800/50';
+        const displayStatus = (!l.fb_post_id && l.status === 'success') ? 'FAILED' : l.status;
+
+        const postLink = l.fb_post_id ? (
+          '<a href="https://www.facebook.com/' + (l.fb_photo_id || (l.fb_post_id.includes('_') ? l.fb_post_id.split('_')[1] : l.fb_post_id)) + '" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 underline font-bold" title="View live on FB">' +
+            l.fb_post_id + ' ↗' +
+          '</a>'
+        ) : '<span class="text-slate-500">-</span>';
+
+        return '<tr class="hover:bg-slate-800/40 text-xs transition">' +
+          '<td class="px-3.5 py-2">' +
+            '<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ' + badgeClass + '">' + displayStatus + '</span>' +
+            (l.error_message ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 max-w-[200px] truncate" title="' + l.error_message.replace(/"/g, '&quot;') + '">' + l.error_message + '</div>' : '') +
+          '</td>' +
+          '<td class="px-3.5 py-2 text-slate-200 max-w-[240px] truncate bn font-medium" title="' + (l.article_title || '') + '">' + (l.article_title || '') + '</td>' +
+          '<td class="px-3.5 py-2 font-mono text-[11px]">' + postLink + '</td>' +
+          '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px]">' + (l.duration_ms ? l.duration_ms + 'ms' : '-') + '</td>' +
+          '<td class="px-3.5 py-2 text-slate-500 font-mono text-[11px] whitespace-nowrap">' + new Date(l.created_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      renderPagination('logs-pagination', page, totalPages, total, 'changeLogsPage', LOGS_PAGE_SIZE);
+    }
+
     async function loadQueue() {
       try {
         const [qRes, lRes] = await Promise.all([
           safeFetchJson('/api/queue'),
           safeFetchJson('/api/logs')
         ]);
-        const jobs = (qRes.ok && Array.isArray(qRes.data)) ? qRes.data : [];
-        const logs = (lRes.ok && Array.isArray(lRes.data)) ? lRes.data : [];
+        queueJobsData = (qRes.ok && Array.isArray(qRes.data)) ? qRes.data : [];
+        logsData = (lRes.ok && Array.isArray(lRes.data)) ? lRes.data : [];
 
-        const tbody = document.getElementById('queue-table-body');
-        if (jobs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-500 font-mono text-xs">Queue is currently idle and ready.</td></tr>';
-        } else {
-          tbody.innerHTML = jobs.map(j => \`
-            <tr class="hover:bg-slate-800/40 transition">
-              <td class="px-5 py-3.5">
-                <span class="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider \${
-                  j.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                  j.status === 'failed' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
-                  j.status === 'processing' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
-                  'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                }">\${j.status}</span>
-              </td>
-              <td class="px-5 py-3.5 font-medium text-slate-200 max-w-sm truncate bn" title="\${j.article_title || ''}">\${j.article_title || 'Pending Ingestion'}</td>
-              <td class="px-5 py-3.5 text-slate-400 font-mono text-xs">\${j.page_name || 'All'}</td>
-              <td class="px-5 py-3.5 text-slate-400 font-mono text-xs">\${j.attempts}/\${j.max_attempts}</td>
-              <td class="px-5 py-3.5 text-xs text-slate-400 font-mono">\${new Date(j.run_at).toLocaleTimeString()}</td>
-              <td class="px-5 py-3.5 text-right">
-                <button onclick="retryJob('\${j.id}')" class="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-800/90 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700/80 transition active:scale-95">Run Now</button>
-              </td>
-            </tr>
-          \`).join('');
-        }
-
-        const logBody = document.getElementById('logs-table-body');
-        if (logs.length === 0) {
-          logBody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-mono text-xs">No publication logs recorded yet.</td></tr>';
-        } else {
-          logBody.innerHTML = logs.map(l => {
-            const isLiveSuccess = (l.status === 'success' || l.status === 'dry_run') && (l.status === 'dry_run' || !!l.fb_post_id);
-            const badgeClass = isLiveSuccess
-              ? (l.status === 'dry_run' ? 'text-blue-400 bg-blue-950/60 border border-blue-800/50' : 'text-emerald-400 bg-emerald-950/60 border border-emerald-800/50')
-              : 'text-red-400 bg-red-950/60 border border-red-800/50';
-            const displayStatus = (!l.fb_post_id && l.status === 'success') ? 'FAILED' : l.status;
-
-            return \`
-            <tr class="hover:bg-slate-800/40 text-xs transition">
-              <td class="px-5 py-3">
-                <span class="px-2 py-0.5 rounded font-mono font-bold uppercase \${badgeClass}">\${displayStatus}</span>
-                \${l.error_message ? \`<div class="text-[10px] text-red-400/90 font-mono mt-1 max-w-[220px] truncate cursor-pointer hover:underline" onclick="alert(this.getAttribute('data-full-error'))" data-full-error="\${(l.error_message || '').replace(/"/g, '&quot;')}" title="Click to view full error">\${l.error_message}</div>\` : ''}
-              </td>
-              <td class="px-5 py-3 text-slate-200 max-w-sm truncate bn font-medium">\${l.article_title || ''}</td>
-              <td class="px-5 py-3 font-mono">
-                \${l.fb_post_id ? \`
-                  <a href="https://www.facebook.com/\${l.fb_photo_id || (l.fb_post_id.includes('_') ? l.fb_post_id.split('_')[1] : l.fb_post_id)}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 hover:underline inline-flex items-center gap-1.5 font-bold" title="Click to view live post on Facebook">
-                    <span>\${l.fb_post_id}</span>
-                    <svg class="w-3.5 h-3.5 inline opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                  </a>
-                \` : '<span class="text-slate-500 font-semibold" title="No live post ID was recorded">-</span>'}
-              </td>
-              <td class="px-5 py-3 text-slate-400 font-mono">\${l.duration_ms ? l.duration_ms + 'ms' : '-'}</td>
-              <td class="px-5 py-3 text-slate-500 font-mono">\${new Date(l.created_at).toLocaleString()}</td>
-            </tr>
-          \`;
-          }).join('');
-        }
+        queuePage = 1;
+        logsPage = 1;
+        renderQueuePage(1);
+        renderLogsPage(1);
       } catch (e) {
         console.error(e);
       }
@@ -2047,49 +2202,74 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     async function retryJob(id) {
       try {
         const res = await safeFetchJson('/api/queue/' + id + '/retry', { method: 'POST' });
-        const d = res.data || {};
-        if (d.success) {
+        if (res.data?.success) {
           showToast('Job queued for immediate publishing!');
           loadQueue();
         } else {
-          showToast(d.error || 'Retry failed', true);
+          showToast(res.data?.error || 'Retry failed', true);
         }
       } catch (e) {
         showToast('Error retrying job', true);
       }
     }
 
-    // --- RSS SOURCES ---
+    // --- RSS SOURCES (PAGINATED) ---
+    let sourcesData = [];
+    let sourcesPage = 1;
+    const SOURCES_PAGE_SIZE = 5;
+
+    function changeSourcesPage(page) {
+      sourcesPage = page;
+      renderSourcesPage(sourcesPage);
+    }
+
+    function renderSourcesPage(page) {
+      const list = document.getElementById('sources-list');
+      if (!list) return;
+      const total = sourcesData.length;
+      const totalPages = Math.ceil(total / SOURCES_PAGE_SIZE);
+      const start = (page - 1) * SOURCES_PAGE_SIZE;
+      const pageSources = sourcesData.slice(start, start + SOURCES_PAGE_SIZE);
+
+      if (total === 0) {
+        list.innerHTML = '<div class="text-xs text-slate-500 font-mono py-4">No RSS sources added yet.</div>';
+        renderPagination('sources-pagination', 1, 0, 0, 'changeSourcesPage', SOURCES_PAGE_SIZE);
+        return;
+      }
+
+      list.innerHTML = pageSources.map(s => 
+        '<div class="flex items-center justify-between p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition">' +
+          '<div class="min-w-0 flex-1 pr-3">' +
+            '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5 truncate">' +
+              '<span>' + s.name + '</span>' +
+              '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>' +
+            '</div>' +
+            '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | ' + s.template_id + '</div>' +
+          '</div>' +
+          '<button onclick="deleteSource(\'' + s.id + '\')" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+        '</div>'
+      ).join('');
+
+      renderPagination('sources-pagination', page, totalPages, total, 'changeSourcesPage', SOURCES_PAGE_SIZE);
+    }
+
     async function loadSources() {
       const [sRes, pRes] = await Promise.all([
         safeFetchJson('/api/sources'),
         safeFetchJson('/api/pages')
       ]);
-      const sources = (sRes.ok && Array.isArray(sRes.data)) ? sRes.data : [];
+      sourcesData = (sRes.ok && Array.isArray(sRes.data)) ? sRes.data : [];
       const pages = (pRes.ok && Array.isArray(pRes.data)) ? pRes.data : [];
 
       const pageSelect = document.getElementById('source-page');
-      pageSelect.innerHTML = '<option value="">Select Connected Page</option>' +
-        pages.map(p => \`<option value="\${p.id}">\${p.name} (\${p.id})</option>\`).join('');
-
-      const list = document.getElementById('sources-list');
-      if (sources.length === 0) {
-        list.innerHTML = '<div class="text-sm text-slate-500 font-mono">No RSS sources added yet.</div>';
-      } else {
-        list.innerHTML = sources.map(s => \`
-          <div class="flex items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition">
-            <div>
-              <div class="font-bold text-slate-100 flex items-center gap-2">
-                <span>\${s.name}</span>
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>
-              </div>
-              <div class="text-xs text-slate-400 font-mono mt-1 truncate max-w-md">\${s.url}</div>
-              <div class="text-xs text-slate-500 mt-1 font-mono">Page: \${s.page_name || s.page_id} | Template: \${s.template_id}</div>
-            </div>
-            <button onclick="deleteSource('\${s.id}')" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition">Delete</button>
-          </div>
-        \`).join('');
+      if (pageSelect) {
+        pageSelect.innerHTML = '<option value="">Select Connected Page</option>' +
+          pages.map(p => '<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>').join('');
       }
+
+      sourcesPage = 1;
+      renderSourcesPage(1);
     }
 
     async function handleAddSource(e) {
@@ -2106,84 +2286,103 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const d = res.data || {};
-      if (d.success) {
+      if (res.data?.success) {
         showToast('Source added successfully!');
         document.getElementById('add-source-form').reset();
         loadSources();
       } else {
-        showToast(d.error || 'Failed to add source', true);
+        showToast(res.data?.error || 'Failed to add source', true);
       }
     }
 
     async function deleteSource(id) {
-      if (!confirm('Are you sure you want to delete this source?')) return;
+      if (!confirm('Delete this source?')) return;
       await safeFetchJson('/api/sources/' + id, { method: 'DELETE' });
       showToast('Source deleted');
       loadSources();
     }
 
-    // --- FACEBOOK PAGES ---
+    // --- FACEBOOK PAGES (PAGINATED) ---
+    let pagesData = [];
+    let pagesPage = 1;
+    const PAGES_PAGE_SIZE = 5;
+
+    function changePagesPage(page) {
+      pagesPage = page;
+      renderPagesPage(pagesPage);
+    }
+
+    function renderPagesPage(page) {
+      const list = document.getElementById('pages-list');
+      if (!list) return;
+      const total = pagesData.length;
+      const totalPages = Math.ceil(total / PAGES_PAGE_SIZE);
+      const start = (page - 1) * PAGES_PAGE_SIZE;
+      const pagePages = pagesData.slice(start, start + PAGES_PAGE_SIZE);
+
+      if (total === 0) {
+        list.innerHTML = '<div class="text-xs text-slate-500 font-mono py-4">No Facebook Pages connected yet.</div>';
+        renderPagination('pages-pagination', 1, 0, 0, 'changePagesPage', PAGES_PAGE_SIZE);
+        return;
+      }
+
+      list.innerHTML = pagePages.map(p => 
+        '<div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition space-y-2">' +
+          '<div class="flex items-center justify-between">' +
+            '<div>' +
+              '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5">' +
+                '<span>' + p.name + '</span>' +
+                '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">Connected</span>' +
+              '</div>' +
+              '<div class="text-[11px] text-slate-400 font-mono mt-0.5">ID: ' + p.id + '</div>' +
+              '<div class="text-[10px] text-slate-500 font-mono">' + (p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent Token') + '</div>' +
+            '</div>' +
+            '<div class="flex gap-1.5">' +
+              '<button onclick="diagnosePageToken(\'' + p.id + '\')" class="text-[11px] text-amber-400 hover:text-amber-300 px-2.5 py-1 bg-amber-950/40 rounded border border-amber-800/50 transition font-mono">Diagnose</button>' +
+              '<button onclick="deletePage(\'' + p.id + '\')" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="diagnose-result-' + p.id + '" class="hidden text-xs p-2.5 rounded font-mono"></div>' +
+        '</div>'
+      ).join('');
+
+      renderPagination('pages-pagination', page, totalPages, total, 'changePagesPage', PAGES_PAGE_SIZE);
+    }
+
     async function loadPages() {
       const res = await safeFetchJson('/api/pages');
-      const pages = (res.ok && Array.isArray(res.data)) ? res.data : [];
-      const list = document.getElementById('pages-list');
-      if (pages.length === 0) {
-        list.innerHTML = '<div class="text-sm text-slate-500 font-mono">No Facebook Pages connected yet.</div>';
-      } else {
-        list.innerHTML = pages.map(p => \`
-          <div class="p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="font-bold text-slate-100 flex items-center gap-2">
-                  <span>\${p.name}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">Connected</span>
-                </div>
-                <div class="text-xs text-slate-400 font-mono mt-1">Page ID: \${p.id}</div>
-                <div class="text-xs text-slate-500 mt-0.5 font-mono">Token: \${p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent (Long-Lived)'}</div>
-              </div>
-              <div class="flex gap-2">
-                <button onclick="diagnosePageToken('\${p.id}')" class="text-xs text-amber-400 hover:text-amber-300 px-3 py-1.5 bg-amber-950/40 hover:bg-amber-900/60 rounded-lg border border-amber-800/50 transition font-mono">🔍 Diagnose Token</button>
-                <button onclick="deletePage('\${p.id}')" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition">Delete</button>
-              </div>
-            </div>
-            <div id="diagnose-result-\${p.id}" class="hidden text-xs p-3 rounded-lg font-mono"></div>
-          </div>
-        \`).join('');
-      }
+      pagesData = (res.ok && Array.isArray(res.data)) ? res.data : [];
+      pagesPage = 1;
+      renderPagesPage(1);
     }
 
     async function diagnosePageToken(id) {
       const box = document.getElementById('diagnose-result-' + id);
       if (!box) return;
       box.classList.remove('hidden');
-      box.className = 'text-xs p-3.5 rounded-lg font-mono bg-slate-900 border border-slate-800 text-slate-300';
-      box.innerHTML = 'Analyzing token permissions and Facebook Page capabilities...';
+      box.className = 'text-xs p-3 rounded font-mono bg-slate-900 border border-slate-800 text-slate-300';
+      box.innerHTML = 'Diagnosing token permissions...';
 
       try {
         const res = await safeFetchJson('/api/pages/' + id + '/diagnose');
         if (!res.ok) {
-          box.className = 'text-xs p-3.5 rounded-lg font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
-          box.innerHTML = 'Error querying diagnosis: ' + (res.data?.error || res.status);
+          box.className = 'text-xs p-3 rounded font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
+          box.innerHTML = 'Error: ' + (res.data?.error || res.status);
           return;
         }
         const d = res.data || {};
         const isOk = d.canPost && d.isPageToken;
         box.className = isOk
-          ? 'text-xs p-3.5 rounded-lg font-mono bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 space-y-1'
-          : 'text-xs p-3.5 rounded-lg font-mono bg-amber-950/60 border border-amber-800/80 text-amber-300 space-y-1';
+          ? 'text-xs p-3 rounded font-mono bg-emerald-950/60 border border-emerald-800 text-emerald-300 space-y-1'
+          : 'text-xs p-3 rounded font-mono bg-amber-950/60 border border-amber-800 text-amber-300 space-y-1';
 
-        box.innerHTML = \`
-          <div class="font-bold text-sm mb-1">\${isOk ? '✓ Token Verified for Publishing' : '⚠️ Action Needed'}</div>
-          <div><strong>Diagnosis:</strong> \${d.diagnosis}</div>
-          <div><strong>Token Type:</strong> \${d.tokenType || 'Unknown'} \${d.isUserToken ? '<span class=\"text-red-400 font-bold\">(MUST BE PAGE TOKEN!)</span>' : ''}</div>
-          <div><strong>Token Subject:</strong> \${d.tokenSubject || 'Unknown'}</div>
-          <div><strong>Granted Permissions:</strong> \${(d.scopes || []).join(', ') || 'None'}</div>
-          \${d.missingScopes && d.missingScopes.length > 0 ? \`<div class=\"text-red-400\"><strong>Missing Permissions:</strong> \${d.missingScopes.join(', ')}</div>\` : ''}
-          \${d.tasks && d.tasks.length > 0 ? \`<div><strong>Page Tasks:</strong> \${d.tasks.join(', ')}</div>\` : ''}
-        \`;
+        box.innerHTML = 
+          '<div class="font-bold text-xs mb-1">' + (isOk ? '✓ Token Verified' : '⚠️ Attention') + '</div>' +
+          '<div>' + d.diagnosis + '</div>' +
+          '<div>Type: ' + (d.tokenType || 'Unknown') + '</div>' +
+          '<div>Scopes: ' + ((d.scopes || []).join(', ') || 'None') + '</div>';
       } catch (err) {
-        box.className = 'text-xs p-3.5 rounded-lg font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
+        box.className = 'text-xs p-3 rounded font-mono bg-rose-950/60 border border-rose-800 text-rose-300';
         box.innerHTML = 'Diagnosis failed: ' + err.message;
       }
     }
@@ -2192,7 +2391,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const token = document.getElementById('page-token').value;
       if (!token) return alert('Enter token first');
       const box = document.getElementById('token-test-result');
-      box.innerText = 'Testing token via Facebook Graph API...';
+      box.innerText = 'Testing token...';
       box.classList.remove('hidden');
 
       const res = await fetch('/api/pages/test', {
@@ -2201,7 +2400,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         body: JSON.stringify({ access_token: token })
       });
       const d = await res.json();
-      box.innerHTML = \`<pre class="overflow-x-auto text-emerald-400">\${JSON.stringify(d, null, 2)}</pre>\`;
+      box.innerHTML = '<pre class="overflow-x-auto text-emerald-400 text-[10px]">' + JSON.stringify(d, null, 2) + '</pre>';
     }
 
     async function handleAddPage(e) {
@@ -2229,156 +2428,161 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     async function deletePage(id) {
-      if (!confirm('Are you sure you want to delete this page?')) return;
+      if (!confirm('Delete this page?')) return;
       await fetch('/api/pages/' + id, { method: 'DELETE' });
       showToast('Page removed');
       loadPages();
     }
 
-    // --- FACEBOOK GROUPS AUTO-SHARING ---
-    let cachedGroups = [];
+    // --- FACEBOOK GROUPS (PAGINATED) ---
+    let groupsData = [];
+    let groupsPage = 1;
+    const GROUPS_PAGE_SIZE = 6;
+
+    let groupSharesData = [];
+    let groupSharesPage = 1;
+    const GROUP_SHARES_PAGE_SIZE = 10;
+
+    function changeGroupsPage(page) {
+      groupsPage = page;
+      renderGroupsPage(groupsPage);
+    }
+
+    function renderGroupsPage(page) {
+      const container = document.getElementById('groups-container');
+      if (!container) return;
+      const total = groupsData.length;
+      const totalPages = Math.ceil(total / GROUPS_PAGE_SIZE);
+      const start = (page - 1) * GROUPS_PAGE_SIZE;
+      const pageGroups = groupsData.slice(start, start + GROUPS_PAGE_SIZE);
+
+      if (total === 0) {
+        container.innerHTML = 
+          '<div class="col-span-full py-8 px-4 text-center glass-panel rounded-xl border border-dashed border-slate-800 space-y-2">' +
+            '<div class="w-10 h-10 mx-auto rounded-xl bg-emerald-950/60 text-emerald-400 flex items-center justify-center text-lg">👥</div>' +
+            '<h4 class="text-sm font-bold text-slate-200">No Facebook Groups configured</h4>' +
+            '<button onclick="openAddGroupModal()" class="mt-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition">+ Add Group</button>' +
+          '</div>';
+        renderPagination('groups-pagination', 1, 0, 0, 'changeGroupsPage', GROUPS_PAGE_SIZE);
+        return;
+      }
+
+      container.innerHTML = pageGroups.map(g => {
+        const categories = Array.isArray(g.categories) ? g.categories : ['all'];
+        const catPills = categories.map(c => 
+          c.toLowerCase() === 'all'
+            ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">সকল</span>'
+            : '<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-slate-900 text-slate-300 border border-slate-700">' + c + '</span>'
+        ).join(' ');
+
+        return '<div class="glass-panel rounded-xl p-3.5 border ' + (g.autoShare ? 'border-emerald-500/30' : 'border-slate-800') + ' flex flex-col justify-between space-y-2.5">' +
+          '<div class="space-y-2">' +
+            '<div class="flex items-start justify-between gap-2">' +
+              '<div class="min-w-0 flex-1">' +
+                '<h4 class="font-bold text-xs text-slate-100 truncate">' + g.name + '</h4>' +
+                '<div class="text-[10px] text-slate-400 font-mono mt-0.5">ID: ' + g._id + '</div>' +
+              '</div>' +
+              '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase ' + (g.autoShare ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-900 text-slate-500 border border-slate-800') + '">' +
+                (g.autoShare ? 'Active' : 'Paused') +
+              '</span>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-[9px] uppercase font-mono text-slate-400 mb-0.5">Categories:</div>' +
+              '<div class="flex flex-wrap gap-1">' + catPills + '</div>' +
+            '</div>' +
+            '<div class="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/80 flex justify-between">' +
+              '<span>Shares: <strong class="text-slate-200">' + (g.totalShares || 0) + '</strong></span>' +
+              '<span>' + (g.lastSharedAt ? new Date(g.lastSharedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Never') + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800">' +
+            '<button onclick="testShareGroup(\'' + g._id + '\', \'' + g.name.replace(/'/g, "\\'") + '\')" class="px-2.5 py-1 rounded bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold transition active:scale-95">🚀 Test</button>' +
+            '<div class="flex items-center gap-1">' +
+              '<button onclick="toggleGroupAutoShare(\'' + g._id + '\', ' + g.autoShare + ')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] transition">' + (g.autoShare ? 'Pause' : 'Enable') + '</button>' +
+              '<button onclick="deleteGroup(\'' + g._id + '\')" class="px-2 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-[11px] transition">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      renderPagination('groups-pagination', page, totalPages, total, 'changeGroupsPage', GROUPS_PAGE_SIZE);
+    }
+
+    function changeGroupSharesPage(page) {
+      groupSharesPage = page;
+      renderGroupSharesPage(groupSharesPage);
+    }
+
+    function renderGroupSharesPage(page) {
+      const tbody = document.getElementById('group-shares-table-body');
+      if (!tbody) return;
+      const total = groupSharesData.length;
+      const totalPages = Math.ceil(total / GROUP_SHARES_PAGE_SIZE);
+      const start = (page - 1) * GROUP_SHARES_PAGE_SIZE;
+      const pageShares = groupSharesData.slice(start, start + GROUP_SHARES_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500 font-mono text-xs">No group shares recorded yet.</td></tr>';
+        renderPagination('group-shares-pagination', 1, 0, 0, 'changeGroupSharesPage', GROUP_SHARES_PAGE_SIZE);
+        return;
+      }
+
+      tbody.innerHTML = pageShares.map(s => {
+        const isSuccess = s.status === 'success' || s.status === 'dry_run';
+        const statusBadge = isSuccess
+          ? '<span class="px-1.5 py-0.2 rounded text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold">' + (s.status === 'dry_run' ? 'DRY' : 'SHARED') + '</span>'
+          : '<span class="px-1.5 py-0.2 rounded text-[9px] bg-rose-950 text-rose-400 border border-rose-800/60 font-bold" title="' + (s.errorMessage || '').replace(/"/g, '&quot;') + '">FAIL</span>';
+
+        const postLink = s.fbPostId
+          ? '<a href="https://facebook.com/' + s.fbPostId + '" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline font-mono truncate block max-w-[110px]">' + s.fbPostId + ' ↗</a>'
+          : '-';
+
+        return '<tr class="hover:bg-slate-900/40 text-xs transition">' +
+          '<td class="py-2 pr-3 font-sans font-medium text-slate-200 max-w-[180px] truncate" title="' + (s.articleTitle || '') + '">' + (s.articleTitle || '-') + '</td>' +
+          '<td class="py-2 pr-3 text-emerald-300 font-sans max-w-[120px] truncate">' + (s.groupName || s.groupId) + '</td>' +
+          '<td class="py-2 pr-3">' + postLink + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400">' + (s.durationMs ? s.durationMs + 'ms' : '-') + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 whitespace-nowrap">' + (s.createdAt ? new Date(s.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-') + '</td>' +
+          '<td class="py-2">' + statusBadge + '</td>' +
+        '</tr>';
+      }).join('');
+
+      renderPagination('group-shares-pagination', page, totalPages, total, 'changeGroupSharesPage', GROUP_SHARES_PAGE_SIZE);
+    }
 
     async function loadGroups() {
       try {
-        const [groupsRes, sharesRes, statsRes] = await Promise.all([
+        const [groupsRes, sharesRes] = await Promise.all([
           safeFetchJson('/api/groups'),
-          safeFetchJson('/api/groups/shares?limit=25'),
-          safeFetchJson('/api/stats')
+          safeFetchJson('/api/groups/shares?limit=50')
         ]);
 
-        const groups = (groupsRes.ok && Array.isArray(groupsRes.data)) ? groupsRes.data : [];
-        cachedGroups = groups;
+        groupsData = (groupsRes.ok && Array.isArray(groupsRes.data)) ? groupsRes.data : [];
+        groupSharesData = (sharesRes.ok && Array.isArray(sharesRes.data)) ? sharesRes.data : [];
 
-        const totalCount = groups.length;
-        const activeCount = groups.filter(g => g.autoShare).length;
-        const totalShares = groups.reduce((acc, g) => acc + (g.totalShares || 0), 0);
+        const totalCount = groupsData.length;
+        const activeCount = groupsData.filter(g => g.autoShare).length;
+        const totalShares = groupsData.reduce((acc, g) => acc + (g.totalShares || 0), 0);
 
-        const elTotal = document.getElementById('stat-groups-total');
-        const elActive = document.getElementById('stat-groups-active');
-        const elShares = document.getElementById('stat-groups-shares');
-        if (elTotal) elTotal.innerText = totalCount;
-        if (elActive) elActive.innerText = activeCount;
-        if (elShares) elShares.innerText = totalShares;
+        if (document.getElementById('stat-groups-total')) document.getElementById('stat-groups-total').innerText = totalCount;
+        if (document.getElementById('stat-groups-active')) document.getElementById('stat-groups-active').innerText = activeCount;
+        if (document.getElementById('stat-groups-shares')) document.getElementById('stat-groups-shares').innerText = totalShares;
 
-        const container = document.getElementById('groups-container');
-        if (!container) return;
-
-        if (groups.length === 0) {
-          container.innerHTML = \`
-            <div class="col-span-full py-12 px-6 text-center glass-panel rounded-2xl border border-dashed border-slate-800 space-y-3">
-              <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-950/60 text-emerald-400 flex items-center justify-center text-xl border border-emerald-800/40">👥</div>
-              <h4 class="text-base font-bold text-slate-200">No Facebook Groups configured yet</h4>
-              <p class="text-xs text-slate-400 max-w-md mx-auto">
-                Add target Facebook Groups to automatically broadcast your published news cards to relevant community feeds.
-              </p>
-              <button onclick="openAddGroupModal()" class="mt-2 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-lg shadow-emerald-950/60">
-                + Add Your First Group
-              </button>
-            </div>
-          \`;
-        } else {
-          container.innerHTML = groups.map(g => {
-            const categories = Array.isArray(g.categories) ? g.categories : ['all'];
-            const catPills = categories.map(c => {
-              if (c.toLowerCase() === 'all') {
-                return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">All Posts (সকল)</span>';
-              }
-              return \`<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-900 text-slate-300 border border-slate-700/80">\${c}</span>\`;
-            }).join(' ');
-
-            const lastSharedText = g.lastSharedAt ? new Date(g.lastSharedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) : 'Never';
-
-            return \`
-              <div class="tilt-card glass-panel rounded-2xl p-5 border \${g.autoShare ? 'border-emerald-500/30 shadow-glow-emerald/30' : 'border-slate-800'} relative overflow-hidden flex flex-col justify-between group" onmousemove="handleTilt(event, this)" onmouseleave="resetTilt(this)">
-                <div class="space-y-3">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-9 h-9 rounded-xl \${g.autoShare ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'} flex items-center justify-center font-bold text-sm">👥</div>
-                      <div>
-                        <h4 class="font-bold text-slate-100 text-sm group-hover:text-emerald-300 transition">\${g.name}</h4>
-                        <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                          <span>ID: \${g._id}</span>
-                          <a href="https://facebook.com/groups/\${g._id}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline">↗</a>
-                        </div>
-                      </div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider \${g.autoShare ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/80' : 'bg-slate-900 text-slate-500 border border-slate-800'}">
-                      \${g.autoShare ? 'Active' : 'Paused'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div class="text-[10px] uppercase font-mono text-slate-400 mb-1 font-semibold">Matched Categories:</div>
-                    <div class="flex flex-wrap gap-1">\${catPills}</div>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-[11px] font-mono text-slate-400">
-                    <div>Shares: <span class="text-slate-200 font-bold">\${g.totalShares || 0}</span></div>
-                    <div class="truncate">Last: <span class="text-slate-200">\${lastSharedText}</span></div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-800">
-                  <button onclick="testShareGroup('\${g._id}', '\${g.name.replace(/'/g, \"\\\\'\")}')" class="px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
-                    <span>🚀 Test Share</span>
-                  </button>
-                  <div class="flex items-center gap-1.5">
-                    <button onclick="toggleGroupAutoShare('\${g._id}', \${g.autoShare})" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs transition" title="\${g.autoShare ? 'Pause Auto-Share' : 'Enable Auto-Share'}">
-                      \${g.autoShare ? '⏸ Pause' : '▶ Enable'}
-                    </button>
-                    <button onclick="deleteGroup('\${g._id}')" class="px-2 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-xs transition" title="Delete Group">
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
-            \`;
-          }).join('');
-        }
-
-        renderGroupShareLogs((sharesRes.ok && Array.isArray(sharesRes.data)) ? sharesRes.data : []);
+        groupsPage = 1;
+        groupSharesPage = 1;
+        renderGroupsPage(1);
+        renderGroupSharesPage(1);
       } catch (err) {
         console.error('Error loading groups:', err);
       }
     }
 
-    function renderGroupShareLogs(shares) {
-      const tbody = document.getElementById('group-shares-table-body');
-      if (!tbody) return;
-
-      if (!shares || shares.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500 font-mono">No group shares executed yet. Shares happen automatically when new news is published!</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = shares.map(s => {
-        const isSuccess = s.status === 'success' || s.status === 'dry_run';
-        const statusBadge = isSuccess
-          ? \`<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold">\${s.status === 'dry_run' ? 'DRY RUN' : 'SHARED'}</span>\`
-          : \`<span class="px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-400 border border-rose-800/60 font-bold" title="\${(s.errorMessage || '').replace(/"/g, '&quot;')}">FAILED</span>\`;
-
-        const timeStr = s.createdAt ? new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) : '-';
-        const postLink = s.fbPostId
-          ? \`<a href="https://facebook.com/\${s.fbPostId}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline font-mono truncate block max-w-[130px]">\${s.fbPostId} ↗</a>\`
-          : '-';
-
-        return \`
-          <tr class="hover:bg-slate-900/40 transition">
-            <td class="py-3 pr-4 font-sans font-medium text-slate-200 max-w-xs truncate" title="\${s.articleTitle || ''}">\${s.articleTitle || '-'}</td>
-            <td class="py-3 pr-4 text-emerald-300 font-sans">\${s.groupName || s.groupId}</td>
-            <td class="py-3 pr-4">\${postLink}</td>
-            <td class="py-3 pr-4 text-slate-400">\${s.durationMs ? s.durationMs + 'ms' : '-'}</td>
-            <td class="py-3 pr-4 text-slate-400 whitespace-nowrap">\${timeStr}</td>
-            <td class="py-3 pr-2">\${statusBadge}</td>
-          </tr>
-        \`;
-      }).join('');
-    }
-
     async function loadGroupShares() {
-      const res = await safeFetchJson('/api/groups/shares?limit=25');
+      const res = await safeFetchJson('/api/groups/shares?limit=50');
       if (res.ok && Array.isArray(res.data)) {
-        renderGroupShareLogs(res.data);
+        groupSharesData = res.data;
+        groupSharesPage = 1;
+        renderGroupSharesPage(1);
         showToast('Group shares refreshed');
       }
     }
@@ -2388,13 +2592,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (!modal) return;
       modal.classList.remove('hidden');
 
-      // Populate pages select
       try {
         const pagesRes = await safeFetchJson('/api/pages');
         const select = document.getElementById('group-page-select');
         if (select && pagesRes.ok && Array.isArray(pagesRes.data)) {
-          select.innerHTML = '<option value="all">All Active Pages (ডিফল্ট)</option>' +
-            pagesRes.data.map(p => \`<option value="\${p.id}">\${p.name} (\${p.id})</option>\`).join('');
+          select.innerHTML = '<option value="all">All Active Pages</option>' +
+            pagesRes.data.map(p => '<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>').join('');
         }
       } catch (e) {}
     }
@@ -2407,7 +2610,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     function toggleCategoryTag(btn, cat) {
       const input = document.getElementById('group-categories-input');
       if (!input) return;
-
       let currentCats = input.value.split(',').map(c => c.trim()).filter(Boolean);
 
       if (cat === 'all') {
@@ -2417,13 +2619,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           b.classList.add('border-slate-700', 'bg-slate-900', 'text-slate-300');
         });
         btn.classList.add('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
-        btn.classList.remove('border-slate-700', 'bg-slate-900', 'text-slate-300');
         return;
       }
 
-      // If 'all' was in there, remove it
       currentCats = currentCats.filter(c => c.toLowerCase() !== 'all');
-
       const idx = currentCats.indexOf(cat);
       if (idx > -1) {
         currentCats.splice(idx, 1);
@@ -2432,28 +2631,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       } else {
         currentCats.push(cat);
         btn.classList.add('active', 'border-emerald-600', 'bg-emerald-950/60', 'text-emerald-300');
-        btn.classList.remove('border-slate-700', 'bg-slate-900', 'text-slate-300');
       }
-
       input.value = currentCats.length > 0 ? currentCats.join(', ') : 'all';
     }
 
     async function handleSaveGroup(e) {
       e.preventDefault();
-      const id = document.getElementById('group-id-input').value.trim();
-      const name = document.getElementById('group-name-input').value.trim();
-      const categories = document.getElementById('group-categories-input').value.trim();
-      const pageId = document.getElementById('group-page-select').value;
-      const delaySeconds = document.getElementById('group-delay-input').value;
-      const accessToken = document.getElementById('group-token-input').value.trim();
-
       const payload = {
-        id,
-        name,
-        categories,
-        page_id: pageId,
-        delay_seconds: parseInt(delaySeconds, 10) || 5,
-        access_token: accessToken || null,
+        id: document.getElementById('group-id-input').value.trim(),
+        name: document.getElementById('group-name-input').value.trim(),
+        categories: document.getElementById('group-categories-input').value.trim(),
+        page_id: document.getElementById('group-page-select').value,
+        delay_seconds: parseInt(document.getElementById('group-delay-input').value, 10) || 5,
+        access_token: document.getElementById('group-token-input').value.trim() || null,
         auto_share: true,
       };
 
@@ -2463,8 +2653,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok && res.data && res.data.success) {
-        showToast(\`Group "\${name}" added successfully!\`);
+      if (res.ok && res.data?.success) {
+        showToast('Group added successfully!');
         closeAddGroupModal();
         document.getElementById('form-add-group').reset();
         loadGroups();
@@ -2479,9 +2669,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auto_share: !currentStatus })
       });
-
       if (res.ok) {
-        showToast(\`Auto-share \${!currentStatus ? 'enabled' : 'paused'} for group\`);
+        showToast('Auto-share ' + (!currentStatus ? 'enabled' : 'paused'));
         loadGroups();
       } else {
         showToast(res.error || 'Failed to update group', true);
@@ -2489,7 +2678,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     async function deleteGroup(id) {
-      if (!confirm('Are you sure you want to remove this group from auto-share?')) return;
+      if (!confirm('Remove this group from auto-share?')) return;
       const res = await safeFetchJson('/api/groups/' + id, { method: 'DELETE' });
       if (res.ok) {
         showToast('Group removed');
@@ -2500,10 +2689,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     async function testShareGroup(id, groupName) {
-      showToast(\`Initiating test share to "\${groupName}"...\`);
+      showToast('Sharing to "' + groupName + '"...');
       const res = await safeFetchJson('/api/groups/' + id + '/test-share', { method: 'POST' });
-      if (res.ok && res.data && res.data.success) {
-        showToast(\`✓ Shared successfully to "\${groupName}"!\`);
+      if (res.ok && res.data?.success) {
+        showToast('✓ Shared to "' + groupName + '"!');
         loadGroups();
       } else {
         showToast(res.data?.error || res.error || 'Test share failed', true);
@@ -2514,12 +2703,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     async function renderPreview() {
       const spinner = document.getElementById('preview-spinner');
       const frame = document.getElementById('preview-frame');
-      const img = document.getElementById('preview-img');
       const placeholder = document.getElementById('preview-placeholder');
       const meta = document.getElementById('preview-meta');
 
-      spinner.classList.remove('hidden');
-      meta.innerText = 'Compiling Bengali layout in 3D frame...';
+      if (spinner) spinner.classList.remove('hidden');
+      if (meta) meta.innerText = 'Compiling Bengali layout...';
 
       const payload = {
         templateId: document.getElementById('preview-template').value,
@@ -2535,25 +2723,24 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           body: JSON.stringify(payload)
         });
 
-        if (res.ok && res.data && res.data.html) {
+        if (res.ok && res.data?.html) {
           frame.srcdoc = res.data.html;
           frame.classList.remove('hidden');
-          img.classList.add('hidden');
           placeholder.classList.add('hidden');
-          meta.innerText = '✓ Live Interactive Canva Template Ready (1080x1080 Rendered)';
+          meta.innerText = '✓ Live Canva Template Ready (1080x1080)';
         } else {
-          meta.innerText = 'Preview notice: ' + (res.data?.error || res.error || 'Failed to compile template');
+          meta.innerText = res.data?.error || 'Failed to compile template';
         }
       } catch (e) {
         meta.innerText = 'Error: ' + e.message;
-        showToast('Error generating preview: ' + e.message, true);
       } finally {
-        spinner.classList.add('hidden');
+        if (spinner) spinner.classList.add('hidden');
       }
     }
 
     // --- SETTINGS ---
     async function loadSettings() {
+      initCronPills();
       const res = await safeFetchJson('/api/settings');
       const d = res.data || {};
       document.getElementById('setting-cron').value = d.POLL_INTERVAL_CRON || '*/10 * * * *';
@@ -2584,38 +2771,18 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const d = res.data || {};
-      if (d.success) {
-        showToast('Pipeline configuration saved successfully!');
+      if (res.data?.success) {
+        showToast('Pipeline configuration saved!');
       } else {
-        showToast(d.error || 'Failed to save settings', true);
+        showToast(res.data?.error || 'Failed to save settings', true);
       }
     }
 
-    // --- 7. FACEBOOK REELS STUDIO ---
+    // --- REELS STUDIO (PAGINATED) ---
     let cachedReelArticles = [];
-    const reelThemeDescriptions = {
-      'auto-category': 'Smart AI Matching: Automatically detects bdnews.site category (13 categories) and applies tailored visual theme and audio profile',
-      'rolling': 'Dynamic Round-Robin: Cycles through all templates automatically on every post',
-      'cat-bangladesh': '1080x1080 Square: Patriotic emerald & crimson theme, live badge, framed photo, bold Bengali card',
-      'cat-politics': '1080x1080 Square: Authoritative political breaking theme, golden alert badge, heavy bass broadcast fanfare',
-      'cat-economy': '1080x1080 Square: Financial markets & business theme, emerald green badge, modern crisp pulse audio',
-      'cat-international': '1080x1080 Square: Global world affairs theme, yellow badge, expansive world broadcast reverb sound',
-      'cat-sports': '1080x1080 Square: High-octane stadium sports theme, orange badge, upbeat energetic sports fanfare',
-      'cat-technology': '1080x1080 Square: Futuristic cyber innovation theme, electric cyan badge, electronic tech resonance sound',
-      'cat-entertainment': '1080x1080 Square: Celebrity & cinema theme, neon fuchsia badge, lively upbeat pop showbiz shimmer sound',
-      'cat-opinion': '1080x1080 Square: Thought-provoking editorial column theme, ochre gold badge, thoughtful orchestral sound',
-      'cat-religion': '1080x1080 Square: Dignified spiritual serene theme, radiant gold badge, peaceful acoustic sound',
-      'cat-education': '1080x1080 Square: Academic campus & students theme, cerulean badge, bright inspiring melodic audio',
-      'cat-job': '1080x1080 Square: Career opportunities theme, mint green badge, confident forward-moving beat',
-      'cat-lifestyle': '1080x1080 Square: Health & living theme, warm coral badge, light friendly lifestyle ambiance',
-      'cat-todays-match': '1080x1080 Square: Pulse-pounding match day & urgent alert theme, fiery gold badge, maximum overdrive sound',
-      'studio-red': '1080x1080 Square: Red gradient studio, framed photo, circular logo, white lower-third card',
-      'breaking-bold': '1080x1080 Square: High urgency TV alert, animated breaking ticker, bold red & black straps with gold accent',
-      'dark-cinema': '1080x1080 Square: Premium obsidian & neon cyan aesthetic, widescreen photo, glowing glassmorphic card',
-      'viral-gradient': '1080x1080 Square: Modern sunset violet/rose mesh gradient, floating photo, high-contrast viral card',
-      'vertical-916': '1080x1920 Fullscreen: Native smartphone vertical reel format, massive centered photo & bottom overlay headline',
-    };
+    let reelLogsData = [];
+    let reelLogsPage = 1;
+    const REEL_LOGS_PAGE_SIZE = 10;
 
     let reelDebounceTimer = null;
     function updateReelFramePreviewDebounced() {
@@ -2623,77 +2790,27 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       reelDebounceTimer = setTimeout(updateReelFramePreview, 350);
     }
 
-    async function loadReels() {
-      try {
-        loadReelSettings();
-        loadReelArticles();
-        loadReelPages();
-        loadReelLogs();
-        onReelThemeChanged();
-      } catch (e) {
-        console.error('Error loading reels tab:', e);
-      }
-    }
-
     function onReelThemeChanged() {
       const select = document.getElementById('reel-theme-select');
       const theme = select ? select.value : 'auto-category';
-      const durSelect = document.getElementById('reel-duration-select');
-      const dur = durSelect ? durSelect.value : '18';
-      const descEl = document.getElementById('reel-theme-desc');
+      const dur = document.getElementById('reel-duration-select')?.value || '18';
       const badgeEl = document.getElementById('reel-theme-badge');
-      const playerBox = document.getElementById('reel-player-box');
       const durBadge = document.getElementById('reel-duration-badge');
 
-      if (descEl) descEl.innerText = reelThemeDescriptions[theme] || '';
-
-      if (theme === 'auto-category') {
-        if (badgeEl) {
-          badgeEl.innerText = 'Smart AI Category';
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-400 border border-amber-800';
-        }
-        if (playerBox) {
-          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
-        }
-        if (durBadge) durBadge.innerText = dur + 's • 24fps • Smart AI Matching';
-      } else if (theme === 'rolling') {
-        if (badgeEl) {
-          badgeEl.innerText = 'Auto Rolling';
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800';
-        }
-        if (playerBox) {
-          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
-        }
-        if (durBadge) durBadge.innerText = dur + 's • 24fps • Rotating Templates';
-      } else if (theme && theme.startsWith('cat-')) {
-        if (badgeEl) {
-          badgeEl.innerText = '1:1 Category';
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-400 border border-cyan-800';
-        }
-        if (playerBox) {
-          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
-        }
-        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1080';
-      } else if (theme === 'vertical-916') {
-        if (badgeEl) {
+      if (badgeEl) {
+        if (theme === 'auto-category') {
+          badgeEl.innerText = 'Smart Category';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-amber-950 text-amber-400 border border-amber-800';
+        } else if (theme === 'vertical-916') {
           badgeEl.innerText = '9:16 Vertical';
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
-        }
-        if (playerBox) {
-          playerBox.className = 'relative w-full max-w-[280px] aspect-[9/16] bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
-        }
-        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1920';
-      } else {
-        if (badgeEl) {
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+        } else {
           badgeEl.innerText = '1:1 Square';
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800';
         }
-        if (playerBox) {
-          playerBox.className = 'relative w-full max-w-[420px] aspect-square bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl flex items-center justify-center overflow-hidden group transition-all duration-300';
-        }
-        if (durBadge) durBadge.innerText = dur + 's • 24fps • 1080x1080';
       }
 
+      if (durBadge) durBadge.innerText = dur + 's • 24fps • AAC';
       updateReelFramePreview();
     }
 
@@ -2717,7 +2834,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const params = new URLSearchParams({
         theme: previewTheme,
         category: category,
-        headline: headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি'
+        headline: headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত'
       });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
@@ -2744,14 +2861,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ headline, category })
           });
-          if (res.ok && res.data && res.data.hashtags) {
+          if (res.ok && res.data?.hashtags) {
             const el = document.getElementById('reel-hashtags-input');
             if (el) el.value = res.data.hashtags;
           }
-        } catch (e) {
-          console.error('Failed to generate viral hashtags:', e);
-        }
+        } catch (e) {}
       }, 300);
+    }
+
+    async function loadReels() {
+      loadReelSettings();
+      loadReelArticles();
+      loadReelPages();
+      loadReelLogs();
+      onReelThemeChanged();
     }
 
     async function loadReelSettings() {
@@ -2760,94 +2883,31 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (res.ok && res.data) {
           const auto = Boolean(res.data.autoPostReels);
           const toggle = document.getElementById('toggle-auto-reels');
-          const badge = document.getElementById('reels-auto-badge');
           if (toggle) toggle.checked = auto;
-          if (badge) {
-            badge.innerText = auto ? 'ACTIVE' : 'OFF';
-            badge.className = auto 
-              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800' 
-              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
-          }
-
-          const disablePoster = Boolean(res.data.disablePoster);
-          const togglePoster = document.getElementById('toggle-disable-poster');
-          const posterBadge = document.getElementById('poster-disable-badge');
-          if (togglePoster) togglePoster.checked = disablePoster;
-          if (posterBadge) {
-            posterBadge.innerText = disablePoster ? 'ACTIVE' : 'OFF';
-            posterBadge.className = disablePoster 
-              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800' 
-              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
-          }
 
           const postStories = res.data.postPosterToStories !== false;
           const toggleStories = document.getElementById('toggle-post-stories');
-          const storiesBadge = document.getElementById('stories-poster-badge');
           if (toggleStories) toggleStories.checked = postStories;
-          if (storiesBadge) {
-            storiesBadge.innerText = postStories ? 'ACTIVE' : 'OFF';
-            storiesBadge.className = postStories 
-              ? 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-950 text-purple-400 border border-purple-800' 
-              : 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-800 text-slate-400';
-          }
         }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    async function handleDisablePosterToggle(checked) {
-      try {
-        const res = await safeFetchJson('/api/reels/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ disablePoster: checked })
-        });
-        if (res.ok) {
-          showToast(checked ? '✓ Poster disabled! 15-20s Reels-Only mode active.' : 'Poster posting enabled');
-          loadReelSettings();
-        } else {
-          showToast('Failed to update setting', true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
-      }
+      } catch (e) {}
     }
 
     async function handleAutoReelsToggle(checked) {
-      try {
-        const res = await safeFetchJson('/api/reels/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ autoPostReels: checked })
-        });
-        if (res.ok) {
-          showToast(checked ? '✓ Auto-Reels enabled on new posts' : 'Auto-Reels disabled');
-          loadReelSettings();
-        } else {
-          showToast('Failed to update Auto-Reels setting', true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
-      }
+      await safeFetchJson('/api/reels/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoPostReels: checked })
+      });
+      showToast(checked ? '✓ Auto-Reels enabled' : 'Auto-Reels disabled');
     }
 
     async function handlePostStoriesToggle(checked) {
-      try {
-        const res = await safeFetchJson('/api/reels/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postPosterToStories: checked })
-        });
-        if (res.ok) {
-          showToast(checked ? '✓ JPG poster will publish to Page Stories (Not Feed)' : 'Page Stories auto-post disabled');
-          loadReelSettings();
-        } else {
-          showToast('Failed to update setting', true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
-      }
+      await safeFetchJson('/api/reels/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postPosterToStories: checked })
+      });
+      showToast(checked ? '✓ Stories posting enabled' : 'Stories posting disabled');
     }
 
     async function loadReelArticles() {
@@ -2858,22 +2918,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
         let items = [];
         if (res.ok && res.data) {
-          items = (res.data.pendingJobs || []).concat(res.data.recentLogs || []);
+          items = Array.isArray(res.data) ? res.data : (res.data.pendingJobs || []).concat(res.data.recentLogs || []);
         }
 
         cachedReelArticles = items;
         select.innerHTML = '<option value="">-- Choose an article or type custom below --</option>';
 
         items.slice(0, 30).forEach((item, idx) => {
-          const title = item.articleTitle || item.payload?.articleTitle || item.title || ('Article #' + (idx + 1));
+          const title = item.article_title || item.articleTitle || item.payload?.articleTitle || item.title || ('Article #' + (idx + 1));
           const opt = document.createElement('option');
           opt.value = idx;
-          opt.textContent = title.length > 70 ? title.substring(0, 70) + '...' : title;
+          opt.textContent = title.length > 60 ? title.substring(0, 60) + '...' : title;
           select.appendChild(opt);
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
 
     function onReelArticleSelected() {
@@ -2882,11 +2940,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (idx === '' || !cachedReelArticles[idx]) return;
 
       const item = cachedReelArticles[idx];
-      const title = item.articleTitle || item.payload?.articleTitle || item.title || '';
+      const title = item.article_title || item.articleTitle || item.payload?.articleTitle || item.title || '';
       const category = item.category || item.payload?.category || 'বিশেষ খবর';
       const img = item.imageUrl || item.payload?.imageUrl || '';
-      const link = item.link || item.payload?.link || item.articleLink || '';
-      const articleId = item._id || item.articleId || item.payload?.articleId || '';
+      const link = item.article_link || item.link || item.payload?.link || '';
+      const articleId = item.id || item._id || item.articleId || '';
 
       if (title) document.getElementById('reel-headline-input').value = title;
       if (category) document.getElementById('reel-category-input').value = category;
@@ -2905,13 +2963,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         select.innerHTML = '<option value="all">Active Default Page (BD News 24/7)</option>';
         res.data.forEach(p => {
           const opt = document.createElement('option');
-          opt.value = p._id;
-          opt.textContent = p.name + ' (' + p._id + ')';
+          opt.value = p._id || p.id;
+          opt.textContent = p.name + ' (' + (p._id || p.id) + ')';
           select.appendChild(opt);
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     }
 
     async function renderReelPreview() {
@@ -2921,7 +2977,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const theme = document.getElementById('reel-theme-select').value || 'studio-red';
 
       if (!headline) {
-        showToast('Please enter a Bengali headline', true);
+        showToast('Please enter a headline', true);
         return;
       }
 
@@ -2935,14 +2991,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
       spinner.classList.remove('hidden');
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering ' + dur + 's MP4 news reel (' + theme + ')... This takes ~15-20 seconds.';
+      statusEl.innerText = 'Rendering ' + dur + 's MP4 news reel...';
 
-      const params = new URLSearchParams({
-        headline: headline,
-        category: category,
-        theme: theme,
-        duration: dur
-      });
+      const params = new URLSearchParams({ headline, category, theme, duration: dur });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
       const streamUrl = '/api/reels/preview.mp4?' + params.toString();
@@ -2950,7 +3001,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       try {
         video.src = streamUrl;
         video.load();
-
         video.onloadeddata = () => {
           spinner.classList.add('hidden');
           placeholder.classList.add('hidden');
@@ -2959,10 +3009,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           video.play().catch(() => {});
           downloadLink.href = streamUrl;
           downloadLink.classList.remove('hidden');
-          statusEl.innerText = '✓ ' + dur + 's Reel rendered successfully! Playing in studio player.';
-          showToast('✓ ' + dur + 's MP4 Reel (' + theme + ') rendered successfully!');
+          statusEl.innerText = '✓ ' + dur + 's Reel ready!';
+          showToast('✓ ' + dur + 's MP4 Reel rendered successfully!');
         };
-
         video.onerror = () => {
           spinner.classList.add('hidden');
           statusEl.innerText = 'Failed to load video stream.';
@@ -2985,10 +3034,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const dur = parseInt(document.getElementById('reel-duration-select')?.value || '18', 10) || 18;
       const hashtags = document.getElementById('reel-hashtags-input')?.value.trim() || '';
 
-      if (!headline) {
-        showToast('Please enter a Bengali headline', true);
-        return;
-      }
+      if (!headline) return showToast('Please enter a headline', true);
 
       const statusEl = document.getElementById('reel-action-status');
       const spinner = document.getElementById('reel-player-spinner');
@@ -2997,37 +3043,27 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       btn.disabled = true;
       btn.classList.add('opacity-50');
       spinner.classList.remove('hidden');
-      document.getElementById('reel-spinner-text').innerText = 'Generating ' + dur + 's MP4 & publishing to Facebook Reels...';
+      document.getElementById('reel-spinner-text').innerText = 'Publishing to Facebook Reels...';
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering ' + dur + 's MP4 (' + theme + ') and uploading to Facebook Graph API...';
+      statusEl.innerText = 'Publishing reel...';
 
       try {
         const res = await safeFetchJson('/api/reels/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            headline,
-            category,
-            imageUrl,
-            link,
-            articleId,
-            pageId,
-            theme,
-            duration: dur,
-            hashtags
-          })
+          body: JSON.stringify({ headline, category, imageUrl, link, articleId, pageId, theme, duration: dur, hashtags })
         });
 
-        if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully published ' + dur + 's Reel with first comment to ' + (res.data.pageName || 'Facebook') + '!');
-          statusEl.innerText = '✓ Published! Facebook Video ID: ' + (res.data.videoId || 'N/A');
+        if (res.ok && res.data?.success) {
+          showToast('✓ Reel published to ' + (res.data.pageName || 'Facebook') + '!');
+          statusEl.innerText = '✓ Published! Video ID: ' + (res.data.videoId || 'N/A');
           loadReelLogs();
         } else {
           showToast('Publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
           statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
         }
       } catch (e) {
-        showToast('Error publishing reel: ' + e.message, true);
+        showToast('Error: ' + e.message, true);
       } finally {
         btn.disabled = false;
         btn.classList.remove('opacity-50');
@@ -3041,10 +3077,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const imageUrl = document.getElementById('reel-image-input').value.trim();
       const pageId = document.getElementById('reel-page-select').value;
 
-      if (!headline) {
-        showToast('Please enter a Bengali headline', true);
-        return;
-      }
+      if (!headline) return showToast('Please enter a headline', true);
 
       const statusEl = document.getElementById('reel-action-status');
       const btn = document.getElementById('btn-publish-story');
@@ -3052,7 +3085,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       btn.disabled = true;
       btn.classList.add('opacity-50');
       statusEl.classList.remove('hidden');
-      statusEl.innerText = 'Rendering 1080x1080 JPG card and publishing to Facebook Stories (NOT feed)...';
+      statusEl.innerText = 'Publishing JPG card to Stories...';
 
       try {
         const res = await safeFetchJson('/api/stories/publish', {
@@ -3061,25 +3094,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           body: JSON.stringify({ headline, category, imageUrl, pageId })
         });
 
-        if (res.ok && res.data && res.data.success) {
-          showToast('✓ Successfully posted JPG poster to ' + (res.data.pageName || 'Facebook') + ' Stories!');
-          statusEl.innerText = '✓ Published to Stories! Photo ID: ' + res.data.photoId + ', Story ID: ' + res.data.storyId;
+        if (res.ok && res.data?.success) {
+          showToast('✓ Posted to Stories!');
+          statusEl.innerText = '✓ Published to Stories! ID: ' + res.data.storyId;
         } else {
-          showToast('Story publish failed: ' + (res.data?.error || res.error || 'Server error'), true);
+          showToast('Story publish failed', true);
           statusEl.innerText = 'Error: ' + (res.data?.error || res.error);
         }
       } catch (e) {
-        showToast('Error publishing story: ' + e.message, true);
+        showToast('Error: ' + e.message, true);
       } finally {
         btn.disabled = false;
         btn.classList.remove('opacity-50');
       }
     }
-
-    // --- REEL LOGS (WITH PAGINATION) ---
-    let reelLogsData = [];
-    let reelLogsPage = 1;
-    const REEL_LOGS_PAGE_SIZE = 10;
 
     function changeReelsPage(newPage) {
       reelLogsPage = newPage;
@@ -3099,65 +3127,57 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const pageLogs = reelLogsData.slice(start, start + REEL_LOGS_PAGE_SIZE);
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500 font-mono text-xs">No reels published yet. Click "Publish Reel Now" to create one!</td></tr>';
-        renderPagination('reels-pagination', 1, 0, 0, 'changeReelsPage');
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500 font-mono text-xs">No reels published yet.</td></tr>';
+        renderPagination('reels-pagination', 1, 0, 0, 'changeReelsPage', REEL_LOGS_PAGE_SIZE);
         return;
       }
 
-      const themeLabels = {
-        'studio-red': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-300 border border-rose-800">Studio Red</span>',
-        'breaking-bold': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800">Breaking Flash</span>',
-        'dark-cinema': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">Dark Cyber</span>',
-        'viral-gradient': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-800">Viral Mesh</span>',
-        'vertical-916': '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800">9:16 Vertical</span>',
-      };
-
       tbody.innerHTML = pageLogs.map(log => {
-        const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
         const isSuccess = log.status === 'success';
         const isDryRun = log.status === 'dry_run';
         const statusBadge = isSuccess
-          ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
+          ? '<span class="px-1.5 py-0.2 text-[9px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUB</span>'
           : (isDryRun 
-              ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
-              : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
-                (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
+              ? '<span class="px-1.5 py-0.2 text-[9px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY</span>'
+              : '<span class="px-1.5 py-0.2 text-[9px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAIL</span>');
 
         const videoLink = log.fbVideoId && !log.fbVideoId.startsWith('dryrun')
           ? '<a href="https://facebook.com/' + log.fbVideoId + '" target="_blank" class="text-rose-400 hover:underline">' + log.fbVideoId + ' ↗</a>'
-          : (log.fbVideoId || 'N/A');
-
-        const themeBadge = log.theme && themeLabels[log.theme] ? themeLabels[log.theme] : '<span class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-400">Standard</span>';
+          : (log.fbVideoId || '-');
 
         return '<tr class="hover:bg-slate-900/40 text-xs transition">' +
-          '<td class="py-2.5 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
-          '<td class="py-2.5 pr-4 text-slate-400">' + (log.pageName || 'BD News 24/7') + '</td>' +
-          '<td class="py-2.5 pr-4">' + themeBadge + '</td>' +
-          '<td class="py-2.5 pr-4 font-mono">' + videoLink + '</td>' +
-          '<td class="py-2.5 pr-4 text-slate-400 font-mono">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
-          '<td class="py-2.5 pr-4 text-slate-400 font-mono">' + dateStr + '</td>' +
-          '<td class="py-2.5">' + statusBadge + '</td>' +
-          '</tr>';
+          '<td class="py-2 pr-3 font-bengali text-slate-200 max-w-[200px] truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 truncate max-w-[100px]">' + (log.pageName || 'BD News 24/7') + '</td>' +
+          '<td class="py-2 pr-3 text-[10px] font-mono text-slate-400">' + (log.theme || 'Standard') + '</td>' +
+          '<td class="py-2 pr-3 font-mono text-[11px]">' + videoLink + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px]">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : '-') + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + (log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-') + '</td>' +
+          '<td class="py-2">' + statusBadge + '</td>' +
+        '</tr>';
       }).join('');
 
-      renderPagination('reels-pagination', page, totalPages, total, 'changeReelsPage');
+      renderPagination('reels-pagination', page, totalPages, total, 'changeReelsPage', REEL_LOGS_PAGE_SIZE);
     }
 
     async function loadReelLogs() {
       try {
         const res = await safeFetchJson('/api/reels/logs?limit=50');
         reelLogsData = (res.ok && Array.isArray(res.data)) ? res.data : [];
-        renderReelLogsPage(reelLogsPage);
-      } catch (e) {
-        console.error('Error loading reel logs:', e);
-      }
+        reelLogsPage = 1;
+        renderReelLogsPage(1);
+      } catch (e) {}
     }
 
-
-    // --- GOOGLE DRIVE MULTI-CHANNEL CLOUD REELS ---
+    // --- GOOGLE DRIVE CLOUD REELS (PAGINATED) ---
     let cachedGDriveChannels = [];
     let activeGDriveChannelId = null;
     let cachedGDriveVideos = [];
+
+    let gdriveChannelsPage = 1;
+    const GDRIVE_CHANNELS_PAGE_SIZE = 5;
+
+    let gdriveVideoPage = 1;
+    const GDRIVE_PAGE_SIZE = 10;
 
     async function loadGDriveReels() {
       await loadGDrivePageOptions();
@@ -3173,234 +3193,143 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         select.innerHTML = '<option value="">-- Select Target Facebook Page --</option>';
         res.data.forEach(p => {
           const opt = document.createElement('option');
-          opt.value = p._id;
-          opt.textContent = p.name + ' (' + p._id + ')';
+          opt.value = p._id || p.id;
+          opt.textContent = p.name + ' (' + (p._id || p.id) + ')';
           select.appendChild(opt);
         });
-      } catch (e) {
-        console.error('Error loading pages for gdrive channels:', e);
-      }
+      } catch (e) {}
     }
 
     async function refreshGDriveChannels() {
       const badge = document.getElementById('gdrive-global-status-badge');
-      if (badge) badge.innerText = 'Syncing channels...';
+      if (badge) badge.innerText = 'Syncing...';
 
       try {
         const res = await safeFetchJson('/api/gdrive-reels/channels');
-        if (!res.ok || !res.data) {
-          if (badge) {
-            badge.innerText = '❌ Error Loading Channels';
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-red-950/80 text-red-400 border border-red-800';
-          }
-          return;
-        }
+        if (!res.ok || !res.data) return;
 
         cachedGDriveChannels = res.data.channels || [];
         const globalApiKey = res.data.globalApiKey || '';
 
-        // Update API Key UI
         const keyInput = document.getElementById('gdrive-global-api-key');
         const keyPill = document.getElementById('gdrive-api-key-status-pill');
         if (keyInput) keyInput.value = globalApiKey;
         if (keyPill) {
-          if (globalApiKey) {
-            keyPill.innerText = '✓ Key Active';
-            keyPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
-          } else {
-            keyPill.innerText = '⚠️ Key Missing';
-            keyPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800';
-          }
+          keyPill.innerText = globalApiKey ? '✓ Active' : '⚠️ Missing';
+          keyPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full ' + (globalApiKey ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400');
         }
 
-        // Calculate and update stats
         const totalChannels = cachedGDriveChannels.length;
         const activeChannels = cachedGDriveChannels.filter(c => c.isActive).length;
         let totalPosted = 0;
-        cachedGDriveChannels.forEach(c => {
-          totalPosted += (c.postedVideoIds ? c.postedVideoIds.length : 0);
-        });
+        cachedGDriveChannels.forEach(c => { totalPosted += (c.postedVideoIds ? c.postedVideoIds.length : 0); });
 
-        if (document.getElementById('stat-gdrive-total-channels')) {
-          document.getElementById('stat-gdrive-total-channels').innerText = totalChannels;
-        }
-        if (document.getElementById('stat-gdrive-active-channels')) {
-          document.getElementById('stat-gdrive-active-channels').innerText = activeChannels;
-        }
-        if (document.getElementById('stat-gdrive-posted-videos')) {
-          document.getElementById('stat-gdrive-posted-videos').innerText = totalPosted;
-        }
+        if (document.getElementById('stat-gdrive-total-channels')) document.getElementById('stat-gdrive-total-channels').innerText = totalChannels;
+        if (document.getElementById('stat-gdrive-active-channels')) document.getElementById('stat-gdrive-active-channels').innerText = activeChannels;
+        if (document.getElementById('stat-gdrive-posted-videos')) document.getElementById('stat-gdrive-posted-videos').innerText = totalPosted;
 
         if (badge) {
-          if (activeChannels > 0) {
-            badge.innerText = '🟢 ' + activeChannels + ' Channels Active (24/7 Cloud)';
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800';
-          } else {
-            badge.innerText = '⏸️ Standby (' + totalChannels + ' Channels)';
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-950/80 text-amber-400 border border-amber-800';
-          }
+          badge.innerText = activeChannels > 0 ? '🟢 ' + activeChannels + ' Active' : 'Standby';
+          badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full ' + (activeChannels > 0 ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400');
         }
 
-        renderGDriveChannelCards(cachedGDriveChannels);
+        gdriveChannelsPage = 1;
+        renderGDriveChannelsPage(1);
 
-        // Select active channel if none selected
         if (!activeGDriveChannelId && cachedGDriveChannels.length > 0) {
           selectGDriveChannel(cachedGDriveChannels[0]._id);
         } else if (activeGDriveChannelId) {
           const exists = cachedGDriveChannels.some(c => c._id === activeGDriveChannelId);
-          if (exists) {
-            selectGDriveChannel(activeGDriveChannelId);
-          } else if (cachedGDriveChannels.length > 0) {
-            selectGDriveChannel(cachedGDriveChannels[0]._id);
-          }
+          if (exists) selectGDriveChannel(activeGDriveChannelId);
+          else if (cachedGDriveChannels.length > 0) selectGDriveChannel(cachedGDriveChannels[0]._id);
         }
-      } catch (e) {
-        console.error('Error refreshing gdrive channels:', e);
-      }
+      } catch (e) {}
     }
 
-    function renderGDriveChannelCards(channels) {
+    function changeGDriveChannelsPage(page) {
+      gdriveChannelsPage = page;
+      renderGDriveChannelsPage(gdriveChannelsPage);
+    }
+
+    function renderGDriveChannelsPage(page) {
       const container = document.getElementById('gdrive-channels-container');
       if (!container) return;
 
-      if (!channels || channels.length === 0) {
-        container.innerHTML = '<div class="glass-panel p-6 text-center text-slate-500 font-mono text-xs rounded-2xl border border-slate-800">' +
-          'No channels configured yet. Click "+ Add Drive Folder Channel" above to link a Google Drive folder to a Facebook Page!' +
-          '</div>';
+      const total = cachedGDriveChannels.length;
+      const totalPages = Math.ceil(total / GDRIVE_CHANNELS_PAGE_SIZE);
+      const start = (page - 1) * GDRIVE_CHANNELS_PAGE_SIZE;
+      const pageChannels = cachedGDriveChannels.slice(start, start + GDRIVE_CHANNELS_PAGE_SIZE);
+
+      if (total === 0) {
+        container.innerHTML = '<div class="glass-panel p-4 text-center text-slate-500 font-mono text-xs rounded-xl">No channels configured. Click "+ Add Channel" to link a folder.</div>';
+        renderPagination('gdrive-channels-pagination', 1, 0, 0, 'changeGDriveChannelsPage', GDRIVE_CHANNELS_PAGE_SIZE);
         return;
       }
 
-      container.innerHTML = channels.map((c, idx) => {
+      container.innerHTML = pageChannels.map(c => {
         const isSelected = c._id === activeGDriveChannelId;
-        const borderClass = isSelected
-          ? 'border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-slate-900/90'
-          : 'border-slate-800/80 hover:border-slate-700 bg-slate-950/60';
-
-        const activeBadge = c.isActive
-          ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">🟢 Active 24/7</span>'
-          : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">⏸️ Paused</span>';
-
         const postedCount = c.postedVideoIds ? c.postedVideoIds.length : 0;
-        const lastPostText = c.lastPostedAt ? new Date(c.lastPostedAt).toLocaleTimeString() : 'Never';
 
-        return '<div class="glass-panel p-4 rounded-2xl border transition-all ' + borderClass + '" data-id="' + c._id + '">' +
-          '<div class="flex items-start justify-between gap-3 mb-2">' +
-            '<div class="flex-1 min-w-0">' +
-              '<div class="flex items-center gap-2 mb-1">' +
-                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition" data-id="' + c._id + '" onclick="onSelectChannelCard(this)">' + (c.name || 'Channel') + '</h4>' +
-                activeBadge +
+        return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
+          '<div class="flex items-start justify-between gap-2 mb-1.5">' +
+            '<div class="min-w-0 flex-1">' +
+              '<div class="flex items-center gap-1.5">' +
+                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" onclick="selectGDriveChannel(\'' + c._id + '\')">' + (c.name || 'Channel') + '</h4>' +
+                '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
-              '<div class="text-[11px] text-slate-400 flex items-center gap-1.5 truncate">' +
-                '<span class="text-slate-500">📄 Page:</span>' +
-                '<span class="font-semibold text-slate-200 truncate">' + (c.pageName || c.pageId || 'No Page Assigned') + '</span>' +
-              '</div>' +
+              '<div class="text-[10px] text-slate-400 truncate">Page: ' + (c.pageName || c.pageId || 'None') + '</div>' +
             '</div>' +
-            '<div class="flex items-center gap-1 shrink-0">' +
-              '<button data-id="' + c._id + '" onclick="onEditChannelClick(this)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Edit settings">' +
-                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' +
-              '</button>' +
-              '<button data-id="' + c._id + '" onclick="onDeleteChannelClick(this)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-rose-400 hover:text-rose-300 transition" title="Delete channel">' +
-                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
-              '</button>' +
+            '<div class="flex items-center gap-1">' +
+              '<button onclick="editGDriveChannel(\'' + c._id + '\')" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
+              '<button onclick="deleteGDriveChannel(\'' + c._id + '\')" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
             '</div>' +
           '</div>' +
-
-          '<div class="grid grid-cols-2 gap-2 text-[10px] font-mono py-2 border-y border-slate-900/80 text-slate-400 my-2">' +
-            '<div>⏱️ Every ' + (c.scheduleIntervalHours || 2) + 'h</div>' +
-            '<div class="text-right text-purple-400">✓ ' + postedCount + ' Posted</div>' +
-            '<div class="truncate text-slate-500">Last: ' + lastPostText + '</div>' +
-            '<div class="text-right text-slate-500 truncate">' + (c.orderStrategy || 'oldest') + '</div>' +
+          '<div class="text-[10px] font-mono text-slate-400 py-1 border-y border-slate-900 flex justify-between">' +
+            '<span>⏱️ Every ' + (c.scheduleIntervalHours || 2) + 'h</span>' +
+            '<span class="text-purple-400">✓ ' + postedCount + ' Posted</span>' +
           '</div>' +
-
-          '<div class="flex items-center gap-2 pt-1">' +
-            '<button data-id="' + c._id + '" onclick="onSelectChannelCard(this)" class="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-bold text-[11px] border border-slate-800 transition flex items-center justify-center gap-1.5">' +
-              '<svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' +
-              '<span>Explore Queue</span>' +
-            '</button>' +
-            '<button data-id="' + c._id + '" onclick="onPublishNextChannelClick(this)" class="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[11px] transition active:scale-95 shadow flex items-center gap-1">' +
-              '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
-              '<span>Post Now</span>' +
-            '</button>' +
+          '<div class="flex items-center gap-1.5 pt-1.5">' +
+            '<button onclick="selectGDriveChannel(\'' + c._id + '\')" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
+            '<button onclick="publishNextForGDriveChannel(\'' + c._id + '\')" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
           '</div>' +
         '</div>';
       }).join('');
-    }
 
-    function onSelectChannelCard(btn) {
-      const id = btn.getAttribute('data-id');
-      if (id) selectGDriveChannel(id);
-    }
-
-    function onEditChannelClick(btn) {
-      const id = btn.getAttribute('data-id');
-      if (id) editGDriveChannel(id);
-    }
-
-    function onDeleteChannelClick(btn) {
-      const id = btn.getAttribute('data-id');
-      if (id) deleteGDriveChannel(id);
-    }
-
-    function onPublishNextChannelClick(btn) {
-      const id = btn.getAttribute('data-id');
-      if (id) publishNextForGDriveChannel(id);
+      renderPagination('gdrive-channels-pagination', page, totalPages, total, 'changeGDriveChannelsPage', GDRIVE_CHANNELS_PAGE_SIZE);
     }
 
     async function selectGDriveChannel(id) {
       activeGDriveChannelId = id;
-      renderGDriveChannelCards(cachedGDriveChannels);
+      renderGDriveChannelsPage(gdriveChannelsPage);
 
       const titleEl = document.getElementById('gdrive-explorer-title');
       const badgeEl = document.getElementById('gdrive-explorer-page-badge');
       const descEl = document.getElementById('gdrive-explorer-desc');
       const tbody = document.getElementById('gdrive-channel-videos-table-body');
 
-      if (titleEl) titleEl.innerText = 'Scanning Channel Folder...';
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">Scanning Google Drive folder files...</td></tr>';
-      }
+      if (titleEl) titleEl.innerText = 'Scanning...';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">Scanning Drive files...</td></tr>';
 
       try {
         const res = await safeFetchJson('/api/gdrive-reels/channels/' + id);
-        if (!res.ok || !res.data) {
-          if (titleEl) titleEl.innerText = 'Error Loading Channel';
-          if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-rose-400 font-mono text-xs">Failed to load channel details.</td></tr>';
-          return;
-        }
+        if (!res.ok || !res.data) return;
 
         const channel = res.data.channel;
         const scan = res.data.scan || {};
         cachedGDriveVideos = scan.videos || [];
 
         if (titleEl) titleEl.innerText = channel.name || 'Channel Videos';
-        if (badgeEl) {
-          badgeEl.innerText = 'Target: ' + (channel.pageName || channel.pageId || 'No Page');
-          badgeEl.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
-        }
-        if (descEl) {
-          if (scan.error) {
-            descEl.innerText = '❌ ' + scan.error;
-            descEl.className = 'text-[11px] text-rose-400 mt-0.5';
-          } else {
-            descEl.innerText = '✓ Found ' + scan.totalVideos + ' videos (' + scan.pendingCount + ' ready to post, ' + scan.postedCount + ' published)';
-            descEl.className = 'text-[11px] text-emerald-400 mt-0.5';
-          }
-        }
+        if (badgeEl) badgeEl.innerText = 'Page: ' + (channel.pageName || channel.pageId || 'Default');
+        if (descEl) descEl.innerText = '✓ ' + scan.totalVideos + ' videos (' + scan.pendingCount + ' ready, ' + scan.postedCount + ' posted)';
 
-        // Update overall pending stats if applicable
         if (document.getElementById('stat-gdrive-pending-videos')) {
           document.getElementById('stat-gdrive-pending-videos').innerText = scan.pendingCount || 0;
         }
 
-        renderSelectedChannelVideosTable(cachedGDriveVideos);
-      } catch (e) {
-        console.error('Error selecting channel:', e);
-      }
+        gdriveVideoPage = 1;
+        renderGDriveVideoPage(1);
+      } catch (e) {}
     }
-
-    // --- GDRIVE VIDEOS (WITH PAGINATION) ---
-    let gdriveVideoPage = 1;
-    const GDRIVE_PAGE_SIZE = 10;
 
     function changeGDriveVideoPage(newPage) {
       gdriveVideoPage = newPage;
@@ -3417,25 +3346,25 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const pageVideos = cachedGDriveVideos.slice(start, start + GDRIVE_PAGE_SIZE);
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in this Drive folder. Check folder link or add videos.</td></tr>';
-        renderPagination('gdrive-videos-pagination', 1, 0, 0, 'changeGDriveVideoPage');
+        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in folder.</td></tr>';
+        renderPagination('gdrive-videos-pagination', 1, 0, 0, 'changeGDriveVideoPage', GDRIVE_PAGE_SIZE);
         return;
       }
 
       tbody.innerHTML = pageVideos.map((v, pageIdx) => {
         const globalIdx = start + pageIdx;
         const statusBadge = v.isPosted
-          ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-950 text-purple-400 border border-purple-800">✓ Posted</span>'
-          : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">🟢 Ready</span>';
+          ? '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-purple-950 text-purple-400 border border-purple-800">✓ Posted</span>'
+          : '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">Ready</span>';
 
         const publishBtn = v.isPosted
-          ? '<button data-idx="' + globalIdx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
-          : '<button data-idx="' + globalIdx + '" onclick="onGDriveVideoActionClick(this)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
+          ? '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold">Re-Post</button>'
+          : '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black shadow">Post</button>';
 
         return '<tr class="hover:bg-slate-900/60 transition">' +
-          '<td class="py-2 px-3 max-w-[240px] truncate">' +
+          '<td class="py-2 px-3 max-w-[200px] truncate">' +
             '<div class="font-bold text-slate-200 text-xs truncate" title="' + v.cleanTitle + '">' + v.cleanTitle + '</div>' +
-            '<div class="text-[10px] font-mono text-slate-500 truncate">' + v.name + '</div>' +
+            '<div class="text-[9px] font-mono text-slate-500 truncate">' + v.name + '</div>' +
           '</td>' +
           '<td class="py-2 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
           '<td class="py-2 px-2">' + statusBadge + '</td>' +
@@ -3443,66 +3372,55 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         '</tr>';
       }).join('');
 
-      renderPagination('gdrive-videos-pagination', page, totalPages, total, 'changeGDriveVideoPage');
+      renderPagination('gdrive-videos-pagination', page, totalPages, total, 'changeGDriveVideoPage', GDRIVE_PAGE_SIZE);
     }
 
-    function renderSelectedChannelVideosTable(videos) {
-      gdriveVideoPage = 1;
-      renderGDriveVideoPage(1);
-    }
-
-    async function onGDriveVideoActionClick(btn) {
-      const idx = parseInt(btn.getAttribute('data-idx') || '-1', 10);
-      if (isNaN(idx) || idx < 0 || !cachedGDriveVideos[idx] || !activeGDriveChannelId) return;
+    async function onGDriveVideoActionClick(idx) {
+      if (!cachedGDriveVideos[idx] || !activeGDriveChannelId) return;
       const file = cachedGDriveVideos[idx];
 
-      if (!confirm('Are you sure you want to publish "' + file.cleanTitle + '" from Google Drive to Facebook now?')) return;
+      if (!confirm('Publish "' + file.cleanTitle + '" to Facebook now?')) return;
+      showToast('Downloading & uploading Reel to Facebook...');
 
-      showToast('⏳ Downloading "' + file.cleanTitle + '" & uploading Reel to Facebook...');
       try {
         const res = await safeFetchJson('/api/gdrive-reels/channels/' + activeGDriveChannelId + '/publish-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileId: file.id })
         });
-
-        if (res.ok && res.data && res.data.success) {
-          showToast('✓ Reel "' + res.data.cleanTitle + '" published successfully to ' + res.data.pageName + '!');
+        if (res.ok && res.data?.success) {
+          showToast('✓ Reel "' + res.data.cleanTitle + '" published!');
           await selectGDriveChannel(activeGDriveChannelId);
           await refreshGDriveChannels();
         } else {
           showToast(res.data?.error || res.error || 'Publish failed', true);
         }
       } catch (e) {
-        showToast('Error publishing reel: ' + e.message, true);
+        showToast('Error: ' + e.message, true);
       }
     }
 
     async function publishNextForSelectedChannel() {
-      if (!activeGDriveChannelId) return;
-      await publishNextForGDriveChannel(activeGDriveChannelId);
+      if (activeGDriveChannelId) await publishNextForGDriveChannel(activeGDriveChannelId);
     }
 
     async function rescanSelectedChannel() {
       if (!activeGDriveChannelId) return;
-      showToast('Scanning Google Drive folder...');
+      showToast('Scanning folder...');
       await selectGDriveChannel(activeGDriveChannelId);
       showToast('✓ Folder scan completed');
     }
 
     async function publishNextForGDriveChannel(channelId) {
-      showToast('⏳ Publishing next pending Reel from Google Drive...');
+      showToast('Publishing next pending Reel from Drive...');
       try {
         const res = await safeFetchJson('/api/gdrive-reels/channels/' + channelId + '/publish-next', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
-
-        if (res.ok && res.data && res.data.success) {
-          showToast('✓ Reel "' + res.data.cleanTitle + '" published to ' + (res.data.pageName || 'page') + '!');
-          if (activeGDriveChannelId === channelId) {
-            await selectGDriveChannel(channelId);
-          }
+        if (res.ok && res.data?.success) {
+          showToast('✓ Reel "' + res.data.cleanTitle + '" published!');
+          if (activeGDriveChannelId === channelId) await selectGDriveChannel(channelId);
           await refreshGDriveChannels();
         } else {
           showToast(res.data?.error || res.error || 'Publish failed', true);
@@ -3523,9 +3441,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-active-toggle').checked = true;
       document.getElementById('gdrive-form-mode-viral').checked = true;
       toggleFormCaptionBox();
-
-      const titleEl = document.getElementById('gdrive-form-title');
-      if (titleEl) titleEl.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span>Add New Drive Folder Channel</span>';
 
       const card = document.getElementById('gdrive-channel-form-card');
       if (card) {
@@ -3555,9 +3470,6 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
       toggleFormCaptionBox();
 
-      const titleEl = document.getElementById('gdrive-form-title');
-      if (titleEl) titleEl.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg><span>Edit Channel: ' + (channel.name || '') + '</span>';
-
       const card = document.getElementById('gdrive-channel-form-card');
       if (card) {
         card.classList.remove('hidden');
@@ -3573,165 +3485,149 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     function toggleFormCaptionBox() {
       const isCustom = document.getElementById('gdrive-form-mode-custom')?.checked;
       const box = document.getElementById('gdrive-form-custom-caption-box');
-      if (box) {
-        if (isCustom) box.classList.remove('hidden');
-        else box.classList.add('hidden');
-      }
+      if (box) box.classList.toggle('hidden', !isCustom);
     }
 
     async function handleSaveGDriveChannel(e) {
       if (e) e.preventDefault();
       const channelId = document.getElementById('gdrive-form-channel-id')?.value;
-      const name = document.getElementById('gdrive-form-channel-name')?.value.trim();
-      const folderUrlOrId = document.getElementById('gdrive-form-folder-input')?.value.trim();
-      const pageId = document.getElementById('gdrive-form-page-select')?.value;
-      const intervalHours = parseInt(document.getElementById('gdrive-form-interval-select')?.value || '2', 10) || 2;
-      const orderStrategy = document.getElementById('gdrive-form-order-select')?.value || 'oldest_first';
-      const isActive = document.getElementById('gdrive-form-active-toggle')?.checked || false;
-      const captionStrategy = document.getElementById('gdrive-form-mode-custom')?.checked ? 'custom' : 'viral_hashtags';
-      const customCaption = document.getElementById('gdrive-form-custom-caption')?.value || '';
-      const firstCommentText = document.getElementById('gdrive-form-first-comment')?.value.trim() || '';
+      const payload = {
+        name: document.getElementById('gdrive-form-channel-name')?.value.trim(),
+        folderUrlOrId: document.getElementById('gdrive-form-folder-input')?.value.trim(),
+        pageId: document.getElementById('gdrive-form-page-select')?.value,
+        scheduleIntervalHours: parseInt(document.getElementById('gdrive-form-interval-select')?.value || '2', 10) || 2,
+        orderStrategy: document.getElementById('gdrive-form-order-select')?.value || 'oldest_first',
+        isActive: document.getElementById('gdrive-form-active-toggle')?.checked || false,
+        captionStrategy: document.getElementById('gdrive-form-mode-custom')?.checked ? 'custom' : 'viral_hashtags',
+        customCaption: document.getElementById('gdrive-form-custom-caption')?.value || '',
+        firstCommentText: document.getElementById('gdrive-form-first-comment')?.value.trim() || ''
+      };
+      if (channelId) payload._id = channelId;
 
-      const btn = document.getElementById('btn-save-gdrive-channel');
-      if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
+      const res = await safeFetchJson('/api/gdrive-reels/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-      try {
-        const payload = {
-          name,
-          folderUrlOrId,
-          pageId,
-          scheduleIntervalHours: intervalHours,
-          orderStrategy,
-          isActive,
-          captionStrategy,
-          customCaption,
-          firstCommentText
-        };
-        if (channelId) payload._id = channelId;
-
-        const res = await safeFetchJson('/api/gdrive-reels/channels', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok && res.data && res.data.channel) {
-          showToast('✓ Channel "' + (res.data.channel.name || 'Drive') + '" saved successfully!');
-          hideChannelForm();
-          activeGDriveChannelId = res.data.channel._id;
-          await refreshGDriveChannels();
-        } else {
-          showToast(res.data?.error || res.error || 'Failed to save channel', true);
-        }
-      } catch (err) {
-        showToast('Error saving channel: ' + err.message, true);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Save Channel Mapping</span>';
-        }
+      if (res.ok && res.data?.channel) {
+        showToast('✓ Channel saved!');
+        hideChannelForm();
+        activeGDriveChannelId = res.data.channel._id;
+        await refreshGDriveChannels();
+      } else {
+        showToast(res.data?.error || res.error || 'Failed to save channel', true);
       }
     }
 
     async function deleteGDriveChannel(id) {
-      const channel = cachedGDriveChannels.find(c => c._id === id);
-      const name = channel?.name || 'this channel';
-      if (!confirm('Are you sure you want to delete channel "' + name + '"?')) return;
-
-      try {
-        const res = await safeFetchJson('/api/gdrive-reels/channels/' + id, { method: 'DELETE' });
-        if (res.ok) {
-          showToast('✓ Channel deleted');
-          if (activeGDriveChannelId === id) activeGDriveChannelId = null;
-          await refreshGDriveChannels();
-        } else {
-          showToast('Failed to delete channel: ' + (res.error || 'Unknown error'), true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
+      if (!confirm('Delete this channel?')) return;
+      const res = await safeFetchJson('/api/gdrive-reels/channels/' + id, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('✓ Channel deleted');
+        if (activeGDriveChannelId === id) activeGDriveChannelId = null;
+        await refreshGDriveChannels();
+      } else {
+        showToast('Failed to delete channel', true);
       }
     }
 
     async function saveGlobalGDriveApiKey() {
       const apiKey = document.getElementById('gdrive-global-api-key')?.value.trim();
-      if (!apiKey) {
-        showToast('Please enter a Google Drive API Key to save', true);
-        return;
-      }
+      if (!apiKey) return showToast('Enter API Key first', true);
 
-      const btn = document.getElementById('btn-save-global-api-key');
-      if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
-
-      try {
-        const res = await safeFetchJson('/api/gdrive-reels/global-api-key', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apiKey })
-        });
-        if (res.ok) {
-          showToast('✓ Global Google Drive API Key saved successfully!');
-          await refreshGDriveChannels();
-        } else {
-          showToast('Failed to save API key: ' + (res.error || 'Unknown error'), true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = 'Save Key';
-        }
+      const res = await safeFetchJson('/api/gdrive-reels/global-api-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey })
+      });
+      if (res.ok) {
+        showToast('✓ Global Drive API Key saved!');
+        await refreshGDriveChannels();
+      } else {
+        showToast('Failed to save API key', true);
       }
     }
 
     async function testScanFormFolder() {
       const folderUrlOrId = document.getElementById('gdrive-form-folder-input')?.value.trim();
-      if (!folderUrlOrId) {
-        showToast('Please paste a Google Drive folder link or ID first', true);
-        return;
-      }
+      if (!folderUrlOrId) return showToast('Paste folder link first', true);
 
-      showToast('Testing folder scan...');
-      try {
-        const res = await safeFetchJson('/api/gdrive-reels/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folderUrlOrId })
-        });
-        if (res.ok && res.data && res.data.scan) {
-          const scan = res.data.scan;
-          if (scan.error) {
-            showToast(scan.error, true);
-          } else {
-            showToast('✓ Valid folder! Found ' + scan.totalVideos + ' video files');
-          }
-        } else {
-          showToast(res.error || 'Scan failed', true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
+      showToast('Scanning folder...');
+      const res = await safeFetchJson('/api/gdrive-reels/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderUrlOrId })
+      });
+      if (res.ok && res.data?.scan) {
+        showToast('✓ Found ' + res.data.scan.totalVideos + ' video files');
+      } else {
+        showToast(res.error || 'Scan failed', true);
       }
     }
 
     async function runAllDueChannelsNow() {
-      showToast('⏳ Checking and executing scheduled posts for all active channels...');
-      try {
-        const res = await safeFetchJson('/api/gdrive-reels/publish-all-due', { method: 'POST' });
-        if (res.ok && res.data && res.data.summary) {
-          const summary = res.data.summary;
-          const pubCount = (summary.processed || []).filter(p => p.status === 'published').length;
-          showToast('✓ Processed ' + summary.activeChannels + ' active channels (' + pubCount + ' Reels published)');
-          await refreshGDriveChannels();
-        } else {
-          showToast('Execution notice: ' + (res.error || 'No channels due'), true);
-        }
-      } catch (e) {
-        showToast('Error: ' + e.message, true);
+      showToast('Executing scheduled posts for all due channels...');
+      const res = await safeFetchJson('/api/gdrive-reels/publish-all-due', { method: 'POST' });
+      if (res.ok && res.data?.summary) {
+        const pubCount = (res.data.summary.processed || []).filter(p => p.status === 'published').length;
+        showToast('✓ ' + pubCount + ' Reels published across channels');
+        await refreshGDriveChannels();
+      } else {
+        showToast(res.error || 'No channels due', true);
       }
     }
 
+    // --- YOUTUBE SHORTS (PAGINATED) ---
+    let ytLogsData = [];
+    let ytLogsPage = 1;
+    const YT_LOGS_PAGE_SIZE = 10;
 
-    // --- YOUTUBE SHORTS AUTOMATION ---
+    function changeYouTubeLogsPage(page) {
+      ytLogsPage = page;
+      renderYouTubeLogsPage(ytLogsPage);
+    }
+
+    function renderYouTubeLogsPage(page) {
+      const tbody = document.getElementById('yt-table-body');
+      if (!tbody) return;
+
+      const total = ytLogsData.length;
+      const totalPages = Math.ceil(total / YT_LOGS_PAGE_SIZE);
+      const start = (page - 1) * YT_LOGS_PAGE_SIZE;
+      const pageLogs = ytLogsData.slice(start, start + YT_LOGS_PAGE_SIZE);
+
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono text-xs">No YouTube Shorts uploads yet.</td></tr>';
+        renderPagination('yt-pagination', 1, 0, 0, 'changeYouTubeLogsPage', YT_LOGS_PAGE_SIZE);
+        return;
+      }
+
+      tbody.innerHTML = pageLogs.map(log => {
+        const isSuccess = log.status === 'success';
+        const isDryRun = log.status === 'dry_run';
+        const statusBadge = isSuccess
+          ? '<span class="px-1.5 py-0.2 text-[9px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUB</span>'
+          : (isDryRun 
+              ? '<span class="px-1.5 py-0.2 text-[9px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY</span>'
+              : '<span class="px-1.5 py-0.2 text-[9px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAIL</span>');
+
+        const videoLink = log.ytVideoId && !log.ytVideoId.startsWith('dryrun')
+          ? '<a href="https://youtube.com/shorts/' + log.ytVideoId + '" target="_blank" class="text-red-400 hover:underline font-mono">' + log.ytVideoId + ' ↗</a>'
+          : (log.ytVideoId || '-');
+
+        return '<tr class="hover:bg-slate-900/40 text-xs transition">' +
+          '<td class="py-2 pr-3 font-bengali text-slate-200 max-w-[200px] truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+          '<td class="py-2 pr-3">' + videoLink + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px]">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : '-') + '</td>' +
+          '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + (log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-') + '</td>' +
+          '<td class="py-2">' + statusBadge + '</td>' +
+        '</tr>';
+      }).join('');
+
+      renderPagination('yt-pagination', page, totalPages, total, 'changeYouTubeLogsPage', YT_LOGS_PAGE_SIZE);
+    }
+
     async function loadYouTube() {
       try {
         const res = await safeFetchJson('/api/youtube/status');
@@ -3753,161 +3649,104 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           if (autoToggle) autoToggle.checked = d.autoPost !== false;
 
           if (d.hasClientSecret && clientSecInput && !clientSecInput.value) {
-            clientSecInput.placeholder = '•••••••••••••••• (Saved)';
+            clientSecInput.placeholder = '•••••••• (Saved)';
           }
           if (d.hasRefreshToken && refreshInput && !refreshInput.value) {
-            refreshInput.placeholder = '•••••••••••••••• (Saved)';
+            refreshInput.placeholder = '•••••••• (Saved)';
           }
 
           if (d.isConfigured && d.channel) {
             badge.innerText = 'Connected: ' + d.channel.title;
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40';
-            pill.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-glow-emerald';
+            badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40';
+            pill.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-glow-emerald';
 
             if (titleEl) titleEl.innerText = d.channel.title;
-            if (handleEl) handleEl.innerText = d.channel.customUrl || '@' + d.channel.id;
+            if (handleEl) handleEl.innerText = d.channel.customUrl || ('@' + d.channel.id);
             if (subEl) subEl.innerText = Number(d.channel.subscriberCount || 0).toLocaleString();
             if (vidEl) vidEl.innerText = Number(d.channel.videoCount || 0).toLocaleString();
             if (avatarEl && d.channel.thumbnailUrl) avatarEl.src = d.channel.thumbnailUrl;
-          } else if (d.error) {
-            badge.innerText = 'OAuth Error';
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40';
-            pill.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-            if (titleEl) titleEl.innerText = 'Auth Failed: ' + d.error;
           } else {
             badge.innerText = 'Not Connected';
-            badge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40';
-            pill.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+            badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40';
+            pill.className = 'w-2 h-2 rounded-full bg-amber-400';
           }
         }
         loadYouTubeLogs();
-      } catch (e) {
-        console.error('Error loading YouTube status:', e);
-      }
+      } catch (e) {}
     }
 
     async function saveYouTubeSettings() {
-      try {
-        const clientId = document.getElementById('yt-client-id')?.value.trim();
-        const clientSecret = document.getElementById('yt-client-secret')?.value.trim();
-        const refreshToken = document.getElementById('yt-refresh-token')?.value.trim();
-        const autoPost = document.getElementById('yt-auto-toggle')?.checked;
+      const clientId = document.getElementById('yt-client-id')?.value.trim();
+      const clientSecret = document.getElementById('yt-client-secret')?.value.trim();
+      const refreshToken = document.getElementById('yt-refresh-token')?.value.trim();
+      const autoPost = document.getElementById('yt-auto-toggle')?.checked;
 
-        const payload = { autoPost };
-        if (clientId) payload.clientId = clientId;
-        if (clientSecret) payload.clientSecret = clientSecret;
-        if (refreshToken) payload.refreshToken = refreshToken;
+      const payload = { autoPost };
+      if (clientId) payload.clientId = clientId;
+      if (clientSecret) payload.clientSecret = clientSecret;
+      if (refreshToken) payload.refreshToken = refreshToken;
 
-        showToast('Saving YouTube settings & verifying credentials...');
-        const res = await safeFetchJson('/api/youtube/setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (res.ok && res.data) {
-          if (res.data.channel) {
-            showToast('✓ YouTube Connected: ' + res.data.channel.title);
-          } else if (res.data.verifyError) {
-            showToast('Saved, but token verify note: ' + res.data.verifyError, true);
-          } else {
-            showToast('✓ YouTube settings saved successfully.');
-          }
-          loadYouTube();
-        } else {
-          showToast('Failed to save: ' + (res.data?.error || res.error || 'Server error'), true);
-        }
-      } catch (e) {
-        showToast('Error saving YouTube settings: ' + e.message, true);
+      showToast('Saving YouTube settings...');
+      const res = await safeFetchJson('/api/youtube/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast('✓ YouTube settings saved');
+        loadYouTube();
+      } else {
+        showToast('Save failed', true);
       }
     }
 
     async function triggerYouTubeUploadNow() {
       const btn = document.getElementById('yt-upload-btn');
       if (btn) btn.disabled = true;
+      showToast('Uploading latest short...');
       try {
-        showToast('Rendering 18s MP4 reel & uploading to YouTube Shorts...');
         const res = await safeFetchJson('/api/youtube/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          body: JSON.stringify({})
         });
-
         if (res.ok && res.data) {
-          showToast('✓ YouTube Short Uploaded! URL: ' + res.data.videoUrl);
+          showToast('✓ Uploaded to YouTube!');
           loadYouTubeLogs();
         } else {
-          showToast('YouTube upload failed: ' + (res.data?.error || res.error || 'Check credentials'), true);
+          showToast('Upload failed: ' + (res.data?.error || res.error || 'Check OAuth'), true);
         }
       } catch (e) {
-        showToast('Upload error: ' + e.message, true);
+        showToast('Error: ' + e.message, true);
       } finally {
         if (btn) btn.disabled = false;
       }
     }
 
     async function loadYouTubeLogs() {
-      try {
-        const tbody = document.getElementById('yt-table-body');
-        if (!tbody) return;
-        const res = await safeFetchJson('/api/youtube/logs?limit=30');
-        if (!res.ok || !res.data || !res.data.logs || res.data.logs.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">No YouTube Shorts uploads yet.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = res.data.logs.map(log => {
-          const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
-          const isSuccess = log.status === 'success';
-          const isDryRun = log.status === 'dry_run';
-          const statusBadge = isSuccess
-            ? '<span class="px-2 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PUBLISHED</span>'
-            : (isDryRun 
-                ? '<span class="px-2 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">DRY RUN</span>'
-                : '<span class="px-2 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">FAILED</span>' +
-                  (log.errorMessage ? '<div class="text-[10px] text-red-400 font-mono mt-0.5 truncate max-w-xs" title="' + log.errorMessage + '">' + log.errorMessage + '</div>' : ''));
-
-          const videoLink = log.ytVideoId && !log.ytVideoId.startsWith('dryrun')
-            ? '<a href="https://youtube.com/shorts/' + log.ytVideoId + '" target="_blank" class="text-red-400 hover:underline flex items-center gap-1 font-mono">' + log.ytVideoId + ' ↗</a>'
-            : (log.ytVideoId || 'N/A');
-
-          return '<tr class="hover:bg-slate-900/40 transition">' +
-            '<td class="py-3 pr-4 font-bengali text-slate-200 max-w-xs truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
-            '<td class="py-3 pr-4">' + videoLink + '</td>' +
-            '<td class="py-3 pr-4 text-slate-400">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : 'N/A') + '</td>' +
-            '<td class="py-3 pr-4 text-slate-400">' + dateStr + '</td>' +
-            '<td class="py-3">' + statusBadge + '</td>' +
-            '</tr>';
-        }).join('');
-      } catch (e) {
-        console.error('Error loading YouTube logs:', e);
-      }
+      const res = await safeFetchJson('/api/youtube/logs?limit=50');
+      ytLogsData = (res.ok && res.data?.logs && Array.isArray(res.data.logs)) ? res.data.logs : [];
+      ytLogsPage = 1;
+      renderYouTubeLogsPage(1);
     }
 
     async function startGoogleOAuth() {
-      try {
-        showToast('Generating Google sign-in session...');
-        const res = await safeFetchJson('/api/youtube/auth/url');
-        if (res.ok && res.data && res.data.authUrl) {
-          window.location.href = res.data.authUrl;
-        } else {
-          showToast('Could not start OAuth: ' + (res.data?.error || 'Unknown error'), true);
-        }
-      } catch (e) {
-        showToast('OAuth Error: ' + e.message, true);
+      showToast('Starting Google Sign-In...');
+      const res = await safeFetchJson('/api/youtube/auth/url');
+      if (res.ok && res.data?.authUrl) {
+        window.location.href = res.data.authUrl;
+      } else {
+        showToast('OAuth start failed', true);
       }
     }
 
     function copyRedirectUri() {
       const uri = window.location.origin + '/api/youtube/auth/callback';
       navigator.clipboard.writeText(uri).then(() => {
-        showToast('✓ Redirect URI copied to clipboard: ' + uri);
-      }).catch(() => {
-        showToast(uri);
+        showToast('✓ Redirect URI copied');
       });
     }
 
-    // Update redirect URI display dynamically
     setTimeout(() => {
       const disp = document.getElementById('yt-redirect-uri-display');
       if (disp) disp.innerText = window.location.origin + '/api/youtube/auth/callback';
@@ -3915,14 +3754,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     // Initial load & Tab URL check
     loadOverview();
+    initCronPills();
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('tab') === 'youtube') {
       switchTab('youtube');
       if (urlParams.get('auth') === 'success') {
-        setTimeout(() => showToast('🎉 YouTube Channel Successfully Connected!'), 500);
-      }
-      if (urlParams.get('auth_error')) {
-        setTimeout(() => showToast('Google Auth Note: ' + decodeURIComponent(urlParams.get('auth_error')), true), 500);
+        setTimeout(() => showToast('🎉 YouTube Connected!'), 500);
       }
     }
   </script>
@@ -3931,4 +3768,3 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
   res.send(html);
 });
-
