@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BD News 24/7 - Facebook Automation Control Center</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/assets/images/favicon.png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Compiled Tailwind CSS & Design System -->
+  <link rel="stylesheet" href="/assets/css/tailwind.min.css">
+  <!-- Dashboard Custom Styles -->
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col relative selection:bg-red-500 selection:text-white">
+
+  <!-- Ambient Glow & Grid -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+  <div class="cyber-grid"></div>
+
+  <!-- Background Particles -->
+  <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-30"></canvas>
+
+  <!-- Compact Top Navbar (Height 56px / h-14) -->
+  <header class="border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      
+      <!-- Logo & Brand Header -->
+      <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchTab('overview')">
+        <div class="relative">
+          <div class="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-amber-600 rounded-full blur opacity-60 group-hover:opacity-90 transition duration-300"></div>
+          <img src="/assets/images/favicon.png" alt="BD News 24/7" class="relative w-8 h-8 rounded-full object-cover border border-red-500/80 shadow-glow-red" />
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-base tracking-tight text-white">BD News 24/7</span>
+            <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-red-950/80 text-red-400 border border-red-800/60 uppercase">v2.0 Pro</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-medium hidden sm:block">Meta Automation Engine</p>
+        </div>
+      </div>
+
+      <!-- Action Controls -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- Live / Sandbox Badge -->
+        <div class="relative">
+          <div id="status-pulse-radar" class="absolute -inset-1 rounded-full bg-emerald-500 opacity-20 animate-ping hidden"></div>
+          <span id="dry-run-badge" class="relative px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-900 text-slate-300 border border-slate-700/80 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span>Checking...</span>
+          </span>
+        </div>
+
+        <!-- Input Cron Action -->
+        <button onclick="triggerInputCronNow()" class="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Stage 1: Fetch RSS data -> Create 9:16 Reels -> Save in linked Google Drive folder">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>📥 Input Cron</span>
+        </button>
+
+        <!-- Output Cron Action -->
+        <button onclick="triggerOutputCronNow()" class="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black flex items-center gap-1.5 transition active:scale-95 shadow border border-emerald-400/40" title="Stage 2: Get oldest reel from Drive -> Post to all linked social networks (Facebook, YouTube, TikTok)">
+          <svg class="w-3.5 h-3.5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/></svg>
+          <span>📤 Output Cron</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Compact Sticky Navigation Tabs Bar -->
+  <div class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-14 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex space-x-1 sm:space-x-1.5 overflow-x-auto py-1.5 no-scrollbar">
+      <button onclick="switchTab('overview')" class="tab-btn active px-3 py-1.5 text-xs font-semibold rounded-lg text-red-400 bg-red-950/40 border border-red-800/50 shadow-inner flex items-center gap-1.5 transition whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Overview
+      </button>
+      <button onclick="switchTab('queue')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Queue & Logs
+      </button>
+      <button onclick="switchTab('sources')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+        RSS Sources
+      </button>
+      <button onclick="switchTab('pages')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Pages
+      </button>
+      <button onclick="switchTab('groups')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Groups
+      </button>
+      <button onclick="switchTab('reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        Reels Studio
+      </button>
+      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+        Drive Reels
+      </button>
+      <button onclick="switchTab('youtube')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        YouTube Shorts
+      </button>
+      <button onclick="switchTab('preview')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Preview
+      </button>
+      <button onclick="switchTab('settings')" class="tab-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Stage -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex-1 w-full relative z-10 space-y-4">
+
+    <!-- 1. OVERVIEW TAB -->
+    <div id="tab-overview" class="tab-content space-y-4">
+      
+      <!-- 4 Stat Cards Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        <!-- Card 1: Pending Queue -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400 font-mono">Pending Jobs</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <svg class="w-4 h-4 animate-spin" style="animation-duration: 8s;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+          </div>
+          <div id="stat-pending" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            Awaiting schedule
+          </div>
+        </div>
+
+        <!-- Card 2: Published Successfully -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">Published Live</span>
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+          </div>
+          <div id="stat-published" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Live on Facebook
+          </div>
+        </div>
+
+        <!-- Card 3: Active RSS Feeds -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 font-mono">Active Feeds</span>
+            <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+          </div>
+          <div id="stat-sources" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            RSS news sources
+          </div>
+        </div>
+
+        <!-- Card 4: Connected Facebook Pages -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400 font-mono">Connected Pages</span>
+            <div class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+          </div>
+          <div id="stat-pages" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            Target Facebook Pages
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Engine Specs & Pipeline Overview Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Engine Status -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Engine Specifications
+            </h3>
+            <span class="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60">Operational</span>
+          </div>
+
+          <div class="space-y-2 text-xs text-slate-300">
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Renderer:</span>
+              <span class="font-mono text-[11px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40">Playwright Chromium + Canva</span>
+            </div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Bangla Typography:</span>
+              <span class="text-emerald-400 font-medium">Noto Sans Bengali & Hind Siliguri</span>
+            </div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Database:</span>
+              <span class="text-purple-400 font-mono text-[11px]">MongoDB Atlas Serverless</span>
+            </div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+              <span class="text-slate-400">Anti-Spam Jitter:</span>
+              <span class="text-amber-300 font-mono text-[11px]">Dynamic Jitter Enabled</span>
+            </div>
+            <div class="flex justify-between items-center py-1.5">
+              <span class="text-slate-400">Meta Compliance:</span>
+              <a href="/privacy" target="_blank" class="text-rose-400 hover:text-rose-300 font-mono text-[11px] underline">/privacy (Live Compliant) ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Stage Automation Pipeline Architecture Blueprint -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-slate-800">
+          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              New Automation Architecture
+            </h3>
+            <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">2-Stage Decoupled</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Stage 1 Box -->
+            <div class="p-3 rounded-lg bg-cyan-950/20 border border-cyan-500/30">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                  <span>📥 STAGE 1: INPUT CRON</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-900/50 text-cyan-200 font-mono">/api/cron/input</span>
+                </span>
+                <button onclick="triggerInputCronNow()" class="text-[10px] text-cyan-400 hover:text-white px-2 py-0.5 rounded bg-cyan-900/40 hover:bg-cyan-800 border border-cyan-700/50 transition">Run Stage 1</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">1.</span>
+                  <span>Fetch data from RSS source</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">2.</span>
+                  <span>Create 9:16 reels with templates</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">3.</span>
+                  <span>Save to linked Drive folder</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stage 2 Box -->
+            <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <span>📤 STAGE 2: OUTPUT CRON (FOLDER-WISE)</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-200 font-mono">/api/cron/output</span>
+                </span>
+                <button onclick="triggerOutputCronNow()" class="text-[10px] text-emerald-400 hover:text-white px-2 py-0.5 rounded bg-emerald-900/40 hover:bg-emerald-800 border border-emerald-700/50 transition">Run Stage 2</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-emerald-400 font-bold font-mono">1.</span>
+                  <span>Scan Drive & get oldest video</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-emerald-400 font-bold font-mono">2.</span>
+                  <span>Post to FB, YouTube, TikTok</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 2. QUEUE & LOGS TAB -->
+    <div id="tab-queue" class="tab-content hidden space-y-4">
+      
+      <!-- Queue Section -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              Active Queue Execution Pipeline
+            </h2>
+            <p class="text-[11px] text-slate-400">Scheduled articles waiting for Facebook dispatch</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-cyan-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-cyan-300">
+              <span class="text-slate-500">Cron:</span>
+              <span class="font-bold">/api/cron/publish</span>
+              <button onclick="copyCronUrl('/api/cron/publish', this)" class="text-[10px] text-cyan-400 hover:text-white px-1.5 py-0.5 rounded bg-cyan-950 hover:bg-cyan-800 border border-cyan-700/50 transition">Copy</button>
+            </div>
+            <button onclick="loadQueue()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 active:scale-95 shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 flex-wrap pt-1 pb-1">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="filterQueuePage('all', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition text-[11px]">All Pages (<span id="q-count-all">0</span>)</button>
+            <button onclick="filterQueuePage('1526917347161119', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition text-[11px]">Trending News World (<span id="q-count-tnw">0</span>)</button>
+            <button onclick="filterQueuePage('1405135646008133', this)" class="queue-filter-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition text-[11px]">BD News 24/7 (<span id="q-count-bd">0</span>)</button>
+          </div>
+        </div>
+
+        <div class="glass-panel rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/90 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
+                <tr>
+                  <th class="px-3.5 py-2.5">Status</th>
+                  <th class="px-3.5 py-2.5">Headline</th>
+                  <th class="px-3.5 py-2.5">Page</th>
+                  <th class="px-3.5 py-2.5">Attempts</th>
+                  <th class="px-3.5 py-2.5">Schedule</th>
+                  <th class="px-3.5 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="queue-table-body" class="divide-y divide-slate-800/60 font-sans">
+                <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Loading queue pipeline...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="queue-pagination"></div>
+        </div>
+      </div>
+
+      <!-- Execution Logs Section -->
+      <div class="space-y-2 pt-2">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Execution Logs & FB Telemetry
+            </h3>
+            <p class="text-[11px] text-slate-400">Click any Facebook Post ID to inspect directly</p>
+          </div>
+          <button onclick="resetUnpostedArticles()" id="btn-reset-unposted" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-400 border border-slate-700 transition active:scale-95 flex items-center gap-1.5 self-start sm:self-auto" title="Re-queue unposted items">
+            <span>🔄</span>
+            <span>Re-queue Unposted</span>
+          </button>
+        </div>
+
+        <div class="glass-panel rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/90 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
+                <tr>
+                  <th class="px-3.5 py-2.5">Status</th>
+                  <th class="px-3.5 py-2.5">Article Title</th>
+                  <th class="px-3.5 py-2.5">Facebook Post ID</th>
+                  <th class="px-3.5 py-2.5">Duration</th>
+                  <th class="px-3.5 py-2.5">Published At</th>
+                </tr>
+              </thead>
+              <tbody id="logs-table-body" class="divide-y divide-slate-800/60 font-sans">
+                <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 font-mono text-xs">Loading logs history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="logs-pagination"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. RSS SOURCES TAB -->
+    <div id="tab-sources" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Add Source Form -->
+        <div class="glass-panel p-4 sm:p-5 rounded-xl h-fit space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+            <div class="w-7 h-7 rounded-lg bg-red-600/20 text-red-400 flex items-center justify-center font-bold text-xs">📡</div>
+            <h3 class="text-sm font-bold text-white">Add RSS Source</h3>
+          </div>
+          
+          <form id="add-source-form" onsubmit="handleAddSource(event)" class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Source Name</label>
+              <input type="text" id="source-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">RSS URL</label>
+              <input type="url" id="source-url" required placeholder="https://bdnews.site/rss.php" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition font-mono">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Target Page</label>
+              <select id="source-page" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <option value="">Select Connected Page</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Linked Google Drive Folder (URL / ID)</label>
+              <input type="text" id="source-gdrive-folder" placeholder="https://drive.google.com/drive/folders/... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition font-mono">
+              <p class="text-[10px] text-slate-500 mt-0.5">Where rendered reels are saved. If empty, uses Page default Drive folder.</p>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Reel Visual Theme</label>
+              <select id="source-reel-theme" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <option value="auto-category" selected>⚡ Auto Category-Themed (Sports, Politics, Tech, Economy, etc.)</option>
+                <option value="studio-red">Studio Red (Broadcast News)</option>
+                <option value="breaking-bold">Breaking Bold (Crimson Alert)</option>
+                <option value="dark-cinema">Dark Cinema (Modern Minimalist)</option>
+                <option value="viral-gradient">Viral Gradient (High Engagement)</option>
+                <option value="rolling">Rolling Round-Robin Rotation</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Design Template</label>
+              <select id="source-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <optgroup label="🇺🇸 Trending News World (English / USA)">
+                  <option value="template-trendingnews-breaking" selected>Trending News World - Breaking News (1080x1080)</option>
+                  <option value="template-trendingnews-editorial">Trending News World - US & Politics Editorial (1080x1080)</option>
+                  <option value="template-trendingnews-viral">Trending News World - Viral Spotlight (1080x1080)</option>
+                  <option value="template-trendingnews-landscape">Trending News World - Landscape Share (1200x630)</option>
+                </optgroup>
+                <optgroup label="🇧🇩 BD News 24/7 (Bangla)">
+                  <option value="template-canva-bdnews">BD News 24/7 Red (Canva Replica)</option>
+                  <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
+                  <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
+                  <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+                </optgroup>
+              </select>
+            </div>
+            <button type="submit" class="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Source</button>
+          </form>
+        </div>
+
+        <!-- Sources List -->
+        <div class="lg:col-span-2 glass-panel rounded-xl p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white">Configured Feed Pipelines</h3>
+            <div class="flex items-center gap-1.5 bg-slate-950/80 border border-red-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300">
+              <span class="text-slate-500">Cron:</span>
+              <span class="font-bold">/api/cron/rss</span>
+              <button onclick="copyCronUrl('/api/cron/rss', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
+            </div>
+          </div>
+          <div id="sources-list" class="space-y-2">
+            <div class="text-xs text-slate-500 font-mono">Loading sources...</div>
+          </div>
+          <div id="sources-pagination"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4. FACEBOOK PAGES TAB -->
+    <div id="tab-pages" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- Add Page Form -->
+        <div class="glass-panel p-4 sm:p-5 rounded-xl h-fit space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+            <div class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs">f</div>
+            <h3 class="text-sm font-bold text-white">Connect Facebook Page</h3>
+          </div>
+          
+          <form id="add-page-form" onsubmit="handleAddPage(event)" class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page ID</label>
+              <input type="text" id="page-id" required placeholder="e.g. 1405135646008133" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 font-mono transition">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page Name</label>
+              <input type="text" id="page-name" required placeholder="e.g. BD News 24/7" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Page Access Token</label>
+              <textarea id="page-token" rows="3" required placeholder="EAA..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 transition"></textarea>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" onclick="testPageToken()" class="w-1/2 py-2 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-700 transition active:scale-95">Test</button>
+              <button type="submit" class="w-1/2 py-2 px-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-xs font-bold text-white shadow-glow-red transition active:scale-95">Save</button>
+            </div>
+            <div id="token-test-result" class="text-xs p-2.5 rounded-lg bg-slate-950 border border-slate-800 hidden font-mono"></div>
+          </form>
+        </div>
+
+        <!-- Pages List -->
+        <div class="lg:col-span-2 glass-panel rounded-xl p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              Connected Target Pages
+            </h3>
+            <a href="/privacy" target="_blank" class="text-xs text-rose-400 hover:text-rose-300 font-mono underline">Privacy Policy ↗</a>
+          </div>
+          
+          <!-- Tips Banner -->
+          <div class="p-3 bg-slate-950/80 border border-slate-800/80 rounded-lg text-xs text-slate-300 space-y-1">
+            <div class="font-bold text-amber-400 flex items-center gap-1.5 text-[11px]">
+              <span>💡</span> Meta Live Mode Active
+            </div>
+            <p class="text-[11px] text-slate-400">Tokens are verified to post natively on the Page feed and stories with full public visibility.</p>
+          </div>
+
+          <div id="pages-list" class="space-y-2">
+            <div class="text-xs text-slate-500 font-mono">Loading connected pages...</div>
+          </div>
+          <div id="pages-pagination"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 5. FACEBOOK GROUPS AUTO-SHARE TAB -->
+    <div id="tab-groups" class="tab-content hidden space-y-4">
+      
+      <!-- Header Banner & Action Button -->
+      <div class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-emerald-500/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-extrabold text-white">Facebook Groups Auto-Share</h2>
+            <span class="text-[10px] text-emerald-400 font-bengali bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">গ্রুপ অটো-শেয়ার</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">স্বয়ংক্রিয়ভাবে প্রকাশিত সংবাদ প্রাসঙ্গিক ফেসবুক গ্রুপে নিরাপদে শেয়ার করুন।</p>
+        </div>
+
+        <button onclick="openAddGroupModal()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 transition active:scale-95 border border-emerald-400/30 whitespace-nowrap self-start sm:self-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Add Facebook Group</span>
+        </button>
+      </div>
+
+      <!-- Quick Stats Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-slate-400">Total Configured</div>
+          <div id="stat-groups-total" class="text-xl font-black text-white mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Target groups</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-emerald-400">Auto-Share Active</div>
+          <div id="stat-groups-active" class="text-xl font-black text-emerald-400 mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Active broadcasting</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-cyan-400">Total Shares</div>
+          <div id="stat-groups-shares" class="text-xl font-black text-cyan-400 mt-1">0</div>
+          <div class="text-[10px] text-slate-500">Shared posts</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-amber-400">Anti-Spam Safeguard</div>
+          <div class="text-xl font-black text-amber-400 mt-1">5s Safe Jitter</div>
+          <div class="text-[10px] text-slate-500">Rate-limit protected</div>
+        </div>
+      </div>
+
+      <!-- Configured Groups Container -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Active Group Targets
+          </h3>
+          <span class="text-[10px] font-mono text-slate-400">Category & Keyword Matching</span>
+        </div>
+
+        <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="text-xs text-slate-500 font-mono col-span-full py-6 text-center glass-panel rounded-xl">
+            Loading configured Facebook groups...
+          </div>
+        </div>
+        <div id="groups-pagination"></div>
+      </div>
+
+      <!-- Recent Group Share Logs Table -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📋</span>
+            <span>Recent Group Share Logs</span>
+          </h3>
+          <button onclick="loadGroupShares()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Headline</th>
+                <th class="py-2 pr-3 font-semibold">Group</th>
+                <th class="py-2 pr-3 font-semibold">FB Post ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Time</th>
+                <th class="py-2 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="group-shares-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="6" class="py-6 text-center text-slate-500">Loading group share logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="group-shares-pagination"></div>
+      </div>
+
+    </div>
+
+    <!-- 6. REELS STUDIO TAB -->
+    <div id="tab-reels" class="tab-content hidden space-y-4">
+      
+      <!-- Top Banner & Quick Controls -->
+      <div class="glass-panel p-4 rounded-xl border border-rose-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+              <span>🎬 Reels & Stories Studio</span>
+              <span class="text-[10px] font-normal text-slate-400 font-mono hidden sm:inline">(রিলস ফিডে • পোস্টার স্টোরিজে)</span>
+            </h2>
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          </div>
+          <p class="text-xs text-slate-300">১৫-২০ সেকেন্ডের মোশন রিল পেজ ফিডে এবং জেপিজি কার্ড পেজ স্টোরিজে স্বয়ংক্রিয়ভাবে পাবলিশ হয়।</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Stories Cron Pill -->
+          <div class="hidden md:flex items-center gap-1.5 bg-slate-950/80 border border-purple-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-purple-300">
+            <span class="text-slate-500">Stories Cron:</span>
+            <span class="font-bold">/api/cron/stories</span>
+            <button onclick="copyCronUrl('/api/cron/stories', this)" class="text-[10px] text-purple-400 hover:text-white px-1.5 py-0.5 rounded bg-purple-950 hover:bg-purple-800 border border-purple-700/50 transition">Copy</button>
+          </div>
+
+          <!-- Stories Toggle -->
+          <div class="bg-slate-950/80 border border-purple-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 shadow">
+            <div class="text-[11px] font-semibold text-white">Poster to Stories</div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggle-post-stories" checked onchange="handlePostStoriesToggle(this.checked)" class="sr-only peer">
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          <!-- Auto-Reels Toggle -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center gap-2 shadow">
+            <div class="text-[11px] font-semibold text-white">Auto-Publish Reels</div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggle-auto-reels" checked onchange="handleAutoReelsToggle(this.checked)" class="sr-only peer">
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-rose-600"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-rose-400">Published Reels</div>
+          <div id="stat-reels-count" class="text-xl font-black text-white mt-0.5">0</div>
+          <div class="text-[10px] text-slate-500">Facebook Reels</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-cyan-400">Reel Duration</div>
+          <div class="text-xl font-black text-cyan-400 mt-0.5">18 Seconds</div>
+          <div class="text-[10px] text-slate-500">15-20s Broadcast sweet spot</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-amber-400">Audio Soundtrack</div>
+          <div class="text-xl font-black text-amber-400 mt-0.5">Studio AAC</div>
+          <div class="text-[10px] text-slate-500">13 Category soundscapes</div>
+        </div>
+        <div class="glass-panel p-3.5 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-mono uppercase text-purple-400">Distribution Mode</div>
+          <div class="text-base font-black text-purple-400 mt-0.5">Reels ➔ Feed</div>
+          <div class="text-[10px] text-slate-500">Poster ➔ Stories (24h)</div>
+        </div>
+      </div>
+
+      <!-- Interactive Reel Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        
+        <!-- Controls & Input Form -->
+        <div class="lg:col-span-6 glass-panel p-4 sm:p-5 rounded-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-1.5">
+              <div class="w-6 h-6 rounded-md bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎬</div>
+              <h3 class="text-sm font-bold text-white">Reel Generator & Publisher</h3>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400">Live Meta Graph API</span>
+          </div>
+
+          <!-- Select Article -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Select From Recent Articles</label>
+            <select id="reel-article-select" onchange="onReelArticleSelected()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+              <option value="">-- Choose article or enter custom below --</option>
+            </select>
+          </div>
+
+          <!-- Theme Selector -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono flex items-center justify-between">
+              <span>Visual Theme</span>
+              <span id="reel-theme-badge" class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800">1:1 Square</span>
+            </label>
+            <select id="reel-theme-select" onchange="onReelThemeChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition font-medium">
+              <option value="auto-category" selected>⚡ Auto-Category (ক্যাটাগরি অনুযায়ী থিম ও সাউন্ড)</option>
+              <option value="rolling">🔄 Rolling Rotation (ঘুরিয়ে ঘুরিয়ে)</option>
+              <optgroup label="13 News Categories">
+                <option value="cat-bangladesh">🇧🇩 বাংলাদেশ (জাতীয় - গাঢ় সবুজ ও লাল)</option>
+                <option value="cat-politics">🏛️ রাজনীতি (পলিটিক্স - বার্গান্ডি ও গোল্ড)</option>
+                <option value="cat-economy">📈 অর্থনীতি (ব্যবসা - মিডনাইট ব্লু ও টিল)</option>
+                <option value="cat-international">🌐 আন্তর্জাতিক (বিশ্ব সংবাদ - ভায়োলেট)</option>
+                <option value="cat-sports">⚽ খেলাধুলা (স্পোর্টস - স্যাফায়ার ও অরেঞ্জ)</option>
+                <option value="cat-technology">💻 তথ্যপ্রযুক্তি (টেক - সাইবার সায়ান)</option>
+                <option value="cat-entertainment">🎬 বিনোদন (শোবিজ - গ্ল্যামার ম্যাজেন্টা)</option>
+                <option value="cat-opinion">✍️ মতামত (সম্পাদকীয় - স্লিক চারকোল)</option>
+                <option value="cat-religion">🕌 ধর্ম (ইসলাম - গোল্ডেন এমারেল্ড)</option>
+                <option value="cat-education">🎓 শিক্ষা (ক্যাম্পাস - স্কাই ব্লু)</option>
+                <option value="cat-job">💼 চাকরি (ক্যারিয়ার - সাকসেস টিল)</option>
+                <option value="cat-lifestyle">🌿 জীবনযাপন (লাইফস্টাইল - কোরাল)</option>
+                <option value="cat-todays-match">🔥 আজকের খেলা (হাই এলার্ট)</option>
+              </optgroup>
+              <optgroup label="Classic Studio">
+                <option value="viral-gradient">🔥 Viral Social Mesh (1080x1080)</option>
+                <option value="studio-red">🔴 BD News 24/7 Red (Canva Replica)</option>
+                <option value="breaking-bold">⚡ Breaking News TV Flash</option>
+                <option value="dark-cinema">🌐 Cinematic Dark Cyber</option>
+                <option value="vertical-916">📱 Vertical Fullscreen Reel (9:16)</option>
+              </optgroup>
+            </select>
+            <p id="reel-theme-desc" class="text-[10px] text-slate-400 mt-1 truncate">Smart AI Matching: Automatically applies tailored theme & sound</p>
+          </div>
+
+          <!-- Category Badge & Headline -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Category</label>
+              <input type="text" id="reel-category-input" value="বিশেষ খবর" oninput="updateReelFramePreview()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn focus:outline-none focus:border-rose-500 transition">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Image URL (Optional)</label>
+              <input type="url" id="reel-image-input" onchange="updateReelFramePreview()" placeholder="https://... (Empty for studio placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+            </div>
+          </div>
+
+          <!-- Headline -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Bengali Headline <span class="text-rose-400">*</span></label>
+            <textarea id="reel-headline-input" rows="2" oninput="updateReelFramePreviewDebounced()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="বাংলা খবর লিখুন...">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+          </div>
+
+          <!-- Link & Page -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Article Link (1st Comment)</label>
+              <input type="url" id="reel-link-input" placeholder="https://bdnews.site/..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-700 focus:outline-none focus:border-rose-500 transition">
+              <input type="hidden" id="reel-article-id-input" value="">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Page</label>
+              <select id="reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-rose-500 transition">
+                <option value="all">Active Default Page (BD News 24/7)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Duration & Viral Hashtags -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Duration</label>
+              <select id="reel-duration-select" onchange="onReelDurationChanged()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+                <option value="18" selected>⏱️ 18s (Broadcast)</option>
+                <option value="15">⏱️ 15s (Standard)</option>
+                <option value="20">⏱️ 20s (Extended)</option>
+                <option value="16">⏱️ 16s</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono flex items-center justify-between">
+                <span>Viral Hashtags</span>
+                <button type="button" onclick="refreshViralHashtags()" class="text-rose-400 hover:text-rose-300 underline text-[10px]">অটো রিফ্রেশ</button>
+              </label>
+              <input type="text" id="reel-hashtags-input" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-amber-300/90 focus:outline-none focus:border-rose-500 transition" value="#MedicalAdmission #MBBS #Education #BreakingNews #BanglaNews #fbreels #viralreels">
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow">
+              <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Preview</span>
+            </button>
+            <button onclick="publishReelNow()" id="btn-publish-reel" class="py-2 px-3 rounded-lg bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              <span>Publish Reel</span>
+            </button>
+            <button onclick="publishStoryNow()" id="btn-publish-story" class="py-2 px-3 rounded-lg bg-purple-950/80 hover:bg-purple-900 border border-purple-700/80 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow">
+              <span>📸 Post Stories</span>
+            </button>
+          </div>
+
+          <div id="reel-action-status" class="text-xs font-mono text-slate-400 text-center hidden"></div>
+        </div>
+
+        <!-- 3D Video Player Showcase -->
+        <div class="lg:col-span-6 glass-panel p-4 sm:p-5 rounded-xl flex flex-col items-center justify-center">
+          <div class="flex items-center justify-between w-full mb-2">
+            <span class="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+              Studio Player
+            </span>
+            <span id="reel-duration-badge" class="text-[10px] font-mono text-slate-500">18s • 24fps • AAC</span>
+          </div>
+
+          <div id="reel-player-box" class="relative w-full max-w-[340px] aspect-square bg-slate-950 rounded-xl border border-slate-800 shadow-xl flex items-center justify-center overflow-hidden group">
+            
+            <!-- Video Element -->
+            <video id="reel-video-player" controls playsinline loop class="w-full h-full object-contain bg-black hidden"></video>
+
+            <!-- Frame Preview -->
+            <img id="reel-frame-img" class="w-full h-full object-contain bg-black hidden cursor-pointer" onclick="renderReelPreview()" title="Click to render video" alt="Reel Preview" />
+
+            <!-- Placeholder -->
+            <div id="reel-player-placeholder" class="text-center p-4 space-y-2">
+              <div class="w-12 h-12 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-2xl shadow-glow-red">🎬</div>
+              <p class="text-xs font-semibold text-slate-200">Reel Ready for Render</p>
+              <p class="text-[11px] text-slate-500 max-w-xs">Click <strong>"Preview"</strong> to render broadcast MP4 with Bengali typography and audio.</p>
+            </div>
+
+            <!-- Spinner Overlay -->
+            <div id="reel-player-spinner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2 hidden z-20">
+              <div class="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+              <p class="text-xs font-mono text-slate-300" id="reel-spinner-text">Rendering frames...</p>
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between w-full max-w-[340px] text-[11px] font-mono text-slate-400">
+            <span>Studio AAC Soundtrack</span>
+            <a id="reel-download-link" href="#" target="_blank" class="text-rose-400 hover:text-rose-300 underline hidden">Direct MP4</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Recent Reels History Table -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📋</span>
+            <span>Recent Facebook Reels History</span>
+          </h3>
+          <button onclick="loadReelLogs()" class="text-xs text-slate-400 hover:text-slate-200 font-mono flex items-center gap-1 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Headline</th>
+                <th class="py-2 pr-3 font-semibold">Page</th>
+                <th class="py-2 pr-3 font-semibold">Template</th>
+                <th class="py-2 pr-3 font-semibold">Reel ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Published</th>
+                <th class="py-2 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="reels-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="7" class="py-6 text-center text-slate-500">Loading reels history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="reels-pagination"></div>
+      </div>
+
+    </div>
+
+    <!-- 7. GOOGLE DRIVE MULTI-CHANNEL REELS TAB -->
+    <div id="tab-gdrive-reels" class="tab-content hidden space-y-4">
+      
+      <!-- Header Banner -->
+      <div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">Multi-Channel Cloud Automation</span>
+            <span id="gdrive-global-status-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Connecting...</span>
+          </div>
+          <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            Google Drive Multi-Channel Reels
+          </h2>
+          <p class="text-xs text-slate-300 mt-0.5 max-w-2xl">
+            একাধিক ড্রাইভ ফোল্ডার থেকে পেজগুলোতে রিলস ২৪/৭ স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড করুন।
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-emerald-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-emerald-300">
+            <span class="text-slate-500">Cron:</span>
+            <span class="font-bold">/api/cron/gdrive-reels</span>
+            <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="text-[10px] text-emerald-400 hover:text-white px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-700/50 transition">Copy</button>
+          </div>
+          <button onclick="showAddChannelForm()" class="py-1.5 px-3 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow transition active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Add Channel</span>
+          </button>
+          <button onclick="runAllDueChannelsNow()" class="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/30 font-bold text-xs flex items-center gap-1 transition active:scale-95" title="Trigger post for all due channels right now">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Run Due Now</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Shared API Key Banner -->
+      <div class="glass-panel p-3.5 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5 flex-wrap">
+              <span>Google Drive Access</span>
+              <span id="gdrive-api-key-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">API Key: Checking...</span>
+              <span id="gdrive-oauth-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">OAuth: Checking...</span>
+            </div>
+            <p class="text-[10px] text-slate-400">API Key reads public folders. Google Sign-In is used to auto-delete / trash .mp4 files after posting.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <input type="password" id="gdrive-global-api-key" placeholder="AIzaSy... (API Key)" class="w-full sm:w-56 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+          <button onclick="saveGlobalGDriveApiKey()" id="btn-save-global-api-key" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition shrink-0">
+            Save Key
+          </button>
+          <button onclick="connectGDriveOAuth()" id="btn-connect-gdrive-oauth" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shrink-0 hidden flex items-center gap-1 shadow">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
+            <span>Connect Google</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Stats Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-slate-400">Channels</div>
+          <div id="stat-gdrive-total-channels" class="text-xl font-black text-white font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Folder mappings</div>
+        </div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-emerald-400">Active 24/7</div>
+          <div id="stat-gdrive-active-channels" class="text-xl font-black text-emerald-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Auto-posting channels</div>
+        </div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-cyan-400">Ready Videos</div>
+          <div id="stat-gdrive-pending-videos" class="text-xl font-black text-cyan-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">In drive queues</div>
+        </div>
+        <div class="glass-panel p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] uppercase font-mono text-purple-400">Published</div>
+          <div id="stat-gdrive-posted-videos" class="text-xl font-black text-purple-400 font-mono mt-0.5">0</div>
+          <div class="text-[9px] text-slate-500">Reels posted to FB</div>
+        </div>
+      </div>
+
+      <!-- Main Layout: Left Channels, Right Video Explorer & Form -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Channels List Column (5 Cols) -->
+        <div class="lg:col-span-5 space-y-3">
+          <div class="flex items-center justify-between pb-1">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              Configured Channels
+            </h3>
+            <button onclick="refreshGDriveChannels()" class="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Refresh">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+
+          <div id="gdrive-channels-container" class="space-y-2">
+            <div class="glass-panel p-4 text-center text-slate-500 font-mono text-xs rounded-xl">
+              Loading Google Drive channels...
+            </div>
+          </div>
+          <div id="gdrive-channels-pagination"></div>
+        </div>
+
+        <!-- Right Side: Channel Explorer OR Form (7 Cols) -->
+        <div class="lg:col-span-7 space-y-3">
+
+          <!-- ADD / EDIT CHANNEL FORM CARD -->
+          <div id="gdrive-channel-form-card" class="hidden glass-panel p-4 sm:p-5 rounded-xl border border-emerald-500/40 bg-slate-950/90 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 id="gdrive-form-title" class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Add Drive Channel</span>
+              </h3>
+              <button onclick="hideChannelForm()" class="p-1 text-slate-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <form onsubmit="handleSaveGDriveChannel(event)" class="space-y-3">
+              <input type="hidden" id="gdrive-form-channel-id" value="">
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Channel Name</label>
+                <input type="text" id="gdrive-form-channel-name" required placeholder="e.g. Sports Reels" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Google Drive Folder Link / ID <span class="text-emerald-400">*</span></label>
+                <div class="flex gap-2">
+                  <input type="text" id="gdrive-form-folder-input" required placeholder="https://drive.google.com/drive/folders/... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                  <button type="button" onclick="testScanFormFolder()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition flex items-center gap-1 shrink-0">Test</button>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Facebook Page</label>
+                <select id="gdrive-form-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                  <option value="">Loading pages...</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Schedule Interval</label>
+                  <select id="gdrive-form-interval-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="1">⏱️ Every 1h (24/day)</option>
+                    <option value="2" selected>⏱️ Every 2h (12/day)</option>
+                    <option value="3">⏱️ Every 3h (8/day)</option>
+                    <option value="4">⏱️ Every 4h (6/day)</option>
+                    <option value="6">⏱️ Every 6h (4/day)</option>
+                    <option value="12">⏱️ Every 12h (2/day)</option>
+                    <option value="24">⏱️ Daily (1/day)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Queue Sequence</label>
+                  <select id="gdrive-form-order-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="oldest_first" selected>Oldest First</option>
+                    <option value="newest_first">Newest First</option>
+                    <option value="alphabetical">Alphabetical (A-Z)</option>
+                    <option value="random">Random Shuffle</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Video Category / Niche</label>
+                  <select id="gdrive-form-category-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="auto" selected>🌟 Auto-Detect (Title & Channel)</option>
+                    <option value="sports">⚽ Sports (Football, Cricket, Highlights)</option>
+                    <option value="comedy">🎭 Comedy & Memes (Funny, Humor)</option>
+                    <option value="technology">💻 Tech & AI (Gadgets, Tutorials)</option>
+                    <option value="lifestyle">🌿 Motivation & Fitness (Lifestyle)</option>
+                    <option value="islamic">🕌 Islamic & Spiritual (Waz, Quran)</option>
+                    <option value="food">🍳 Food & Cooking (Recipes)</option>
+                    <option value="gaming">🎮 Gaming (Clips, Gameplay)</option>
+                    <option value="travel">✈️ Travel & Adventure</option>
+                    <option value="entertainment">🎬 Entertainment (Movie, Natok)</option>
+                    <option value="news">📰 News & Current Affairs</option>
+                    <option value="viral">🔥 General Viral Reels</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Custom Hashtags (Optional)</label>
+                  <input type="text" id="gdrive-form-custom-hashtags" placeholder="#MyBrand #TopReels" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                <span class="text-xs font-semibold text-white">Enable 24/7 Cloud Automation</span>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs">
+                  <input type="checkbox" id="gdrive-form-active-toggle" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500">
+                  <span id="gdrive-form-active-label" class="text-emerald-400 font-bold text-xs">Active</span>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+                <div>
+                  <span class="text-xs font-semibold text-white block">Delete from Drive After Posting</span>
+                  <span class="text-[10px] text-slate-400">Moves .mp4 to Google Drive Trash so folder storage stays clean</span>
+                </div>
+                <label class="flex items-center gap-1.5 cursor-pointer text-xs shrink-0">
+                  <input type="checkbox" id="gdrive-form-delete-toggle" checked class="rounded bg-slate-950 border-slate-700 text-rose-500 focus:ring-rose-500">
+                  <span id="gdrive-form-delete-label" class="text-rose-400 font-bold text-xs">Auto-Delete</span>
+                </label>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Caption Strategy</label>
+                <div class="flex items-center gap-4 text-xs text-slate-300">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="gdriveFormCaptionMode" value="viral_hashtags" id="gdrive-form-mode-viral" checked onchange="toggleFormCaptionBox()" class="text-emerald-500">
+                    <span>🔥 Viral Hashtags</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="gdriveFormCaptionMode" value="custom" id="gdrive-form-mode-custom" onchange="toggleFormCaptionBox()" class="text-emerald-500">
+                    <span>Custom Caption</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="gdrive-form-custom-caption-box" class="hidden">
+                <textarea id="gdrive-form-custom-caption" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
+              </div>
+
+              <!-- Linked Social Networks -->
+              <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-2">
+                <span class="text-[11px] font-bold text-slate-300 uppercase font-mono">Linked Social Networks (Output Broadcast)</span>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-yt-toggle" checked class="rounded text-red-500">
+                    <span class="text-slate-300 font-medium">📺 YouTube Shorts</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-tiktok-toggle" checked class="rounded text-cyan-400">
+                    <span class="text-slate-300 font-medium">🎵 TikTok</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-story-toggle" checked class="rounded text-purple-400">
+                    <span class="text-slate-300 font-medium">📸 FB Stories</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-groups-toggle" class="rounded text-emerald-400">
+                    <span class="text-slate-300 font-medium">👥 FB Groups</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">First Comment (Optional)</label>
+                <input type="text" id="gdrive-form-first-comment" placeholder="e.g. Follow for daily reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+              </div>
+
+              <div class="pt-1 flex gap-2">
+                <button type="submit" id="btn-save-gdrive-channel" class="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition shadow active:scale-95">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>Save Channel</span>
+                </button>
+                <button type="button" onclick="hideChannelForm()" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs border border-slate-800 transition">
+                  Cancel
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- SELECTED CHANNEL VIDEO EXPLORER CARD -->
+          <div id="gdrive-explorer-card" class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 id="gdrive-explorer-title" class="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>Channel Videos</span>
+                  </h3>
+                  <span id="gdrive-explorer-page-badge" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-800 text-slate-300">Loading...</span>
+                </div>
+                <p id="gdrive-explorer-desc" class="text-[10px] text-slate-400 mt-0.5">Google Drive video queue</p>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <button onclick="publishNextForSelectedChannel()" id="btn-publish-next-selected" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs transition active:scale-95 shadow flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  <span>Post Now</span>
+                </button>
+                <button onclick="rescanSelectedChannel()" class="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition" title="Refresh">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Video Queue Table -->
+            <div class="overflow-x-auto rounded-lg border border-slate-800/80 bg-slate-950/40">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-900/80 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="py-2 px-3">Video File</th>
+                    <th class="py-2 px-2">Size</th>
+                    <th class="py-2 px-2">Status</th>
+                    <th class="py-2 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="gdrive-channel-videos-table-body" class="divide-y divide-slate-900">
+                  <tr>
+                    <td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">
+                      Select a channel from the left to view videos.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="gdrive-videos-pagination"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 8. YOUTUBE SHORTS TAB -->
+    <div id="tab-youtube" class="tab-content hidden space-y-4">
+      
+      <!-- Header Banner -->
+      <div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">Multi-Platform Pipeline</span>
+            <span id="yt-channel-count-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking Channels...</span>
+          </div>
+          <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            YouTube Shorts Multi-Channel Automation
+          </h2>
+          <p class="text-xs text-slate-300 mt-0.5">
+            প্রতিটি ফেসবুক পেজের রিল ভিডিও স্বয়ংক্রিয়ভাবে তার সংশ্লিষ্ট YouTube চ্যানেলে Shorts হিসেবে আপলোড হয়।
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-red-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300">
+            <span class="text-slate-500">Cron:</span>
+            <span class="font-bold">/api/cron/youtube</span>
+            <button onclick="copyCronUrl('/api/cron/youtube', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
+          </div>
+          <button onclick="openConnectChannelModal()" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center gap-1.5 transition active:scale-95 border border-red-400/30">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Connect Channel</span>
+          </button>
+          <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            <span>Upload Latest Short</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Connected YouTube Channels Section -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Connected YouTube Channels</h3>
+            <span id="yt-channel-count-display" class="px-2 py-0.2 rounded-full text-[10px] bg-red-950/80 text-red-300 border border-red-800/40 font-mono">0</span>
+          </div>
+          <button onclick="loadYouTube()" class="text-[11px] text-slate-400 hover:text-slate-200 transition flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div id="yt-channels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="glass-panel p-6 rounded-xl text-center text-slate-500 font-mono text-xs col-span-full">
+            Loading connected channels...
+          </div>
+        </div>
+      </div>
+
+      <!-- Global OAuth Credentials & Settings -->
+      <div class="glass-panel p-4 sm:p-5 rounded-xl space-y-3 border border-slate-800">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+              <span>🔑</span> Global Google OAuth 2.0 Credentials (Shared App Config)
+            </h3>
+            <p class="text-[11px] text-slate-400">Google Cloud Console থেকে পাওয়া Client ID & Secret সব চ্যানেলের সাথে শেয়ার করা যায়।</p>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">YouTube Data API v3</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client ID</label>
+            <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="xxxxx.apps.googleusercontent.com" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client Secret</label>
+            <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Client Secret" />
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-xs">
+          <div class="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300 w-full sm:w-auto flex-1">
+            <span class="truncate"><span class="text-slate-400">Authorized Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">/api/youtube/auth/callback</span></span>
+            <button onclick="copyRedirectUri()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200 text-[10px] active:scale-95 transition">Copy</button>
+          </div>
+
+          <button onclick="saveYouTubeSettings()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition active:scale-95 shrink-0">
+            Save App Credentials
+          </button>
+        </div>
+      </div>
+
+      <!-- YouTube Logs Table -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>📊</span> Recent YouTube Shorts Upload History
+          </h3>
+          <button onclick="loadYouTubeLogs()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
+                <th class="py-2 pr-3 font-semibold">Title</th>
+                <th class="py-2 pr-3 font-semibold">Channel</th>
+                <th class="py-2 pr-3 font-semibold">Video ID</th>
+                <th class="py-2 pr-3 font-semibold">Duration</th>
+                <th class="py-2 pr-3 font-semibold">Time</th>
+                <th class="py-2 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="yt-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="6" class="py-6 text-center text-slate-500">Loading YouTube logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="yt-pagination"></div>
+      </div>
+
+    </div>
+
+    <!-- Modal: Connect YouTube Channel -->
+    <div id="modal-connect-yt-channel" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+      <div class="glass-panel w-full max-w-lg rounded-2xl p-5 border border-slate-700/80 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Connect YouTube Channel</h3>
+              <p class="text-[11px] text-slate-400">Link YouTube Shorts automation to a specific Facebook Page</p>
+            </div>
+          </div>
+          <button onclick="closeConnectChannelModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Target Facebook Page</label>
+            <select id="yt-connect-page-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="1405135646008133">BD News 24/7 (1405135646008133)</option>
+              <option value="1526917347161119">Trending News World (1526917347161119)</option>
+              <option value="61578330559981">Alisa Tech Studio (61578330559981)</option>
+              <option value="61579560411893">হক কথা (61579560411893)</option>
+              <option value="all">All Pages (Global Channel)</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1">নির্বাচিত ফেসবুক পেজের রিল ভিডিও শুধু এই YouTube চ্যানেলে Shorts হিসেবে আপলোড হবে।</p>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Content Language</label>
+            <select id="yt-connect-language-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="bn">Bengali (বাংলা)</option>
+              <option value="en">English (US / Global)</option>
+              <option value="all">All Languages</option>
+            </select>
+          </div>
+
+          <div class="border-t border-slate-800 pt-3">
+            <div class="flex items-center gap-2 mb-3">
+              <button type="button" onclick="switchConnectTab('oauth')" id="btn-connect-tab-oauth" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-600/20 text-red-300 border border-red-500/40 transition">
+                Method 1: Google Sign-In
+              </button>
+              <button type="button" onclick="switchConnectTab('manual')" id="btn-connect-tab-manual" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition">
+                Method 2: Manual Refresh Token
+              </button>
+            </div>
+
+            <!-- Tab 1: Google Sign-In -->
+            <div id="connect-pane-oauth" class="space-y-3">
+              <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                <div class="font-bold text-amber-300 flex items-center gap-1">
+                  <span>⚡</span> One-Click Authorization:
+                </div>
+                <p class="text-slate-400">
+                  গুগল সাইন-ইন দিয়ে সরাসরি আপনার ইউটিউব চ্যানেল নির্বাচন করুন। সিস্টেম স্বয়ংক্রিয়ভাবে চ্যানেল প্রোফাইল, লোগো ও রিফ্রেশ টোকেন সেভ করবে।
+                </p>
+              </div>
+
+              <button type="button" onclick="startGoogleOAuthForChannel()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center justify-center gap-2 transition active:scale-95 border border-red-400/30">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>Sign in with Google</span>
+              </button>
+            </div>
+
+            <!-- Tab 2: Manual Refresh Token -->
+            <div id="connect-pane-manual" class="space-y-3 hidden">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Channel Title / Display Name</label>
+                <input type="text" id="yt-manual-title" placeholder="e.g. Trending News World" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none transition" />
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Refresh Token (Required)</label>
+                <input type="password" id="yt-manual-token" placeholder="1//0..." class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block font-semibold text-slate-400 mb-1 text-[10px]">Client ID Override (Optional)</label>
+                  <input type="text" id="yt-manual-client-id" placeholder="Use Global" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1 text-white font-mono text-[11px] focus:outline-none transition" />
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-400 mb-1 text-[10px]">Client Secret (Optional)</label>
+                  <input type="password" id="yt-manual-client-secret" placeholder="Use Global" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1 text-white font-mono text-[11px] focus:outline-none transition" />
+                </div>
+              </div>
+
+              <button type="button" onclick="submitManualChannel()" id="btn-save-manual-channel" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-glow-emerald flex items-center justify-center gap-2 transition active:scale-95">
+                <span>Verify & Connect Channel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Edit YouTube Channel Mapping -->
+    <div id="modal-edit-yt-channel" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+      <div class="glass-panel w-full max-w-md rounded-2xl p-5 border border-slate-700/80 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>⚙️</span> Edit Channel Settings
+          </h3>
+          <button onclick="closeEditYouTubeChannelModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <input type="hidden" id="yt-edit-channel-id" />
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Channel Title</label>
+            <input type="text" id="yt-edit-title" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none transition" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Mapped Facebook Page</label>
+            <select id="yt-edit-page-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="1405135646008133">BD News 24/7 (1405135646008133)</option>
+              <option value="1526917347161119">Trending News World (1526917347161119)</option>
+              <option value="61578330559981">Alisa Tech Studio (61578330559981)</option>
+              <option value="61579560411893">হক কথা (61579560411893)</option>
+              <option value="all">All Pages (Global Channel)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Language Preference</label>
+            <select id="yt-edit-language-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="bn">Bengali (বাংলা)</option>
+              <option value="en">English</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between border-t border-slate-800">
+            <span class="text-slate-300 text-xs font-semibold">Auto-Upload Shorts on Publish:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="yt-edit-auto-toggle" class="sr-only peer" checked />
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-red-600"></div>
+            </label>
+          </div>
+
+          <div class="pt-2 flex justify-end gap-2">
+            <button type="button" onclick="closeEditYouTubeChannelModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
+            <button type="button" onclick="saveEditYouTubeChannel()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white font-bold text-xs">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+    <!-- 9. TEMPLATE PREVIEW TAB -->
+    <div id="tab-preview" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Controls -->
+        <div class="lg:col-span-5 glass-panel p-4 sm:p-5 rounded-xl space-y-3 h-fit">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎨</div>
+              <h3 class="text-sm font-bold text-white">Live Template Preview</h3>
+            </div>
+          </div>
+
+          <!-- Quick Preset Switcher -->
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="setPreviewPreset('trendingnews')" class="flex-1 py-1.5 px-2 rounded-lg bg-blue-950/80 hover:bg-blue-900 border border-blue-700/60 text-blue-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+              <span>🇺🇸</span>
+              <span>Trending News World</span>
+            </button>
+            <button type="button" onclick="setPreviewPreset('bdnews')" class="flex-1 py-1.5 px-2 rounded-lg bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+              <span>🇧🇩</span>
+              <span>BD News 24/7</span>
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Template Style</label>
+            <select id="preview-template" onchange="onTemplateStyleChange()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <optgroup label="🇺🇸 Trending News World (English / USA)">
+                <option value="template-trendingnews-breaking" selected>Trending News World - Breaking News (1080x1080)</option>
+                <option value="template-trendingnews-editorial">Trending News World - US & Politics Editorial (1080x1080)</option>
+                <option value="template-trendingnews-viral">Trending News World - Viral Spotlight (1080x1080)</option>
+                <option value="template-trendingnews-landscape">Trending News World - Landscape Share (1200x630)</option>
+              </optgroup>
+              <optgroup label="🇧🇩 BD News 24/7 (Bangla)">
+                <option value="template-canva-bdnews">BD News 24/7 Red (Canva Replica)</option>
+                <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
+                <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
+                <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Category Badge</label>
+            <input type="text" id="preview-category" value="US POLITICS" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Headline (Auto-Fit Text)</label>
+            <textarea id="preview-headline" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 leading-relaxed focus:outline-none focus:border-red-500 transition">White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote</textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Image URL (Optional)</label>
+            <input type="url" id="preview-image" placeholder="https://... (Empty for placeholder)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-700 focus:outline-none focus:border-red-500 transition">
+          </div>
+          <button onclick="renderPreview()" class="w-full py-2.5 px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-glow-red transition active:scale-95">
+            <span id="preview-spinner" class="hidden animate-spin">⚪</span>
+            <span>Render Preview</span>
+          </button>
+        </div>
+
+        <!-- 3D Preview Stage -->
+        <div class="lg:col-span-7 glass-panel p-4 sm:p-5 rounded-xl flex flex-col items-center justify-center min-h-[460px]">
+          <div class="relative group">
+            <div id="preview-container" class="relative w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] aspect-square bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center overflow-hidden shadow-2xl">
+              <div id="preview-placeholder" class="text-slate-500 text-xs text-center px-4 leading-relaxed">
+                <span class="text-3xl block mb-2">🖼️</span>
+                Click <strong>"Render Preview"</strong> to view the Canva replica card with Bengali auto-fit
+              </div>
+              <iframe id="preview-frame" class="w-[1080px] h-[1080px] origin-top-left border-0 hidden" style="transform: scale(0.388);" sandbox="allow-scripts allow-same-origin"></iframe>
+              <img id="preview-img" class="w-full h-full object-contain hidden" alt="Preview Result" />
+            </div>
+          </div>
+          <div id="preview-meta" class="mt-3 text-[11px] font-mono text-slate-400">Ready for rendering</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 10. SETTINGS TAB -->
+    <div id="tab-settings" class="tab-content hidden space-y-4">
+      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-3xl space-y-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
+          <div class="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold text-xs">⚙️</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Pipeline Automation Settings</h3>
+            <p class="text-[11px] text-slate-400">Ingestion schedules, rate limits, and caption formatting</p>
+          </div>
+        </div>
+
+        <form id="settings-form" onsubmit="handleSaveSettings(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">RSS Poll Cron</label>
+              <input type="text" id="setting-cron" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">e.g. */10 * * * * (Every 10 min)</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Max Age (Hours)</label>
+              <input type="number" id="setting-age" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Ignore older articles</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Hourly Post Cap</label>
+              <input type="number" id="setting-cap" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Max posts allowed / hour</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Anti-Spam Delay Range (Sec)</label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="setting-min-delay" placeholder="Min (30)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <input type="number" id="setting-max-delay" placeholder="Max (60)" class="w-1/2 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              </div>
+              <span class="text-[10px] text-slate-500 mt-0.5 block">Natural delay between posts</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase font-mono">Default Hashtags</label>
+              <div class="flex items-center gap-1.5 text-[10px]">
+                <button type="button" onclick="setHashtagPreset('usa')" class="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-700/60 text-blue-300 hover:bg-blue-900 transition font-sans">🇺🇸 Trending News World (USA)</button>
+                <button type="button" onclick="setHashtagPreset('bd')" class="px-2 py-0.5 rounded bg-red-950/80 border border-red-700/60 text-red-300 hover:bg-red-900 transition font-sans">🇧🇩 BD News 24/7</button>
+              </div>
+            </div>
+            <input type="text" id="setting-hashtags" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Caption Template</label>
+            <textarea id="setting-caption-format" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition"></textarea>
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Variables: {headline}, {summary}, {hashtags}</span>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">First Comment Format</label>
+            <input type="text" id="setting-comment-format" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-red-500 transition">
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Variable: {url}</span>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">cron-job.org API Key</label>
+            <div class="flex items-center gap-2">
+              <input type="password" id="setting-cronjob-api-key" placeholder="Bearer key from cron-job.org (krm76c+...)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 transition">
+              <button type="button" onclick="toggleApiKeyVisibility('setting-cronjob-api-key')" class="px-2.5 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Show/Hide Key">👁️</button>
+            </div>
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Used to manage, create, toggle, and trigger scheduled jobs via API v2</span>
+          </div>
+
+          <!-- TikTok API Settings -->
+          <div class="pt-3 border-t border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold text-cyan-300 uppercase font-mono flex items-center gap-1.5">
+                <span>🎵 TikTok API Integration</span>
+                <span id="setting-tiktok-badge" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-800 text-slate-400">Checking...</span>
+              </label>
+              <button type="button" onclick="testTikTokConnection()" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/50 hover:bg-cyan-800 transition">Test Connection</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input type="password" id="setting-tiktok-token" placeholder="TikTok Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition">
+              <input type="text" id="setting-tiktok-key" placeholder="TikTok Client Key (Optional)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition">
+            </div>
+            <span class="text-[10px] text-slate-500 block">Required for automatically posting videos to TikTok in Output Cron. If empty, runs in safe simulated mode.</span>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="py-2 px-5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Pipeline Configuration</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 10b. DISTINCT CRON-JOB.ORG SCHEDULERS & FULL CRUD MANAGER -->
+      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-5xl space-y-4 border border-cyan-500/20 shadow-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-sm">⏱️</div>
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                cron-job.org Multi-Process Schedulers
+                <span id="cron-connection-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-900 text-slate-400 border border-slate-800 font-semibold">Connecting...</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">লাইভ ক্রন জব ব্যবস্থাপনা, শিডিউল এডিটর, ম্যানুয়াল টেস্ট ও এক্সিকিউশন হিস্ট্রি</p>
+            </div>
+          </div>
+          <div class="flex items-center flex-wrap gap-2">
+            <button type="button" onclick="openAddCronJobModal()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-glow-cyan transition flex items-center gap-1.5 active:scale-95">
+              <span>+ Add Cron Job</span>
+            </button>
+            <button type="button" onclick="syncAllCronJobs()" class="px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold text-xs transition flex items-center gap-1.5 active:scale-95" title="Synchronize all distinct per-page webhooks with cron-job.org">
+              <span>⚡ 1-Click Sync All Cron Jobs</span>
+            </button>
+            <button type="button" onclick="loadCronJobs()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-xs transition active:scale-95" title="Reload jobs from cron-job.org">
+              <span>🔄 Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- API Key Missing Alert -->
+        <div id="cron-api-key-alert" class="hidden p-3.5 bg-amber-950/40 border border-amber-500/40 rounded-xl text-xs space-y-2">
+          <div class="flex items-center gap-2 text-amber-300 font-bold text-xs">
+            <span>⚠️ cron-job.org API Key Not Configured</span>
+          </div>
+          <p class="text-slate-300 text-[11px] leading-relaxed">
+            ক্রন জব তালিকা ও অটোমেশন কন্ট্রোল দেখতে আপনার cron-job.org এর API Key দিন।
+          </p>
+          <div class="flex items-center gap-2 max-w-md">
+            <input type="text" id="cron-quick-key-input" placeholder="Paste cron-job.org Bearer API Key..." class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500">
+            <button type="button" onclick="quickSaveCronKey()" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded transition shrink-0">Save Key</button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+          <div class="flex items-center flex-wrap gap-1 text-[11px]">
+            <button type="button" onclick="filterCronJobs('all', this)" id="cron-filter-all" class="cron-tab-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition">All (<span id="cron-count-all">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('active', this)" id="cron-filter-active" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Active (<span id="cron-count-active">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('paused', this)" id="cron-filter-paused" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Paused (<span id="cron-count-paused">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('webhooks', this)" id="cron-filter-webhooks" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Webhooks (<span id="cron-count-webhooks">0</span>)</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="cron-search-input" oninput="searchCronJobs(this.value)" placeholder="Search jobs by title or URL..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg pl-8 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+            <span class="absolute left-2.5 top-1.5 text-slate-500 text-xs">🔍</span>
+          </div>
+        </div>
+
+        <!-- Jobs Table Container -->
+        <div id="cron-jobs-table-container" class="space-y-2 overflow-x-auto">
+          <div class="p-8 text-center text-slate-500 text-xs animate-pulse">Loading cron jobs from cron-job.org...</div>
+        </div>
+
+        <!-- Distinct Serverless Webhooks Reference (Collapsible Accordion) -->
+        <div class="border border-slate-800 rounded-xl overflow-hidden mt-4">
+          <button type="button" onclick="toggleDistinctCronDetails()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-900/80 flex items-center justify-between text-xs font-semibold text-slate-300 transition">
+            <span class="flex items-center gap-2">
+              <span>📋 Distinct Serverless Webhooks Reference</span>
+              <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">Dedicated Per-Page Webhooks</span>
+            </span>
+            <span id="cron-details-arrow" class="text-slate-500 text-xs transition-transform duration-200">▼ Show Endpoints</span>
+          </button>
+          <div id="cron-details-content" class="p-3.5 space-y-3 bg-slate-950/40 border-t border-slate-800/80 hidden">
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। ৪টি পেজের জন্য আলাদা আলাদা ডিস্টিঙ্কট ক্রন ব্যবহার করলে কোনো পেজ অন্য পেজের জন্য আটকে থাকবে না (২টি RSS পেজের জন্য আলাদা <code class="text-cyan-400">/api/cron/publish?pageId=...</code> এবং ২টি Google Drive পেজের জন্য আলাদা <code class="text-emerald-400">/api/cron/gdrive-reels?pageId=...</code>)।
+            </p>
+            <div id="dynamic-cron-webhooks-container" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              <!-- 1. RSS Ingestion -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">1. RSS Ingestion</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Bangla & English RSS Feeds Ingestion</div>
+                  <p class="text-[11px] text-slate-400">Prothom Alo, Kaler Kantho, BDNews24, Reuters, AP থেকে সংবাদ সংগ্রহ ও ডিডুপ্লিকেশন</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/rss" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/rss', 'cron-res-rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-rss" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 2. Facebook Publisher - Trending News World -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. RSS Publisher [Page 1]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Trending News World (USA)</div>
+                  <p class="text-[11px] text-slate-400">আন্তর্জাতিক ও ইউএসএ অডিয়েন্সের জন্য কিউ থেকে সংবাদ ক্যানভা কার্ড ও রিলস আকারে ফেসবুক পেজে পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/publish?pageId=1526917347161119" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/publish?pageId=1526917347161119', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/publish?pageId=1526917347161119', 'cron-res-pub-tnw', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-pub-tnw" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 3. Facebook Publisher - BD News 24/7 -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. RSS Publisher [Page 2]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">BD News 24/7- বিডি নিউজ ২৪/৭</div>
+                  <p class="text-[11px] text-slate-400">বাংলাদেশ ও আন্তর্জাতিক জাতীয় সংবাদ কিউ থেকে ক্যানভা কার্ড ও রিলস হিসেবে ফেসবুক পেজে পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/publish?pageId=1405135646008133" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/publish?pageId=1405135646008133', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/publish?pageId=1405135646008133', 'cron-res-pub-bd', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-pub-bd" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 4. Google Drive Reels - Alisa Tech Studio -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. GDrive Reels [Page 3]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Alisa Tech Studio</div>
+                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার থেকে ফাইলনেম ছাড়া শুধু ভাইরাল হ্যাশট্যাগ দিয়ে ফেসবুক রিলস ভিডিও পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219', 'cron-res-gd-alisa', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-gd-alisa" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 5. Google Drive Reels - হক কথা -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. GDrive Reels [Page 4]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">হক কথা</div>
+                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার থেকে ফাইলনেম ছাড়া শুধু ভাইরাল হ্যাশট্যাগ দিয়ে ফেসবুক রিলস ভিডিও পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819', 'cron-res-gd-hok', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-gd-hok" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 4. Facebook 24-Hour Stories -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-600/20 text-purple-400 border border-purple-600/40 uppercase tracking-wider">4. FB Stories</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 * * * * (Hourly)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Facebook 24-Hour Stories</div>
+                  <p class="text-[11px] text-slate-400">লেটেস্ট সংবাদের ১০৮০x১০৮০ কার্ড ফেসবুক পেজের স্টোরিজে আপলোড</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/stories" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/stories', 'cron-res-stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-stories" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 5. YouTube Shorts Auto-Upload -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40 uppercase tracking-wider">5. YouTube Shorts</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">15 * * * * (:15 min)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">YouTube Shorts Auto-Uploader</div>
+                  <p class="text-[11px] text-slate-400">প্রতি ঘন্টার লেটেস্ট সংবাদের শর্ট ভিডিও ইউটিউবে ভাইরাল ট্যাগসহ আপলোড</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/youtube" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/youtube', 'cron-res-youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-youtube" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 6. Queue Maintenance & Cleanup -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40 uppercase tracking-wider">6. Self-Healing</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 */6 * * * (6 hrs)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Self-Healing Queue Maintenance</div>
+                  <p class="text-[11px] text-slate-400">আটকে থাকা প্রসেসিং জবস আনলক ও ফাঁকা পোস্ট আইডি রিসেট</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/cleanup" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/cleanup', 'cron-res-cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-cleanup" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+            </div>
+
+            <!-- Master Gateway & Setup Tips -->
+            <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-500 font-mono">Master Gateway:</span>
+                <code data-cron-path="/api/cron" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-cyan-400 text-[11px]">/api/cron</code>
+                <button onclick="copyCronUrl('/api/cron', this)" class="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Copy</button>
+              </div>
+              <div class="text-[11px] text-slate-500">
+                Method: <span class="text-slate-300 font-mono">GET</span> or <span class="text-slate-300 font-mono">POST</span> (Both supported on all endpoints)
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Add/Edit Cron Job Modal -->
+  <div id="modal-cron-job-form" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-5 rounded-xl border border-cyan-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">⏱️</div>
+          <div>
+            <h3 id="cron-modal-header-title" class="text-sm font-bold text-white">Create New Cron Job</h3>
+            <p class="text-[10px] text-slate-400">cron-job.org এ নতুন শিডিউল ওয়েব হুক যুক্ত করুন</p>
+          </div>
+        </div>
+        <button onclick="closeCronJobModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form id="form-cron-job" onsubmit="handleSaveCronJobModal(event)" class="space-y-3">
+        <input type="hidden" id="cron-modal-id">
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Job Title <span class="text-rose-400">*</span></label>
+          <input id="cron-modal-title" type="text" placeholder="e.g. RSS Ingestion" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-semibold text-slate-300">Webhook URL <span class="text-rose-400">*</span></label>
+            <span class="text-[10px] text-slate-500">Quick-fill pills below</span>
+          </div>
+          <input id="cron-modal-url" type="url" placeholder="https://..." required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500 transition">
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button type="button" onclick="setCronModalUrl('/api/cron/rss')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/rss</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/publish')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/publish</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/gdrive-reels')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/gdrive-reels</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/stories')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/stories</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/youtube')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/youtube</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/cleanup')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/cleanup</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/api/cron</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Schedule Interval</label>
+            <select id="cron-modal-preset" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+              <option value="5m">Every 5 Minutes (*/5)</option>
+              <option value="10m" selected>Every 10 Minutes (*/10)</option>
+              <option value="15m">Every 15 Minutes (*/15)</option>
+              <option value="30m">Every 30 Minutes (*/30)</option>
+              <option value="1h">Every 1 Hour (0 * * * *)</option>
+              <option value="1h_15">Hourly at :15 (15 * * * *)</option>
+              <option value="2h">Every 2 Hours (0 */2 * * *)</option>
+              <option value="6h">Every 6 Hours (45 */6 * * *)</option>
+              <option value="12h">Every 12 Hours</option>
+              <option value="24h">Daily (Once Every 24h)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Timezone</label>
+            <select id="cron-modal-timezone" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-mono">
+              <option value="Asia/Dhaka" selected>Asia/Dhaka (UTC+6)</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+              <option value="UTC">UTC (GMT+0)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+              <option value="Europe/London">Europe/London (BST)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">HTTP Method</label>
+            <select id="cron-modal-method" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-mono">
+              <option value="0" selected>GET</option>
+              <option value="1">POST</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4 pt-4">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+              <input id="cron-modal-enabled" type="checkbox" checked class="rounded border-slate-800 text-cyan-600 focus:ring-0">
+              <span>Enabled</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+              <input id="cron-modal-save-responses" type="checkbox" checked class="rounded border-slate-800 text-cyan-600 focus:ring-0">
+              <span>Save Responses</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeCronJobModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Cancel</button>
+          <button type="submit" id="cron-modal-submit-btn" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold text-xs shadow-glow-cyan transition active:scale-95">Save Cron Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cron Execution History Modal -->
+  <div id="modal-cron-history" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-2xl p-4 sm:p-5 rounded-xl border border-cyan-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">📜</div>
+          <div>
+            <h3 id="cron-history-modal-title" class="text-sm font-bold text-white">Execution Logs</h3>
+            <p id="cron-history-modal-subtitle" class="text-[10px] text-slate-400 font-mono">Job History</p>
+          </div>
+        </div>
+        <button onclick="closeCronHistoryModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <div id="cron-history-content" class="max-h-96 overflow-y-auto space-y-2 pr-1">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+        <span class="text-[10px] text-slate-500">History fetched live from cron-job.org</span>
+        <button type="button" onclick="closeCronHistoryModal()" class="px-4 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Group Modal -->
+
+  <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-5 rounded-xl border border-emerald-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-bold">👥</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Add Facebook Group</h3>
+            <p class="text-[10px] text-slate-400">ফেসবুক গ্রুপে অটো শেয়ার কনফিগার করুন</p>
+          </div>
+        </div>
+        <button onclick="closeAddGroupModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form id="form-add-group" onsubmit="handleSaveGroup(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Group ID or URL <span class="text-rose-400">*</span></label>
+          <input id="group-id-input" type="text" placeholder="e.g. 1234567890 or https://facebook.com/groups/..." required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Group Name <span class="text-rose-400">*</span></label>
+          <input id="group-name-input" type="text" placeholder="e.g. বাংলাদেশ ব্রেকিং নিউজ" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Categories / Keywords</label>
+          <div class="flex flex-wrap gap-1 mb-1.5">
+            <button type="button" onclick="toggleCategoryTag(this, 'all')" class="cat-pill active px-2 py-0.5 text-[10px] rounded border border-emerald-600 bg-emerald-950/60 text-emerald-300 font-semibold transition">সকল (All)</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'রাজনীতি')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">রাজনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'খেলাধুলা')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">খেলাধুলা</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'জাতীয়')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">জাতীয়</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'আন্তর্জাতিক')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">আন্তর্জাতিক</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'অর্থনীতি')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">অর্থনীতি</button>
+            <button type="button" onclick="toggleCategoryTag(this, 'বিনোদন')" class="cat-pill px-2 py-0.5 text-[10px] rounded border border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 transition">বিনোদন</button>
+          </div>
+          <input id="group-categories-input" type="text" value="all" placeholder="e.g. all, রাজনীতি, ক্রিকেট" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Page</label>
+            <select id="group-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+              <option value="all">All Active Pages</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Delay (Seconds)</label>
+            <input id="group-delay-input" type="number" min="1" max="60" value="5" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Token Override (Optional)</label>
+          <input id="group-token-input" type="text" placeholder="Leave empty to use Page Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition font-mono">
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddGroupModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs transition">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow transition active:scale-95">Save Group</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl hidden transition-all duration-300 z-50 flex items-center gap-2 backdrop-blur-xl border"></div>
+
+  <!-- Client-Side JavaScript Engine with Pagination -->
+  <!-- Dashboard JavaScript Engine -->
+  <script src="/assets/js/dashboard.js"></script>
+</body>
+</html>
