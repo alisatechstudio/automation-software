@@ -167,24 +167,109 @@
     }
 
     // --- TAB SWITCHING ---
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
+    // --- NAVIGATION DROPDOWNS & ACTIVE TAB STATE ---
+    function toggleNavDropdown(menuId, event) {
+      if (event) event.stopPropagation();
+      const targetMenu = document.getElementById(menuId);
+      const isAlreadyOpen = targetMenu && targetMenu.classList.contains('show');
+      
+      closeAllNavDropdowns();
+      
+      if (!isAlreadyOpen && targetMenu) {
+        targetMenu.classList.add('show');
+      }
+    }
+
+    function closeAllNavDropdowns() {
+      document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('show'));
+    }
+
+    function selectNavTab(tabId) {
+      closeAllNavDropdowns();
+      switchTab(tabId);
+    }
+
+    function updateNavActiveState(tabId) {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
         btn.classList.add('text-slate-400', 'border-transparent');
       });
+
+      let targetBtnId = 'nav-btn-overview';
+      let tabNameLabel = 'Overview';
+
+      if (tabId === 'overview' || tabId === 'queue') {
+        targetBtnId = 'nav-btn-overview';
+        tabNameLabel = tabId === 'overview' ? 'Overview' : 'Queue & Logs';
+      } else if (tabId === 'sources' || tabId === 'reels' || tabId === 'preview') {
+        targetBtnId = 'nav-btn-input';
+        tabNameLabel = tabId === 'sources' ? 'RSS Sources' : tabId === 'reels' ? 'Reel Templates' : 'Preview';
+      } else if (tabId === 'gdrive-reels') {
+        targetBtnId = 'nav-btn-drive';
+        tabNameLabel = 'Drive Management';
+      } else if (tabId === 'pages' || tabId === 'groups' || tabId === 'youtube' || tabId === 'tiktok') {
+        targetBtnId = 'nav-btn-output';
+        tabNameLabel = tabId === 'pages' ? 'Facebook Pages' : tabId === 'groups' ? 'Facebook Groups' : tabId === 'youtube' ? 'YouTube Shorts' : 'TikTok IDs';
+      } else if (tabId === 'settings') {
+        targetBtnId = 'nav-btn-settings';
+        tabNameLabel = 'Settings';
+      }
+
+      const activeBtn = document.getElementById(targetBtnId);
+      if (activeBtn) {
+        activeBtn.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
+        activeBtn.classList.remove('text-slate-400', 'border-transparent');
+      }
+
+      const labelEl = document.getElementById('nav-current-tab-text');
+      if (labelEl) labelEl.innerText = tabNameLabel;
+    }
+
+    // Modal Add Source Functions
+    function openAddSourceModal() {
+      const modal = document.getElementById('modal-add-source');
+      if (modal) {
+        modal.classList.remove('hidden');
+        if (typeof pagesData !== 'undefined' && pagesData.length > 0) {
+          const pageSelect = document.getElementById('source-page');
+          if (pageSelect && pageSelect.options.length <= 1) {
+            pageSelect.innerHTML = '<option value="">Select Connected Page</option>' +
+              pagesData.map(p => '<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>').join('');
+          }
+        }
+      }
+    }
+
+    function openAddSourceModalFromNav() {
+      selectNavTab('sources');
+      setTimeout(() => openAddSourceModal(), 120);
+    }
+
+    function closeAddSourceModal() {
+      const modal = document.getElementById('modal-add-source');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Close dropdowns on outside click or Escape
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.nav-dropdown-group')) {
+        closeAllNavDropdowns();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAllNavDropdowns();
+        closeAddSourceModal();
+      }
+    });
+
+    function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
-      const allBtns = Array.from(document.querySelectorAll('.tab-btn'));
-      const matchedBtn = (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList) 
-        ? event.currentTarget 
-        : allBtns.find(b => (b.getAttribute('onclick') || '').includes(tabId));
-      if (matchedBtn) {
-        matchedBtn.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
-        matchedBtn.classList.remove('text-slate-400', 'border-transparent');
-      }
-      
       const targetTab = document.getElementById('tab-' + tabId);
       if (targetTab) targetTab.classList.remove('hidden');
+
+      updateNavActiveState(tabId);
 
       if (tabId === 'overview') loadOverview();
       if (tabId === 'queue') loadQueue();
@@ -194,6 +279,7 @@
       if (tabId === 'reels') loadReels();
       if (tabId === 'gdrive-reels') loadGDriveReels();
       if (tabId === 'youtube') loadYouTube();
+      if (tabId === 'tiktok') loadTikTokTab();
       if (tabId === 'settings') loadSettings();
     }
 
@@ -622,6 +708,7 @@
       if (res.data?.success) {
         showToast('Source added successfully with linked Drive folder!');
         document.getElementById('add-source-form').reset();
+        closeAddSourceModal();
         loadSources();
       } else {
         showToast(res.data?.error || 'Failed to add source', true);
@@ -1141,6 +1228,65 @@
         showToast('✓ TikTok is configured and ready for video posting!');
       } else {
         showToast('TikTok access token not set; running in safe simulated dry-run mode.');
+      }
+      loadTikTokTab();
+    }
+
+    async function loadTikTokTab() {
+      const badge = document.getElementById('tiktok-status-badge');
+      const tableBody = document.getElementById('tiktok-logs-table-body');
+      
+      const res = await safeFetchJson('/api/tiktok/status');
+      if (res.ok && res.data) {
+        const isConfigured = !!res.data.configured;
+        if (badge) {
+          badge.className = isConfigured 
+            ? 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700'
+            : 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-950 text-cyan-400 border border-cyan-700';
+          badge.innerText = isConfigured ? '✓ Connected (Live Mode)' : '⚡ Safe Simulated Mode';
+        }
+
+        const logs = Array.isArray(res.data.recentLogs) ? res.data.recentLogs : [];
+        if (tableBody) {
+          if (logs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-500 font-mono text-xs">No TikTok upload logs yet. Automated video uploads will be logged here when Output Cron runs.</td></tr>';
+          } else {
+            tableBody.innerHTML = logs.map(l => {
+              const isSim = !!l.isDryRun;
+              const statusBadge = l.status === 'PUBLISHED' 
+                ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">PUBLISHED</span>'
+                : l.status === 'FAILED'
+                ? '<span class="px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-400 border border-rose-800">FAILED</span>'
+                : '<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800">' + (l.status || 'PENDING') + '</span>';
+              return '<tr class="hover:bg-slate-900/40">' +
+                '<td class="py-2.5 px-3">' + statusBadge + '</td>' +
+                '<td class="py-2.5 px-3"><div class="font-sans font-semibold text-slate-200">' + escapeHtml(l.videoTitle || 'Untitled Video') + '</div><div class="text-[10px] text-slate-500">' + escapeHtml(l.publishId || 'N/A') + (l.error ? (' - <span class="text-rose-400">' + escapeHtml(l.error) + '</span>') : '') + '</div></td>' +
+                '<td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[9px] ' + (isSim ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' : 'bg-slate-800 text-slate-300') + '">' + (isSim ? 'Simulated' : 'Live') + '</span></td>' +
+                '<td class="py-2.5 px-3 text-slate-400 text-[11px]">' + (l.createdAt ? new Date(l.createdAt).toLocaleString() : 'N/A') + '</td>' +
+              '</tr>';
+            }).join('');
+          }
+        }
+      }
+    }
+
+    async function handleSaveTikTokSettings(e) {
+      if (e) e.preventDefault();
+      const token = (document.getElementById('tab-tiktok-token')?.value || '').trim();
+      const key = (document.getElementById('tab-tiktok-key')?.value || '').trim();
+      const secret = (document.getElementById('tab-tiktok-secret')?.value || '').trim();
+
+      const res = await safeFetchJson('/api/tiktok/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: token, clientKey: key, clientSecret: secret })
+      });
+
+      if (res.ok && res.data?.success) {
+        showToast('TikTok credentials updated successfully!');
+        loadTikTokTab();
+      } else {
+        showToast(res.data?.error || 'Failed saving TikTok settings', true);
       }
     }
 
@@ -3259,4 +3405,8 @@
       if (urlParams.get('auth') === 'success') {
         setTimeout(() => showToast('🎉 Google Drive Connected (Auto-Delete Ready)!'), 500);
       }
+    } else if (urlParams.get('tab')) {
+      switchTab(urlParams.get('tab'));
+    } else {
+      updateNavActiveState('overview');
     }

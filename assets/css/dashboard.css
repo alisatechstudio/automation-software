@@ -74,3 +74,23 @@ body {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Navigation Dropdowns */
+    .nav-dropdown-menu {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    .nav-dropdown-group:hover .nav-dropdown-menu,
+    .nav-dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .nav-dropdown-group:hover .dropdown-chevron,
+    .nav-dropdown-menu.show ~ button .dropdown-chevron {
+      transform: rotate(180deg);
+    }
