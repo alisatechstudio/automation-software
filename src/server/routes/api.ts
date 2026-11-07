@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
-import { getDatabase } from '../../db/index.js';
+import { getDatabase, isDbConnected } from '../../db/index.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
@@ -2181,6 +2181,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
       AUTO_POST_YOUTUBE: 'true',
+      CRONJOB_API_KEY: config.CRONJOB_API_KEY || process.env.CRONJOB_API_KEY || '',
     };
 
     for (const r of rows) {
@@ -2217,6 +2218,521 @@ apiRouter.post('/settings', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ==============================================================================
+// 8.1. cron-job.org Management API (Full CRUD, Sync & Manual Runner)
+// ==============================================================================
+
+async function getCronJobApiKey(): Promise<string> {
+  try {
+    if (isDbConnected()) {
+      const db = getDatabase();
+      const setting = await db.collection<Setting>('settings').findOne({ _id: 'CRONJOB_API_KEY' });
+      if (setting && setting.value && setting.value.trim().length > 0) {
+        return setting.value.trim();
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return (config.CRONJOB_API_KEY || process.env.CRONJOB_API_KEY || '').trim();
+}
+
+async function callCronJobApi(path: string, options: { method?: string; body?: any; apiKey?: string } = {}) {
+  const apiKey = options.apiKey || (await getCronJobApiKey());
+  if (!apiKey) {
+    throw new Error('cron-job.org API Key is not configured. Please save your API key in Settings.');
+  }
+  const url = `https://api.cron-job.org${path}`;
+  const fetchOptions: RequestInit = {
+    method: options.method || 'GET',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  if (options.body !== undefined) {
+    fetchOptions.body = JSON.stringify(options.body);
+  }
+  const response = await fetch(url, fetchOptions);
+  const text = await response.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+  if (!response.ok) {
+    const errorMsg = data?.error?.message || data?.message || `cron-job.org API error (HTTP ${response.status})`;
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+function parseCronJobSchedule(preset: string, timezone: string = 'Asia/Dhaka', customMinutes?: number[], customHours?: number[]) {
+  const schedule: any = {
+    timezone: timezone || 'Asia/Dhaka',
+    hours: [-1],
+    mdays: [-1],
+    minutes: [0],
+    months: [-1],
+    wdays: [-1],
+  };
+
+  switch (preset) {
+    case '5m':
+      schedule.minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+      break;
+    case '10m':
+      schedule.minutes = [0, 10, 20, 30, 40, 50];
+      break;
+    case '15m':
+      schedule.minutes = [0, 15, 30, 45];
+      break;
+    case '30m':
+      schedule.minutes = [0, 30];
+      break;
+    case '1h':
+      schedule.minutes = [0];
+      break;
+    case '1h_15':
+      schedule.minutes = [15];
+      break;
+    case '2h':
+      schedule.hours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+      schedule.minutes = [0];
+      break;
+    case '6h':
+      schedule.hours = [0, 6, 12, 18];
+      schedule.minutes = customMinutes && customMinutes.length > 0 ? customMinutes : [45];
+      break;
+    case '12h':
+      schedule.hours = [0, 12];
+      schedule.minutes = [0];
+      break;
+    case '24h':
+      schedule.hours = [0];
+      schedule.minutes = [0];
+      break;
+    case 'custom':
+      if (Array.isArray(customHours) && customHours.length > 0) {
+        schedule.hours = customHours;
+      }
+      if (Array.isArray(customMinutes) && customMinutes.length > 0) {
+        schedule.minutes = customMinutes;
+      }
+      break;
+    default:
+      if (Array.isArray(customMinutes) && customMinutes.length > 0) {
+        schedule.minutes = customMinutes;
+      } else {
+        schedule.minutes = [0, 10, 20, 30, 40, 50];
+      }
+      break;
+  }
+  return schedule;
+}
+
+// 8.1.1. List all cron jobs
+apiRouter.get('/cron-jobs', async (req: Request, res: Response) => {
+  try {
+    const apiKey = await getCronJobApiKey();
+    if (!apiKey) {
+      res.json({
+        success: false,
+        apiKeyConfigured: false,
+        error: 'cron-job.org API Key is not configured. Please set CRONJOB_API_KEY in Settings.',
+        jobs: [],
+      });
+      return;
+    }
+
+    const data = await callCronJobApi('/jobs');
+    res.json({
+      success: true,
+      apiKeyConfigured: true,
+      jobs: data.jobs || [],
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      apiKeyConfigured: true,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.2. Get specific cron job details
+apiRouter.get('/cron-jobs/:id', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.params.id;
+    const data = await callCronJobApi(`/jobs/${jobId}`);
+    res.json({
+      success: true,
+      job: data.jobDetails,
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.3. Create new cron job
+apiRouter.post('/cron-jobs', async (req: Request, res: Response) => {
+  try {
+    const { title, url, enabled, schedule, preset, timezone, requestMethod, saveResponses, customMinutes, customHours } = req.body;
+
+    if (!title || !title.trim()) {
+      res.status(400).json({ success: false, error: 'Job title is required' });
+      return;
+    }
+    if (!url || !url.trim() || !url.startsWith('http')) {
+      res.status(400).json({ success: false, error: 'A valid http/https URL is required' });
+      return;
+    }
+
+    const finalSchedule = schedule && typeof schedule === 'object' && schedule.timezone
+      ? schedule
+      : parseCronJobSchedule(preset || '10m', timezone || 'Asia/Dhaka', customMinutes, customHours);
+
+    const jobPayload: any = {
+      title: title.trim(),
+      url: url.trim(),
+      enabled: enabled !== false,
+      saveResponses: saveResponses !== false,
+      schedule: finalSchedule,
+      requestMethod: typeof requestMethod === 'number' ? requestMethod : 0,
+    };
+
+    const data = await callCronJobApi('/jobs', {
+      method: 'PUT',
+      body: { job: jobPayload },
+    });
+
+    res.json({
+      success: true,
+      jobId: data.jobId,
+      message: 'Cron job created successfully',
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.4. Update existing cron job
+apiRouter.patch('/cron-jobs/:id', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.params.id;
+    const { title, url, enabled, schedule, preset, timezone, requestMethod, saveResponses, customMinutes, customHours } = req.body;
+
+    const jobUpdate: any = {};
+    if (title !== undefined) jobUpdate.title = title.trim();
+    if (url !== undefined) jobUpdate.url = url.trim();
+    if (enabled !== undefined) jobUpdate.enabled = Boolean(enabled);
+    if (saveResponses !== undefined) jobUpdate.saveResponses = Boolean(saveResponses);
+    if (requestMethod !== undefined) jobUpdate.requestMethod = Number(requestMethod);
+
+    if (schedule && typeof schedule === 'object' && schedule.timezone) {
+      jobUpdate.schedule = schedule;
+    } else if (preset) {
+      jobUpdate.schedule = parseCronJobSchedule(preset, timezone || 'Asia/Dhaka', customMinutes, customHours);
+    } else if (timezone) {
+      jobUpdate.schedule = { timezone };
+    }
+
+    await callCronJobApi(`/jobs/${jobId}`, {
+      method: 'PATCH',
+      body: { job: jobUpdate },
+    });
+
+    res.json({
+      success: true,
+      message: 'Cron job updated successfully',
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.5. Toggle enabled / disabled status
+apiRouter.post('/cron-jobs/:id/toggle', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.params.id;
+    let targetEnabled = req.body.enabled;
+
+    if (typeof targetEnabled !== 'boolean') {
+      const details = await callCronJobApi(`/jobs/${jobId}`);
+      targetEnabled = !details.jobDetails?.enabled;
+    }
+
+    await callCronJobApi(`/jobs/${jobId}`, {
+      method: 'PATCH',
+      body: { job: { enabled: targetEnabled } },
+    });
+
+    res.json({
+      success: true,
+      enabled: targetEnabled,
+      message: `Cron job ${targetEnabled ? 'enabled' : 'disabled'} successfully`,
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.6. Delete cron job
+apiRouter.delete('/cron-jobs/:id', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.params.id;
+    await callCronJobApi(`/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
+
+    res.json({
+      success: true,
+      message: 'Cron job deleted successfully',
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.7. Manual Trigger / Run Now
+apiRouter.post('/cron-jobs/:id/run', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  try {
+    const jobId = req.params.id;
+    let targetUrl = req.body.url;
+    let targetMethod = req.body.method;
+
+    if (!targetUrl) {
+      const details = await callCronJobApi(`/jobs/${jobId}`);
+      targetUrl = details.jobDetails?.url;
+      if (targetMethod === undefined) {
+        targetMethod = details.jobDetails?.requestMethod === 1 ? 'POST' : 'GET';
+      }
+    }
+
+    if (!targetUrl) {
+      res.status(400).json({ success: false, error: 'Job URL not found' });
+      return;
+    }
+
+    const cronSecret = process.env.CRON_SECRET;
+    const fetchHeaders: Record<string, string> = {
+      'User-Agent': 'cron-job.org-manual-runner/1.0',
+    };
+    if (cronSecret) {
+      fetchHeaders['Authorization'] = `Bearer ${cronSecret}`;
+      fetchHeaders['x-cron-secret'] = cronSecret;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
+    const runRes = await fetch(targetUrl, {
+      method: targetMethod || 'GET',
+      headers: fetchHeaders,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    const duration = Date.now() - startTime;
+    const text = await runRes.text();
+    let parsedBody: any = null;
+    try {
+      parsedBody = JSON.parse(text);
+    } catch {
+      parsedBody = text.slice(0, 300);
+    }
+
+    res.json({
+      success: runRes.ok,
+      httpStatus: runRes.status,
+      statusText: runRes.statusText,
+      durationMs: duration,
+      response: parsedBody,
+    });
+  } catch (err: any) {
+    const duration = Date.now() - startTime;
+    res.json({
+      success: false,
+      httpStatus: 0,
+      statusText: err.name === 'AbortError' ? 'Timeout (45s)' : 'Error',
+      durationMs: duration,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.8. Execution History / Logs
+apiRouter.get('/cron-jobs/:id/history', async (req: Request, res: Response) => {
+  try {
+    const jobId = req.params.id;
+    const data = await callCronJobApi(`/jobs/${jobId}/history`);
+    res.json({
+      success: true,
+      history: data.history || [],
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// 8.1.9. One-Click Setup / Sync All 6 Automation Webhooks
+apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
+  try {
+    const rawBaseUrl = req.body.baseUrl || `${req.protocol}://${req.get('host')}`;
+    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+    const cronSecret = process.env.CRON_SECRET;
+    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+
+    const webhookDefs = [
+      {
+        slug: 'rss',
+        title: 'RSS Ingestion',
+        path: '/api/cron/rss',
+        preset: '10m',
+        method: 0,
+        desc: 'Bangla & English RSS Feeds Ingestion',
+      },
+      {
+        slug: 'publish',
+        title: 'Facebook Publisher',
+        path: '/api/cron/publish',
+        preset: '15m',
+        method: 0,
+        desc: 'Facebook Posts & Reels Dispatcher',
+      },
+      {
+        slug: 'gdrive',
+        title: 'Google Drive Reels',
+        path: '/api/cron/gdrive-reels',
+        preset: '30m',
+        method: 0,
+        desc: 'Google Drive Multi-Channel Reels',
+      },
+      {
+        slug: 'stories',
+        title: 'FB Stories',
+        path: '/api/cron/stories',
+        preset: '1h',
+        method: 0,
+        desc: 'Facebook 24-Hour Stories',
+      },
+      {
+        slug: 'youtube',
+        title: 'Youtube Shorts',
+        path: '/api/cron/youtube',
+        preset: '1h_15',
+        customMinutes: [15],
+        method: 0,
+        desc: 'YouTube Shorts Auto-Uploader',
+      },
+      {
+        slug: 'cleanup',
+        title: 'Self Cleaning',
+        path: '/api/cron/cleanup',
+        preset: '6h',
+        customMinutes: [45],
+        method: 0,
+        desc: 'Self-Healing Queue Maintenance',
+      },
+    ];
+
+    // Fetch existing jobs from cron-job.org
+    const existing = await callCronJobApi('/jobs');
+    const existingJobs: any[] = existing.jobs || [];
+
+    const results: any[] = [];
+
+    for (const def of webhookDefs) {
+      const fullUrl = `${baseUrl}${def.path}${secretSuffix}`;
+      // Find matching job by path in url or title match
+      const matched = existingJobs.find(
+        (j: any) =>
+          (j.url && j.url.includes(def.path)) ||
+          (j.title && j.title.toLowerCase() === def.title.toLowerCase())
+      );
+
+      if (matched) {
+        // Update URL and ensure enabled
+        const schedule = parseCronJobSchedule(def.preset, 'Asia/Dhaka', def.customMinutes);
+        await callCronJobApi(`/jobs/${matched.jobId}`, {
+          method: 'PATCH',
+          body: {
+            job: {
+              title: def.title,
+              url: fullUrl,
+              enabled: true,
+              schedule,
+            },
+          },
+        });
+        results.push({
+          action: 'updated',
+          jobId: matched.jobId,
+          title: def.title,
+          url: fullUrl,
+        });
+      } else {
+        // Create new
+        const schedule = parseCronJobSchedule(def.preset, 'Asia/Dhaka', def.customMinutes);
+        const created = await callCronJobApi('/jobs', {
+          method: 'PUT',
+          body: {
+            job: {
+              title: def.title,
+              url: fullUrl,
+              enabled: true,
+              saveResponses: true,
+              schedule,
+              requestMethod: def.method,
+            },
+          },
+        });
+        results.push({
+          action: 'created',
+          jobId: created.jobId,
+          title: def.title,
+          url: fullUrl,
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      baseUrl,
+      results,
+      message: `Successfully synchronized ${results.length} distinct webhooks on cron-job.org`,
+    });
+  } catch (err: any) {
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message,
+    });
   }
 });
 

@@ -28,6 +28,7 @@ export interface AppConfig {
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
+  CRONJOB_API_KEY?: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
 }
@@ -76,6 +77,7 @@ export const config: AppConfig = {
   DEFAULT_COMMENT_FORMAT:
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
+  CRONJOB_API_KEY: process.env.CRONJOB_API_KEY || '',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };

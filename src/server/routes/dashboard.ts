@@ -1591,172 +1591,346 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <span class="text-[10px] text-slate-500 mt-0.5 block">Variable: {url}</span>
           </div>
 
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">cron-job.org API Key</label>
+            <div class="flex items-center gap-2">
+              <input type="password" id="setting-cronjob-api-key" placeholder="Bearer key from cron-job.org (krm76c+...)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 transition">
+              <button type="button" onclick="toggleApiKeyVisibility('setting-cronjob-api-key')" class="px-2.5 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Show/Hide Key">👁️</button>
+            </div>
+            <span class="text-[10px] text-slate-500 mt-0.5 block">Used to manage, create, toggle, and trigger scheduled jobs via API v2</span>
+          </div>
+
           <div class="pt-2 flex justify-end">
             <button type="submit" class="py-2 px-5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Pipeline Configuration</button>
           </div>
         </form>
       </div>
 
-      <!-- 10b. DISTINCT CRON-JOB.ORG SCHEDULERS CARD -->
-      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-4xl space-y-4 border border-cyan-500/20 shadow-2xl">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+      <!-- 10b. DISTINCT CRON-JOB.ORG SCHEDULERS & FULL CRUD MANAGER -->
+      <div class="glass-panel p-4 sm:p-5 rounded-xl max-w-5xl space-y-4 border border-cyan-500/20 shadow-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-sm">⏱️</div>
             <div>
               <h3 class="text-sm font-bold text-white flex items-center gap-2">
                 cron-job.org Multi-Process Schedulers
-                <span class="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60 font-semibold">Distinct Webhooks</span>
+                <span id="cron-connection-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-slate-900 text-slate-400 border border-slate-800 font-semibold">Connecting...</span>
               </h3>
-              <p class="text-[11px] text-slate-400">প্রতিটি প্রসেসের জন্য আলাদা ক্রন ওয়েব হুক (টাইমআউট রোধে শূন্য কনফ্লিক্ট)</p>
+              <p class="text-[11px] text-slate-400">লাইভ ক্রন জব ব্যবস্থাপনা, শিডিউল এডিটর, ম্যানুয়াল টেস্ট ও এক্সিকিউশন হিস্ট্রি</p>
             </div>
           </div>
-          <div id="cron-auth-badge" class="px-2.5 py-1 text-[11px] font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-300 flex items-center gap-1.5 self-start sm:self-auto">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>GET & POST Ready</span>
+          <div class="flex items-center flex-wrap gap-2">
+            <button type="button" onclick="openAddCronJobModal()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-glow-cyan transition flex items-center gap-1.5 active:scale-95">
+              <span>+ Add Cron Job</span>
+            </button>
+            <button type="button" onclick="syncAllCronJobs()" class="px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-semibold text-xs transition flex items-center gap-1.5 active:scale-95" title="Synchronize all 6 distinct webhooks with this server domain">
+              <span>⚡ 1-Click Sync 6 Webhooks</span>
+            </button>
+            <button type="button" onclick="loadCronJobs()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-xs transition active:scale-95" title="Reload jobs from cron-job.org">
+              <span>🔄 Refresh</span>
+            </button>
           </div>
         </div>
 
-        <!-- Architecture Warning / Explainer -->
-        <div class="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded-xl text-xs space-y-1">
-          <div class="flex items-center gap-1.5 text-cyan-300 font-bold text-[11px]">
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            কেন আলাদা ক্রন ওয়েব হুক ব্যবহার করবেন?
+        <!-- API Key Missing Alert -->
+        <div id="cron-api-key-alert" class="hidden p-3.5 bg-amber-950/40 border border-amber-500/40 rounded-xl text-xs space-y-2">
+          <div class="flex items-center gap-2 text-amber-300 font-bold text-xs">
+            <span>⚠️ cron-job.org API Key Not Configured</span>
           </div>
-          <p class="text-slate-300 leading-relaxed text-[11px]">
-            সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। এক ক্রনে RSS স্ক্র্যাপিং, ভিডিও রেন্ডারিং, গুগল ড্রাইভ সিঙ্ক এবং ইউটিউব আপলোড একসাথে চালালে রিকোয়েস্ট টাইমআউট হয়ে ফেইল করতে পারে। নিচের <strong>৬টি আলাদা ওয়েব হুক</strong> আলাদা শিডিউলে সেট করলে প্রতিটি কাজ স্বাধীনভাবে এবং শতভাগ নির্ভুলভাবে সম্পন্ন হয়।
+          <p class="text-slate-300 text-[11px] leading-relaxed">
+            ক্রন জব তালিকা ও অটোমেশন কন্ট্রোল দেখতে আপনার cron-job.org এর API Key দিন।
           </p>
-        </div>
-
-        <!-- Endpoints Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          
-          <!-- 1. RSS Ingestion -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">1. RSS Ingestion</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">Bangla RSS Feeds Ingestion</div>
-              <p class="text-[11px] text-slate-400">Prothom Alo, Kaler Kantho, BDNews24 থেকে সংবাদ সংগ্রহ ও ডিডুপ্লিকেশন</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/rss" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/rss', 'cron-res-rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-rss" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-          <!-- 2. Facebook Posts & Reels Publisher -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. FB Publisher</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">Facebook Posts & Reels Dispatcher</div>
-              <p class="text-[11px] text-slate-400">কিউ থেকে পরবর্তী সংবাদ নিয়ে ক্যানভা/ভিডিও তৈরি ও পেজে পোস্ট ও প্রথম কমেন্ট</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/publish" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/publish', 'cron-res-publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-publish" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-          <!-- 3. Google Drive Multi-Channel Reels -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. Google Drive</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/30 * * * * (30m)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">Google Drive Multi-Channel Reels</div>
-              <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার স্ক্যান করে নির্ধারিত রিলস ফেসবুক পেজ ও গ্রুপে শেয়ার</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/gdrive-reels" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/gdrive-reels', 'cron-res-gdrive', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-gdrive" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-          <!-- 4. Facebook 24-Hour Stories -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-600/20 text-purple-400 border border-purple-600/40 uppercase tracking-wider">4. FB Stories</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 * * * * (Hourly)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">Facebook 24-Hour Stories</div>
-              <p class="text-[11px] text-slate-400">লেটেস্ট সংবাদের ১০৮০x১০৮০ কার্ড ফেসবুক পেজের স্টোরিজে আপলোড</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/stories" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/stories', 'cron-res-stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-stories" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-          <!-- 5. YouTube Shorts Auto-Upload -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40 uppercase tracking-wider">5. YouTube Shorts</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">15 * * * * (:15 min)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">YouTube Shorts Auto-Uploader</div>
-              <p class="text-[11px] text-slate-400">প্রতি ঘন্টার লেটেস্ট সংবাদের শর্ট ভিডিও ইউটিউবে ভাইরাল ট্যাগসহ আপলোড</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/youtube" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/youtube', 'cron-res-youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-youtube" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-          <!-- 6. Queue Maintenance & Cleanup -->
-          <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40 uppercase tracking-wider">6. Self-Healing</span>
-              <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 */6 * * * (6 hrs)</span>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-white">Self-Healing Queue Maintenance</div>
-              <p class="text-[11px] text-slate-400">আটকে থাকা প্রসেসিং জবস আনলক ও ফাঁকা পোস্ট আইডি রিসেট</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <input type="text" readonly data-cron-path="/api/cron/cleanup" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-              <button onclick="copyCronUrl('/api/cron/cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-              <button onclick="testCronJob('/api/cron/cleanup', 'cron-res-cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/80 shrink-0 transition">Test</button>
-            </div>
-            <div id="cron-res-cleanup" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
-          </div>
-
-        </div>
-
-        <!-- Master Gateway & Setup Tips -->
-        <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-          <div class="flex items-center gap-2">
-            <span class="text-slate-500 font-mono">Master Gateway:</span>
-            <code data-cron-path="/api/cron" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-cyan-400 text-[11px]">/api/cron</code>
-            <button onclick="copyCronUrl('/api/cron', this)" class="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Copy</button>
-          </div>
-          <div class="text-[11px] text-slate-500">
-            Method: <span class="text-slate-300 font-mono">GET</span> or <span class="text-slate-300 font-mono">POST</span> (Both supported on all endpoints)
+          <div class="flex items-center gap-2 max-w-md">
+            <input type="text" id="cron-quick-key-input" placeholder="Paste cron-job.org Bearer API Key..." class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500">
+            <button type="button" onclick="quickSaveCronKey()" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded transition shrink-0">Save Key</button>
           </div>
         </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+          <div class="flex items-center flex-wrap gap-1 text-[11px]">
+            <button type="button" onclick="filterCronJobs('all', this)" id="cron-filter-all" class="cron-tab-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition">All (<span id="cron-count-all">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('active', this)" id="cron-filter-active" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Active (<span id="cron-count-active">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('paused', this)" id="cron-filter-paused" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Paused (<span id="cron-count-paused">0</span>)</button>
+            <button type="button" onclick="filterCronJobs('webhooks', this)" id="cron-filter-webhooks" class="cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition">Webhooks (<span id="cron-count-webhooks">0</span>)</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="cron-search-input" oninput="searchCronJobs(this.value)" placeholder="Search jobs by title or URL..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg pl-8 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+            <span class="absolute left-2.5 top-1.5 text-slate-500 text-xs">🔍</span>
+          </div>
+        </div>
+
+        <!-- Jobs Table Container -->
+        <div id="cron-jobs-table-container" class="space-y-2 overflow-x-auto">
+          <div class="p-8 text-center text-slate-500 text-xs animate-pulse">Loading cron jobs from cron-job.org...</div>
+        </div>
+
+        <!-- Distinct Serverless Webhooks Reference (Collapsible Accordion) -->
+        <div class="border border-slate-800 rounded-xl overflow-hidden mt-4">
+          <button type="button" onclick="toggleDistinctCronDetails()" class="w-full p-3 bg-slate-950/60 hover:bg-slate-900/80 flex items-center justify-between text-xs font-semibold text-slate-300 transition">
+            <span class="flex items-center gap-2">
+              <span>📋 6 Distinct Serverless Webhook Endpoints Reference</span>
+              <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">Independent Timeouts</span>
+            </span>
+            <span id="cron-details-arrow" class="text-slate-500 text-xs transition-transform duration-200">▼ Show Endpoints</span>
+          </button>
+          <div id="cron-details-content" class="p-3.5 space-y-3 bg-slate-950/40 border-t border-slate-800/80 hidden">
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              সার্ভারলেস হোস্টিংয়ে (Vercel) সর্বোচ্চ এক্সিকিউশন টাইম ৬০ সেকেন্ড। এক ক্রনে RSS স্ক্র্যাপিং, ভিডিও রেন্ডারিং, গুগল ড্রাইভ সিঙ্ক এবং ইউটিউব আপলোড একসাথে চালালে রিকোয়েস্ট টাইমআউট হয়ে ফেইল করতে পারে। নিচের <strong>৬টি আলাদা ওয়েব হুক</strong> আলাদা শিডিউলে সেট করলে প্রতিটি কাজ স্বাধীনভাবে এবং শতভাগ নির্ভুলভাবে সম্পন্ন হয়।
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              <!-- 1. RSS Ingestion -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">1. RSS Ingestion</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Bangla & English RSS Feeds Ingestion</div>
+                  <p class="text-[11px] text-slate-400">Prothom Alo, Kaler Kantho, BDNews24, Reuters, AP থেকে সংবাদ সংগ্রহ ও ডিডুপ্লিকেশন</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/rss" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/rss', 'cron-res-rss', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-rss" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 2. Facebook Posts & Reels Publisher -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. FB Publisher</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Facebook Posts & Reels Dispatcher</div>
+                  <p class="text-[11px] text-slate-400">কিউ থেকে পরবর্তী সংবাদ নিয়ে ক্যানভা/ভিডিও তৈরি ও পেজে পোস্ট ও প্রথম কমেন্ট</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/publish" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/publish', 'cron-res-publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-publish" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 3. Google Drive Multi-Channel Reels -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. Google Drive</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/30 * * * * (30m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Google Drive Multi-Channel Reels</div>
+                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার স্ক্যান করে নির্ধারিত রিলস ফেসবুক পেজ ও গ্রুপে শেয়ার</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/gdrive-reels', 'cron-res-gdrive', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-gdrive" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 4. Facebook 24-Hour Stories -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-600/20 text-purple-400 border border-purple-600/40 uppercase tracking-wider">4. FB Stories</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 * * * * (Hourly)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Facebook 24-Hour Stories</div>
+                  <p class="text-[11px] text-slate-400">লেটেস্ট সংবাদের ১০৮০x১০৮০ কার্ড ফেসবুক পেজের স্টোরিজে আপলোড</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/stories" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/stories', 'cron-res-stories', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-stories" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 5. YouTube Shorts Auto-Upload -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-600/20 text-rose-400 border border-rose-600/40 uppercase tracking-wider">5. YouTube Shorts</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">15 * * * * (:15 min)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">YouTube Shorts Auto-Uploader</div>
+                  <p class="text-[11px] text-slate-400">প্রতি ঘন্টার লেটেস্ট সংবাদের শর্ট ভিডিও ইউটিউবে ভাইরাল ট্যাগসহ আপলোড</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/youtube" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/youtube', 'cron-res-youtube', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-youtube" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 6. Queue Maintenance & Cleanup -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40 uppercase tracking-wider">6. Self-Healing</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">0 */6 * * * (6 hrs)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Self-Healing Queue Maintenance</div>
+                  <p class="text-[11px] text-slate-400">আটকে থাকা প্রসেসিং জবস আনলক ও ফাঁকা পোস্ট আইডি রিসেট</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/cleanup" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/cleanup', 'cron-res-cleanup', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-cleanup" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+            </div>
+
+            <!-- Master Gateway & Setup Tips -->
+            <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-500 font-mono">Master Gateway:</span>
+                <code data-cron-path="/api/cron" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-cyan-400 text-[11px]">/api/cron</code>
+                <button onclick="copyCronUrl('/api/cron', this)" class="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition">Copy</button>
+              </div>
+              <div class="text-[11px] text-slate-500">
+                Method: <span class="text-slate-300 font-mono">GET</span> or <span class="text-slate-300 font-mono">POST</span> (Both supported on all endpoints)
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
   </main>
 
+  <!-- Add/Edit Cron Job Modal -->
+  <div id="modal-cron-job-form" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-5 rounded-xl border border-cyan-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">⏱️</div>
+          <div>
+            <h3 id="cron-modal-header-title" class="text-sm font-bold text-white">Create New Cron Job</h3>
+            <p class="text-[10px] text-slate-400">cron-job.org এ নতুন শিডিউল ওয়েব হুক যুক্ত করুন</p>
+          </div>
+        </div>
+        <button onclick="closeCronJobModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form id="form-cron-job" onsubmit="handleSaveCronJobModal(event)" class="space-y-3">
+        <input type="hidden" id="cron-modal-id">
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Job Title <span class="text-rose-400">*</span></label>
+          <input id="cron-modal-title" type="text" placeholder="e.g. RSS Ingestion" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-semibold text-slate-300">Webhook URL <span class="text-rose-400">*</span></label>
+            <span class="text-[10px] text-slate-500">Quick-fill pills below</span>
+          </div>
+          <input id="cron-modal-url" type="url" placeholder="https://..." required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500 transition">
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button type="button" onclick="setCronModalUrl('/api/cron/rss')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/rss</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/publish')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/publish</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/gdrive-reels')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/gdrive-reels</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/stories')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/stories</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/youtube')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/youtube</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron/cleanup')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/cleanup</button>
+            <button type="button" onclick="setCronModalUrl('/api/cron')" class="px-1.5 py-0.5 text-[9px] rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-mono">/api/cron</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Schedule Interval</label>
+            <select id="cron-modal-preset" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+              <option value="5m">Every 5 Minutes (*/5)</option>
+              <option value="10m" selected>Every 10 Minutes (*/10)</option>
+              <option value="15m">Every 15 Minutes (*/15)</option>
+              <option value="30m">Every 30 Minutes (*/30)</option>
+              <option value="1h">Every 1 Hour (0 * * * *)</option>
+              <option value="1h_15">Hourly at :15 (15 * * * *)</option>
+              <option value="2h">Every 2 Hours (0 */2 * * *)</option>
+              <option value="6h">Every 6 Hours (45 */6 * * *)</option>
+              <option value="12h">Every 12 Hours</option>
+              <option value="24h">Daily (Once Every 24h)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Timezone</label>
+            <select id="cron-modal-timezone" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-mono">
+              <option value="Asia/Dhaka" selected>Asia/Dhaka (UTC+6)</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+              <option value="UTC">UTC (GMT+0)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+              <option value="Europe/London">Europe/London (BST)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">HTTP Method</label>
+            <select id="cron-modal-method" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition font-mono">
+              <option value="0" selected>GET</option>
+              <option value="1">POST</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4 pt-4">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+              <input id="cron-modal-enabled" type="checkbox" checked class="rounded border-slate-800 text-cyan-600 focus:ring-0">
+              <span>Enabled</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+              <input id="cron-modal-save-responses" type="checkbox" checked class="rounded border-slate-800 text-cyan-600 focus:ring-0">
+              <span>Save Responses</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeCronJobModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Cancel</button>
+          <button type="submit" id="cron-modal-submit-btn" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold text-xs shadow-glow-cyan transition active:scale-95">Save Cron Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cron Execution History Modal -->
+  <div id="modal-cron-history" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-2xl p-4 sm:p-5 rounded-xl border border-cyan-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">📜</div>
+          <div>
+            <h3 id="cron-history-modal-title" class="text-sm font-bold text-white">Execution Logs</h3>
+            <p id="cron-history-modal-subtitle" class="text-[10px] text-slate-400 font-mono">Job History</p>
+          </div>
+        </div>
+        <button onclick="closeCronHistoryModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <div id="cron-history-content" class="max-h-96 overflow-y-auto space-y-2 pr-1">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+        <span class="text-[10px] text-slate-500">History fetched live from cron-job.org</span>
+        <button type="button" onclick="closeCronHistoryModal()" class="px-4 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Group Modal -->
+
   <div id="modal-add-group" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
     <div class="glass-panel w-full max-w-lg p-4 sm:p-5 rounded-xl border border-emerald-500/30 shadow-2xl space-y-4">
       <div class="flex items-center justify-between pb-2 border-b border-slate-800">
@@ -1897,6 +2071,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           : 'bg-emerald-950/90 border-emerald-700/80 text-emerald-200 shadow-glow-emerald');
       toast.classList.remove('hidden');
       setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     // --- CRON-JOB.ORG URL HELPERS ---
@@ -2867,6 +3051,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     // --- SETTINGS ---
     async function loadSettings() {
       initCronPills();
+      loadCronJobs();
       const res = await safeFetchJson('/api/settings');
       const d = res.data || {};
       document.getElementById('setting-cron').value = d.POLL_INTERVAL_CRON || '*/10 * * * *';
@@ -2877,6 +3062,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('setting-hashtags').value = d.DEFAULT_HASHTAGS || '';
       document.getElementById('setting-caption-format').value = d.DEFAULT_CAPTION_FORMAT || '';
       document.getElementById('setting-comment-format').value = d.DEFAULT_COMMENT_FORMAT || '';
+      if (document.getElementById('setting-cronjob-api-key')) {
+        document.getElementById('setting-cronjob-api-key').value = d.CRONJOB_API_KEY || '';
+      }
     }
 
     function setHashtagPreset(type) {
@@ -2900,6 +3088,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         DEFAULT_HASHTAGS: document.getElementById('setting-hashtags').value,
         DEFAULT_CAPTION_FORMAT: document.getElementById('setting-caption-format').value,
         DEFAULT_COMMENT_FORMAT: document.getElementById('setting-comment-format').value,
+        CRONJOB_API_KEY: document.getElementById('setting-cronjob-api-key')?.value || '',
       };
 
       const res = await safeFetchJson('/api/settings', {
@@ -2909,8 +3098,591 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       });
       if (res.data?.success) {
         showToast('Pipeline configuration saved!');
+        loadCronJobs();
       } else {
         showToast(res.data?.error || 'Failed to save settings', true);
+      }
+    }
+
+    // --- CRON-JOB.ORG FULL CRUD & LIVE MANAGER ---
+    let allCronJobs = [];
+    let cronActiveFilter = 'all';
+    let cronSearchTerm = '';
+
+    function toggleApiKeyVisibility(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    function toggleDistinctCronDetails() {
+      const content = document.getElementById('cron-details-content');
+      const arrow = document.getElementById('cron-details-arrow');
+      if (!content) return;
+      const isHidden = content.classList.contains('hidden');
+      if (isHidden) {
+        content.classList.remove('hidden');
+        if (arrow) arrow.innerText = '▲ Hide Endpoints';
+      } else {
+        content.classList.add('hidden');
+        if (arrow) arrow.innerText = '▼ Show Endpoints';
+      }
+    }
+
+    async function quickSaveCronKey() {
+      const input = document.getElementById('cron-quick-key-input');
+      const key = input ? input.value.trim() : '';
+      if (!key) {
+        showToast('Please enter an API Key', true);
+        return;
+      }
+      const res = await safeFetchJson('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ CRONJOB_API_KEY: key })
+      });
+      if (res.data?.success) {
+        showToast('cron-job.org API Key saved successfully!');
+        if (document.getElementById('setting-cronjob-api-key')) {
+          document.getElementById('setting-cronjob-api-key').value = key;
+        }
+        loadCronJobs();
+      } else {
+        showToast(res.data?.error || 'Failed to save API key', true);
+      }
+    }
+
+    function formatCronScheduleString(schedule) {
+      if (!schedule) return 'Custom';
+      const { hours, minutes } = schedule;
+      if (!hours || !minutes) return 'Custom';
+      if (hours.length === 1 && hours[0] === -1) {
+        if (minutes.length === 12) return 'Every 5 min';
+        if (minutes.length === 6) return 'Every 10 min';
+        if (minutes.length === 4) return 'Every 15 min';
+        if (minutes.length === 2) return 'Every 30 min';
+        if (minutes.length === 1) return 'Hourly at :' + String(minutes[0]).padStart(2, '0');
+        return 'Hourly (' + minutes.length + 'x/hr)';
+      }
+      if (hours.length === 12) return 'Every 2 hrs';
+      if (hours.length === 4) return 'Every 6 hrs (:' + String(minutes[0] || 0).padStart(2, '0') + ')';
+      if (hours.length === 2) return 'Every 12 hrs';
+      if (hours.length === 1 && hours[0] !== -1) return 'Daily at ' + String(hours[0]).padStart(2, '0') + ':' + String(minutes[0] || 0).padStart(2, '0');
+      return 'Custom';
+    }
+
+    function formatRelativeTime(unixSec) {
+      if (!unixSec || unixSec <= 0) return '—';
+      const now = Math.floor(Date.now() / 1000);
+      const diff = now - unixSec;
+      if (diff < 60) return Math.max(1, diff) + 's ago';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return Math.floor(diff / 86400) + 'd ago';
+    }
+
+    function formatFutureTime(unixSec) {
+      if (!unixSec || unixSec <= 0) return '—';
+      const now = Math.floor(Date.now() / 1000);
+      const diff = unixSec - now;
+      if (diff <= 0) return 'due now';
+      if (diff < 60) return 'in ' + diff + 's';
+      if (diff < 3600) return 'in ' + Math.floor(diff / 60) + 'm';
+      if (diff < 86400) return 'in ' + Math.floor(diff / 3600) + 'h';
+      return 'in ' + Math.floor(diff / 86400) + 'd';
+    }
+
+    async function loadCronJobs() {
+      const tableEl = document.getElementById('cron-jobs-table-container');
+      const badge = document.getElementById('cron-connection-badge');
+      const alertEl = document.getElementById('cron-api-key-alert');
+
+      if (tableEl && allCronJobs.length === 0) {
+        tableEl.innerHTML = '<div class="p-8 text-center text-slate-500 text-xs animate-pulse">Loading cron jobs from cron-job.org...</div>';
+      }
+
+      const res = await safeFetchJson('/api/cron-jobs');
+      if (!res.ok || !res.data?.success) {
+        if (badge) {
+          badge.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800/60 font-semibold';
+          badge.innerText = 'API Key Missing';
+        }
+        if (alertEl) alertEl.classList.remove('hidden');
+        if (tableEl) {
+          tableEl.innerHTML = '<div class="p-8 text-center bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-3">' +
+            '<div class="text-2xl">🔑</div>' +
+            '<div class="text-sm font-bold text-slate-200">cron-job.org API Key Required</div>' +
+            '<p class="text-xs text-slate-400 max-w-md mx-auto">' +
+              'Please enter your API Key in the box above to manage your scheduled webhooks, view execution history, and test jobs live.' +
+            '</p>' +
+          '</div>';
+        }
+        return;
+      }
+
+      if (alertEl) alertEl.classList.add('hidden');
+      allCronJobs = res.data.jobs || [];
+
+      const activeCount = allCronJobs.filter(j => j.enabled).length;
+      if (badge) {
+        badge.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-semibold flex items-center gap-1.5';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Connected (' + activeCount + '/' + allCronJobs.length + ' Active)</span>';
+      }
+
+      renderCronJobsTable();
+    }
+
+    function filterCronJobs(type, btn) {
+      cronActiveFilter = type;
+      document.querySelectorAll('.cron-tab-btn').forEach(b => {
+        b.className = 'cron-tab-btn px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 transition';
+      });
+      if (btn) {
+        btn.className = 'cron-tab-btn px-2.5 py-1 rounded-md bg-cyan-950 text-cyan-300 border border-cyan-700/60 font-semibold transition';
+      }
+      renderCronJobsTable();
+    }
+
+    function searchCronJobs(val) {
+      cronSearchTerm = (val || '').toLowerCase().trim();
+      renderCronJobsTable();
+    }
+
+    function renderCronJobsTable() {
+      const container = document.getElementById('cron-jobs-table-container');
+      if (!container) return;
+
+      const countAll = allCronJobs.length;
+      const countActive = allCronJobs.filter(j => j.enabled).length;
+      const countPaused = allCronJobs.filter(j => !j.enabled).length;
+      const countWebhooks = allCronJobs.filter(j => (j.url && j.url.includes('/api/cron')) || (j.title && /rss|publisher|publish|gdrive|stories|story|youtube|shorts|cleanup|healing/i.test(j.title))).length;
+
+      const elAll = document.getElementById('cron-count-all');
+      const elAct = document.getElementById('cron-count-active');
+      const elPau = document.getElementById('cron-count-paused');
+      const elWeb = document.getElementById('cron-count-webhooks');
+      if (elAll) elAll.innerText = countAll;
+      if (elAct) elAct.innerText = countActive;
+      if (elPau) elPau.innerText = countPaused;
+      if (elWeb) elWeb.innerText = countWebhooks;
+
+      let filtered = allCronJobs;
+      if (cronActiveFilter === 'active') {
+        filtered = filtered.filter(j => j.enabled);
+      } else if (cronActiveFilter === 'paused') {
+        filtered = filtered.filter(j => !j.enabled);
+      } else if (cronActiveFilter === 'webhooks') {
+        filtered = filtered.filter(j => (j.url && j.url.includes('/api/cron')) || (j.title && /rss|publisher|publish|gdrive|stories|story|youtube|shorts|cleanup|healing/i.test(j.title)));
+      }
+
+      if (cronSearchTerm) {
+        filtered = filtered.filter(j =>
+          (j.title && j.title.toLowerCase().includes(cronSearchTerm)) ||
+          (j.url && j.url.toLowerCase().includes(cronSearchTerm)) ||
+          String(j.jobId).includes(cronSearchTerm)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center bg-slate-950/40 border border-slate-800/60 rounded-xl space-y-2">' +
+          '<div class="text-xl">🔍</div>' +
+          '<div class="text-xs font-semibold text-slate-300">No cron jobs matching the filter</div>' +
+          '<p class="text-[11px] text-slate-500">Try changing your search keywords or create a new cron job.</p>' +
+          '<div class="pt-2">' +
+            '<button onclick="openAddCronJobModal()" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition">+ Add Cron Job</button>' +
+          '</div>' +
+        '</div>';
+        return;
+      }
+
+      let html = '<div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/70">' +
+        '<table class="w-full text-left text-xs">' +
+          '<thead class="bg-slate-900/80 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">' +
+            '<tr>' +
+              '<th class="py-2.5 px-3 w-12 text-center">Status</th>' +
+              '<th class="py-2.5 px-3 min-w-[200px]">Job Name & Webhook URL</th>' +
+              '<th class="py-2.5 px-3 w-32">Schedule</th>' +
+              '<th class="py-2.5 px-3 w-36">Last Run</th>' +
+              '<th class="py-2.5 px-3 w-28">Next Run</th>' +
+              '<th class="py-2.5 px-3 w-44 text-right">Actions</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody class="divide-y divide-slate-800/60 text-slate-300">';
+
+      for (const job of filtered) {
+        const isWebhook = (job.url && job.url.includes('/api/cron'));
+        const scheduleStr = formatCronScheduleString(job.schedule);
+        const tz = job.schedule?.timezone || 'Asia/Dhaka';
+
+        let statusBadge = '<span class="px-1.5 py-0.5 text-[10px] rounded bg-slate-900 text-slate-500 border border-slate-800">Never</span>';
+        if (job.lastStatus === 1) {
+          statusBadge = '<span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-950 text-emerald-400 border border-emerald-800">✓ 200 OK (' + (job.lastDuration || 0) + 'ms)</span>';
+        } else if (job.lastStatus === 2) {
+          statusBadge = '<span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-950 text-rose-400 border border-rose-800">✕ Error (' + (job.lastDuration || 0) + 'ms)</span>';
+        }
+
+        const methodBadge = job.requestMethod === 1
+          ? '<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-amber-950 text-amber-300 border border-amber-800">POST</span>'
+          : '<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">GET</span>';
+
+        const webhookBadge = isWebhook
+          ? '<span class="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-purple-950 text-purple-300 border border-purple-800">Serverless</span>'
+          : '';
+
+        const safeTitle = escapeHtml(job.title);
+        const safeUrl = escapeHtml(job.url);
+        const escapedTitleForArg = safeTitle.replace(/'/g, "\\'");
+        const escapedUrlForArg = safeUrl.replace(/'/g, "\\'");
+
+        html += '<tr class="hover:bg-slate-900/40 transition group">' +
+          '<td class="py-3 px-3 text-center align-top">' +
+            '<button type="button" onclick="toggleCronJob(' + job.jobId + ', ' + (!job.enabled) + ', this)" ' +
+              'class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ' + (job.enabled ? 'bg-emerald-600' : 'bg-slate-800') + '" ' +
+              'title="' + (job.enabled ? 'Click to Disable / Pause' : 'Click to Enable') + '">' +
+              '<span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ' + (job.enabled ? 'translate-x-4' : 'translate-x-0') + '"></span>' +
+            '</button>' +
+          '</td>' +
+          '<td class="py-3 px-3 align-top">' +
+            '<div class="flex items-center gap-1.5 flex-wrap">' +
+              '<span class="font-bold text-white text-xs">' + safeTitle + '</span> ' +
+              methodBadge + ' ' +
+              webhookBadge +
+              '<span class="text-[9px] font-mono text-slate-500">#' + job.jobId + '</span>' +
+            '</div>' +
+            '<div class="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-400">' +
+              '<span class="truncate max-w-xs sm:max-w-sm text-cyan-400/90" title="' + safeUrl + '">' + safeUrl + '</span>' +
+              '<button type="button" onclick="copyCronDirect(\'' + escapedUrlForArg + '\', this)" class="text-slate-500 hover:text-slate-200 p-0.5 rounded transition shrink-0" title="Copy URL">📋</button>' +
+              '<a href="' + safeUrl + '" target="_blank" class="text-slate-500 hover:text-slate-200 p-0.5 rounded transition shrink-0" title="Open in new tab">↗</a>' +
+            '</div>' +
+          '</td>' +
+          '<td class="py-3 px-3 align-top">' +
+            '<div class="font-medium text-slate-200 text-xs">' + scheduleStr + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono mt-0.5">' + escapeHtml(tz) + '</div>' +
+          '</td>' +
+          '<td class="py-3 px-3 align-top">' +
+            '<div>' + statusBadge + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono mt-1">' + formatRelativeTime(job.lastExecution) + '</div>' +
+          '</td>' +
+          '<td class="py-3 px-3 align-top">' +
+            '<div class="text-[11px] font-mono text-slate-300">' + (job.enabled ? formatFutureTime(job.nextExecution) : '<span class="text-slate-600">Paused</span>') + '</div>' +
+          '</td>' +
+          '<td class="py-3 px-3 align-top text-right">' +
+            '<div class="flex items-center justify-end gap-1.5">' +
+              '<button type="button" onclick="runCronJob(' + job.jobId + ', \'' + escapedUrlForArg + '\', ' + (job.requestMethod || 0) + ', this)" class="px-2 py-1 text-[10px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 transition active:scale-95" title="Trigger webhook right now">⚡ Run</button>' +
+              '<button type="button" onclick="viewCronJobHistory(' + job.jobId + ', \'' + escapedTitleForArg + '\', \'' + escapedUrlForArg + '\')" class="px-2 py-1 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition" title="View execution logs">Logs</button>' +
+              '<button type="button" onclick="openEditCronJobModal(' + job.jobId + ')" class="px-2 py-1 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition" title="Edit Job">Edit</button>' +
+              '<button type="button" onclick="deleteCronJob(' + job.jobId + ', \'' + escapedTitleForArg + '\')" class="px-2 py-1 text-[10px] font-semibold rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition" title="Delete Job">✕</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    function copyCronDirect(text, btn) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('URL copied to clipboard!');
+          if (btn) {
+            const original = btn.innerText;
+            btn.innerText = '✓';
+            setTimeout(() => { btn.innerText = original; }, 1500);
+          }
+        });
+      } else {
+        prompt('Copy Webhook URL:', text);
+      }
+    }
+
+    function openAddCronJobModal() {
+      document.getElementById('cron-modal-id').value = '';
+      document.getElementById('cron-modal-header-title').innerText = 'Create New Cron Job';
+      document.getElementById('cron-modal-title').value = '';
+      document.getElementById('cron-modal-url').value = window.location.origin + '/api/cron/rss';
+      document.getElementById('cron-modal-preset').value = '10m';
+      document.getElementById('cron-modal-timezone').value = 'Asia/Dhaka';
+      document.getElementById('cron-modal-method').value = '0';
+      document.getElementById('cron-modal-enabled').checked = true;
+      document.getElementById('cron-modal-save-responses').checked = true;
+
+      const modal = document.getElementById('modal-cron-job-form');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function openEditCronJobModal(jobId) {
+      const job = allCronJobs.find(j => String(j.jobId) === String(jobId));
+      if (!job) {
+        showToast('Job details not found', true);
+        return;
+      }
+
+      document.getElementById('cron-modal-id').value = job.jobId;
+      document.getElementById('cron-modal-header-title').innerText = 'Edit Cron Job (#' + job.jobId + ')';
+      document.getElementById('cron-modal-title').value = job.title || '';
+      document.getElementById('cron-modal-url').value = job.url || '';
+      document.getElementById('cron-modal-timezone').value = job.schedule?.timezone || 'Asia/Dhaka';
+      document.getElementById('cron-modal-method').value = String(job.requestMethod || 0);
+      document.getElementById('cron-modal-enabled').checked = Boolean(job.enabled);
+      document.getElementById('cron-modal-save-responses').checked = job.saveResponses !== false;
+
+      const presetSelect = document.getElementById('cron-modal-preset');
+      const minCount = job.schedule?.minutes?.length || 0;
+      const hoursCount = job.schedule?.hours?.length || 0;
+      if (minCount === 12) presetSelect.value = '5m';
+      else if (minCount === 6) presetSelect.value = '10m';
+      else if (minCount === 4) presetSelect.value = '15m';
+      else if (minCount === 2) presetSelect.value = '30m';
+      else if (hoursCount === 4) presetSelect.value = '6h';
+      else if (hoursCount === 12) presetSelect.value = '2h';
+      else if (hoursCount === 2) presetSelect.value = '12h';
+      else if (hoursCount === 1 && job.schedule?.hours[0] !== -1) presetSelect.value = '24h';
+      else if (minCount === 1 && job.schedule?.minutes[0] === 15) presetSelect.value = '1h_15';
+      else presetSelect.value = '1h';
+
+      const modal = document.getElementById('modal-cron-job-form');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeCronJobModal() {
+      const modal = document.getElementById('modal-cron-job-form');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setCronModalUrl(path) {
+      const input = document.getElementById('cron-modal-url');
+      if (input) {
+        input.value = window.location.origin + path;
+      }
+    }
+
+    async function handleSaveCronJobModal(e) {
+      e.preventDefault();
+      const jobId = document.getElementById('cron-modal-id').value;
+      const submitBtn = document.getElementById('cron-modal-submit-btn');
+
+      const payload = {
+        title: document.getElementById('cron-modal-title').value.trim(),
+        url: document.getElementById('cron-modal-url').value.trim(),
+        preset: document.getElementById('cron-modal-preset').value,
+        timezone: document.getElementById('cron-modal-timezone').value,
+        requestMethod: parseInt(document.getElementById('cron-modal-method').value, 10),
+        enabled: document.getElementById('cron-modal-enabled').checked,
+        saveResponses: document.getElementById('cron-modal-save-responses').checked,
+      };
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Saving...';
+      }
+
+      try {
+        const url = jobId ? '/api/cron-jobs/' + jobId : '/api/cron-jobs';
+        const method = jobId ? 'PATCH' : 'POST';
+        const res = await safeFetchJson(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.data?.success) {
+          showToast(jobId ? 'Cron job updated successfully!' : 'Cron job created successfully!');
+          closeCronJobModal();
+          loadCronJobs();
+        } else {
+          showToast(res.data?.error || 'Failed to save cron job', true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Save Cron Job';
+        }
+      }
+    }
+
+    async function toggleCronJob(jobId, newStatus, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+      }
+      try {
+        const res = await safeFetchJson('/api/cron-jobs/' + jobId + '/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: newStatus })
+        });
+        if (res.data?.success) {
+          showToast('Cron job ' + (newStatus ? 'enabled' : 'paused') + '!');
+          const target = allCronJobs.find(j => String(j.jobId) === String(jobId));
+          if (target) target.enabled = newStatus;
+          renderCronJobsTable();
+        } else {
+          showToast(res.data?.error || 'Failed to toggle status', true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50');
+        }
+      }
+    }
+
+    async function deleteCronJob(jobId, title) {
+      if (!confirm('Are you sure you want to delete cron job "' + title + '"?\\nThis action cannot be undone.')) {
+        return;
+      }
+      try {
+        const res = await safeFetchJson('/api/cron-jobs/' + jobId, {
+          method: 'DELETE'
+        });
+        if (res.data?.success) {
+          showToast('Cron job "' + title + '" deleted!');
+          allCronJobs = allCronJobs.filter(j => String(j.jobId) !== String(jobId));
+          renderCronJobsTable();
+        } else {
+          showToast(res.data?.error || 'Failed to delete job', true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      }
+    }
+
+    async function runCronJob(jobId, url, method, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳';
+        btn.classList.add('opacity-75');
+      }
+      try {
+        const res = await safeFetchJson('/api/cron-jobs/' + jobId + '/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, method })
+        });
+        if (res.data?.success) {
+          showToast('✓ HTTP ' + res.data.httpStatus + ' (' + res.data.durationMs + 'ms)');
+          const target = allCronJobs.find(j => String(j.jobId) === String(jobId));
+          if (target) {
+            target.lastStatus = 1;
+            target.lastDuration = res.data.durationMs;
+            target.lastExecution = Math.floor(Date.now() / 1000);
+          }
+          renderCronJobsTable();
+        } else {
+          const status = res.data?.httpStatus ? 'HTTP ' + res.data.httpStatus : 'Failed';
+          showToast('✕ ' + status + ' (' + (res.data?.durationMs || 0) + 'ms): ' + (res.data?.error || res.data?.statusText || 'Error'), true);
+          const target = allCronJobs.find(j => String(j.jobId) === String(jobId));
+          if (target) {
+            target.lastStatus = 2;
+            target.lastDuration = res.data?.durationMs || 0;
+            target.lastExecution = Math.floor(Date.now() / 1000);
+          }
+          renderCronJobsTable();
+        }
+      } catch (err) {
+        showToast('Trigger failed: ' + err.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '⚡ Run';
+          btn.classList.remove('opacity-75');
+        }
+      }
+    }
+
+    async function viewCronJobHistory(jobId, title, url) {
+      const modal = document.getElementById('modal-cron-history');
+      const titleEl = document.getElementById('cron-history-modal-title');
+      const subtitleEl = document.getElementById('cron-history-modal-subtitle');
+      const contentEl = document.getElementById('cron-history-content');
+
+      if (titleEl) titleEl.innerText = 'Execution Logs: ' + title;
+      if (subtitleEl) subtitleEl.innerText = url;
+      if (contentEl) {
+        contentEl.innerHTML = '<div class="p-8 text-center text-slate-500 text-xs animate-pulse">Loading execution history...</div>';
+      }
+      if (modal) modal.classList.remove('hidden');
+
+      try {
+        const res = await safeFetchJson('/api/cron-jobs/' + jobId + '/history');
+        if (!res.data?.success || !res.data.history || res.data.history.length === 0) {
+          contentEl.innerHTML = '<div class="p-8 text-center bg-slate-950/40 border border-slate-800 rounded-xl space-y-1">' +
+            '<div class="text-base text-slate-400">📜 No Execution Logs Found</div>' +
+            '<p class="text-[11px] text-slate-500">This job may have been recently created or has not run yet.</p>' +
+          '</div>';
+          return;
+        }
+
+        let html = '<div class="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/70">' +
+          '<table class="w-full text-left text-xs">' +
+            '<thead class="bg-slate-900/80 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">' +
+              '<tr>' +
+                '<th class="py-2 px-3">Date & Time</th>' +
+                '<th class="py-2 px-3">Status</th>' +
+                '<th class="py-2 px-3">HTTP Code</th>' +
+                '<th class="py-2 px-3">Duration</th>' +
+                '<th class="py-2 px-3">Network (DNS / Connect / Transfer)</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody class="divide-y divide-slate-800/60 font-mono text-[11px]">';
+
+        for (const log of res.data.history) {
+          const dateStr = log.date ? new Date(log.date * 1000).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) : '—';
+          const isOk = log.status === 1 || log.httpStatus === 200;
+          const statusBadge = isOk
+            ? '<span class="text-emerald-400 font-bold">✓ OK</span>'
+            : '<span class="text-rose-400 font-bold">✕ ' + escapeHtml(log.statusText || 'Failed') + '</span>';
+          const stats = log.stats || {};
+          const dns = stats.nameLookup ? Math.round(stats.nameLookup / 1000) + 'ms' : '—';
+          const conn = stats.connect ? Math.round(stats.connect / 1000) + 'ms' : '—';
+          const trans = stats.total ? Math.round(stats.total / 1000) + 'ms' : '—';
+
+          html += '<tr class="hover:bg-slate-900/30">' +
+            '<td class="py-2 px-3 text-slate-300">' + dateStr + '</td>' +
+            '<td class="py-2 px-3">' + statusBadge + '</td>' +
+            '<td class="py-2 px-3 text-slate-200">' + (log.httpStatus || '—') + '</td>' +
+            '<td class="py-2 px-3 text-cyan-300 font-semibold">' + (log.duration || 0) + 'ms</td>' +
+            '<td class="py-2 px-3 text-slate-400 text-[10px]">' + dns + ' / ' + conn + ' / ' + trans + '</td>' +
+          '</tr>';
+        }
+
+        html += '</tbody></table></div>';
+        contentEl.innerHTML = html;
+      } catch (err) {
+        contentEl.innerHTML = '<div class="p-4 text-center text-rose-400 text-xs">Failed to load logs: ' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    function closeCronHistoryModal() {
+      const modal = document.getElementById('modal-cron-history');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function syncAllCronJobs() {
+      const origin = window.location.origin;
+      if (!confirm('Synchronize and configure all 6 distinct automation webhooks on cron-job.org pointing to:\\n' + origin + '\\n\\nExisting jobs will be updated with this domain and missing jobs will be created. Proceed?')) {
+        return;
+      }
+      showToast('Synchronizing 6 webhooks on cron-job.org...');
+      try {
+        const res = await safeFetchJson('/api/cron-jobs/sync-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ baseUrl: origin })
+        });
+        if (res.data?.success) {
+          showToast('✓ Synchronized ' + (res.data.results?.length || 6) + ' webhooks successfully!');
+          loadCronJobs();
+        } else {
+          showToast(res.data?.error || 'Failed to sync webhooks', true);
+        }
+      } catch (err) {
+        showToast('Sync error: ' + err.message, true);
       }
     }
 
