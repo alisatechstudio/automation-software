@@ -23,6 +23,7 @@ export const ALL_COLLECTIONS = [
   'youtube_channels',
   'facebook_groups',
   'group_share_logs',
+  'gdrive_reel_configs',
   'settings',
 ];
 

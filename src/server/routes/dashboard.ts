@@ -1660,40 +1660,76 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <div id="cron-res-rss" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
               </div>
 
-              <!-- 2. Facebook Posts & Reels Publisher -->
+              <!-- 2. Facebook Publisher - Trending News World -->
               <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
                 <div class="flex items-center justify-between">
-                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. FB Publisher</span>
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. RSS Publisher [Page 1]</span>
                   <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
                 </div>
                 <div>
-                  <div class="text-xs font-bold text-white">Facebook Posts & Reels Dispatcher</div>
-                  <p class="text-[11px] text-slate-400">কিউ থেকে পরবর্তী সংবাদ নিয়ে ক্যানভা/ভিডিও তৈরি ও পেজে পোস্ট ও প্রথম কমেন্ট</p>
+                  <div class="text-xs font-bold text-white">Trending News World (USA)</div>
+                  <p class="text-[11px] text-slate-400">আন্তর্জাতিক ও ইউএসএ অডিয়েন্সের জন্য কিউ থেকে সংবাদ ক্যানভা কার্ড ও রিলস আকারে ফেসবুক পেজে পাবলিশ</p>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <input type="text" readonly data-cron-path="/api/cron/publish" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-                  <button onclick="copyCronUrl('/api/cron/publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-                  <button onclick="testCronJob('/api/cron/publish', 'cron-res-publish', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
+                  <input type="text" readonly data-cron-path="/api/cron/publish?pageId=1526917347161119" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/publish?pageId=1526917347161119', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/publish?pageId=1526917347161119', 'cron-res-pub-tnw', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
                 </div>
-                <div id="cron-res-publish" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+                <div id="cron-res-pub-tnw" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
               </div>
 
-              <!-- 3. Google Drive Multi-Channel Reels -->
+              <!-- 3. Facebook Publisher - BD News 24/7 -->
               <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
                 <div class="flex items-center justify-between">
-                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. Google Drive</span>
-                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/30 * * * * (30m)</span>
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/40 uppercase tracking-wider">2. RSS Publisher [Page 2]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/15 * * * * (15m)</span>
                 </div>
                 <div>
-                  <div class="text-xs font-bold text-white">Google Drive Multi-Channel Reels</div>
-                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার স্ক্যান করে নির্ধারিত রিলস ফেসবুক পেজ ও গ্রুপে শেয়ার</p>
+                  <div class="text-xs font-bold text-white">BD News 24/7- বিডি নিউজ ২৪/৭</div>
+                  <p class="text-[11px] text-slate-400">বাংলাদেশ ও আন্তর্জাতিক জাতীয় সংবাদ কিউ থেকে ক্যানভা কার্ড ও রিলস হিসেবে ফেসবুক পেজে পাবলিশ</p>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
-                  <button onclick="copyCronUrl('/api/cron/gdrive-reels', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
-                  <button onclick="testCronJob('/api/cron/gdrive-reels', 'cron-res-gdrive', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                  <input type="text" readonly data-cron-path="/api/cron/publish?pageId=1405135646008133" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/publish?pageId=1405135646008133', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/publish?pageId=1405135646008133', 'cron-res-pub-bd', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border border-cyan-800/80 shrink-0 transition">Test</button>
                 </div>
-                <div id="cron-res-gdrive" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+                <div id="cron-res-pub-bd" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 4. Google Drive Reels - Alisa Tech Studio -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. GDrive Reels [Page 3]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Alisa Tech Studio</div>
+                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার থেকে ফাইলনেম ছাড়া শুধু ভাইরাল হ্যাশট্যাগ দিয়ে ফেসবুক রিলস ভিডিও পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/gdrive-reels?channelId=gdrive_ch_53ba65aa&pageId=1268359636369219', 'cron-res-gd-alisa', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-gd-alisa" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
+              </div>
+
+              <!-- 5. Google Drive Reels - হক কথা -->
+              <div class="bg-slate-950/80 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 space-y-2.5 transition">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">3. GDrive Reels [Page 4]</span>
+                  <span class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">*/10 * * * * (10m)</span>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">হক কথা</div>
+                  <p class="text-[11px] text-slate-400">ড্রাইভ ফোল্ডার থেকে ফাইলনেম ছাড়া শুধু ভাইরাল হ্যাশট্যাগ দিয়ে ফেসবুক রিলস ভিডিও পাবলিশ</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <input type="text" readonly data-cron-path="/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[11px] font-mono text-cyan-300 select-all focus:outline-none">
+                  <button onclick="copyCronUrl('/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shrink-0 transition">Copy</button>
+                  <button onclick="testCronJob('/api/cron/gdrive-reels?channelId=default_gdrive_reels&pageId=1302276172975819', 'cron-res-gd-hok', this)" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800/80 shrink-0 transition">Test</button>
+                </div>
+                <div id="cron-res-gd-hok" class="text-[10px] font-mono p-1.5 rounded bg-slate-900/90 border border-slate-800/60 hidden"></div>
               </div>
 
               <!-- 4. Facebook 24-Hour Stories -->
