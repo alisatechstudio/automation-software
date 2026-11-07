@@ -438,55 +438,73 @@ export class QueueWorker {
         const ytAutoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
         const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : isYtConfigured;
 
+        // GUARD: The connected YouTube channel is currently BD News 24/7.
+        // Prevent cross-posting English / Trending News World content to the BD News YouTube channel.
+        const isBDNewsTarget =
+          !isEnglish &&
+          (page._id === '1405135646008133' ||
+           page.name.includes('BD News') ||
+           targetJobPageId === '1405135646008133' ||
+           !targetJobPageId);
+
         if (isYtConfigured && shouldPostYt) {
-          publishTasks.push((async () => {
-            const ytStartTime = Date.now();
-            try {
-              console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts...`);
-              const ytResult = await this.ytClient.uploadShort(
-                {
-                  videoBuffer: reelBuffer,
-                  title: article.title,
-                  description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
-                },
-                config.DRY_RUN
-              );
-              ytVideoId = ytResult.videoId;
-              ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
+          if (!isBDNewsTarget) {
+            console.log(`[QueueWorker] ℹ️ Skipping YouTube Shorts auto-post: Connected YouTube channel is for BD News 24/7, while this article is for Trending News World ("${article.title}").`);
+          } else {
+            publishTasks.push((async () => {
+              const ytStartTime = Date.now();
+              try {
+                console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts (BD News)...`);
+                const shortsHashtags = generateViralShortsHashtags({
+                  category: effectiveCategory,
+                  headline: article.title,
+                  userTags: configuredHashtags,
+                });
+                const ytResult = await this.ytClient.uploadShort(
+                  {
+                    videoBuffer: reelBuffer,
+                    title: article.title,
+                    description: `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
+                  },
+                  config.DRY_RUN
+                );
+                ytVideoId = ytResult.videoId;
+                ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
 
-              if (article.link && ytVideoId && !config.DRY_RUN) {
-                await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+                if (article.link && ytVideoId && !config.DRY_RUN) {
+                  await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+                }
+
+                await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                  _id: crypto.randomUUID(),
+                  articleId: article._id,
+                  articleTitle: article.title,
+                  ytVideoId: ytResult.videoId,
+                  ytVideoUrl: ytResult.videoUrl,
+                  durationMs: Date.now() - ytStartTime,
+                  status: ytStatus,
+                  createdAt: new Date(),
+                });
+                console.log(`✓ [QueueWorker] Published to YouTube Shorts! (URL: ${ytResult.videoUrl})`);
+              } catch (ytErr: any) {
+                ytStatus = 'failed';
+                const ytErrMsg = ytErr.message || String(ytErr);
+                console.error(`❌ [QueueWorker] YouTube Short upload failed: ${ytErrMsg}`);
+
+                await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                  _id: crypto.randomUUID(),
+                  articleId: article._id,
+                  articleTitle: article.title,
+                  ytVideoId: '',
+                  ytVideoUrl: '',
+                  durationMs: Date.now() - ytStartTime,
+                  status: 'failed',
+                  errorMessage: ytErrMsg,
+                  createdAt: new Date(),
+                });
               }
-
-              await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-                _id: crypto.randomUUID(),
-                articleId: article._id,
-                articleTitle: article.title,
-                ytVideoId: ytResult.videoId,
-                ytVideoUrl: ytResult.videoUrl,
-                durationMs: Date.now() - ytStartTime,
-                status: ytStatus,
-                createdAt: new Date(),
-              });
-              console.log(`✓ [QueueWorker] Published to YouTube Shorts! (URL: ${ytResult.videoUrl})`);
-            } catch (ytErr: any) {
-              ytStatus = 'failed';
-              const ytErrMsg = ytErr.message || String(ytErr);
-              console.error(`❌ [QueueWorker] YouTube Short upload failed: ${ytErrMsg}`);
-
-              await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-                _id: crypto.randomUUID(),
-                articleId: article._id,
-                articleTitle: article.title,
-                ytVideoId: '',
-                ytVideoUrl: '',
-                durationMs: Date.now() - ytStartTime,
-                status: 'failed',
-                errorMessage: ytErrMsg,
-                createdAt: new Date(),
-              });
-            }
-          })());
+            })());
+          }
         } else {
           console.log(`[QueueWorker] ℹ️ YouTube Shorts skipped: isConfigured=${isYtConfigured}, shouldPost=${shouldPostYt}`);
         }
@@ -1256,7 +1274,10 @@ export class QueueWorker {
       );
 
       if (article.link && result.videoId && !config.DRY_RUN) {
-        await this.ytClient.addComment(result.videoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+        const commentText = isEnglish
+          ? `Read the full story here: ${article.link}`
+          : `বিস্তারিত খবর পড়ুন: ${article.link}`;
+        await this.ytClient.addComment(result.videoId, commentText);
       }
 
       await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({

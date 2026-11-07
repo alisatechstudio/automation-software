@@ -1499,12 +1499,31 @@ async function executeYoutubeCron(req: Request, res: Response) {
       .toArray();
     const uploadedArticleIds = uploadedLogs.map((l: YouTubeUploadLog) => l.articleId).filter(Boolean);
 
-    let targetArticle = await db.collection<NewsArticle>('news_articles').findOne(
-      { _id: { $nin: uploadedArticleIds as string[] } },
-      { sort: { pubDate: -1, createdAt: -1 } }
+    // Guard: Connected YouTube channel is BD News 24/7. Restrict cron candidate articles to BD News.
+    const candidateArticles = await db
+      .collection<NewsArticle>('news_articles')
+      .find({
+        _id: { $nin: uploadedArticleIds as string[] },
+        link: { $not: /trendingnews/i },
+      })
+      .sort({ pubDate: -1, createdAt: -1 })
+      .limit(40)
+      .toArray();
+
+    let targetArticle = candidateArticles.find(
+      (a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))
     );
+
     if (!targetArticle) {
-      targetArticle = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1, createdAt: -1 } });
+      const allBdCandidates = await db
+        .collection<NewsArticle>('news_articles')
+        .find({ link: { $not: /trendingnews/i } })
+        .sort({ pubDate: -1, createdAt: -1 })
+        .limit(40)
+        .toArray();
+      targetArticle = allBdCandidates.find(
+        (a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))
+      );
     }
 
     if (!targetArticle) {
@@ -3089,11 +3108,17 @@ apiRouter.post('/youtube/upload', async (req: Request, res: Response) => {
 
     let targetArticleId = articleId;
     if (!targetArticleId) {
-      const latestArt = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1 } });
-      if (!latestArt) {
-        return res.status(404).json({ error: 'No article found to upload' });
+      const candidates = await db
+        .collection<NewsArticle>('news_articles')
+        .find({ link: { $not: /trendingnews/i } })
+        .sort({ pubDate: -1 })
+        .limit(30)
+        .toArray();
+      const latestBdArt = candidates.find((a: NewsArticle) => !isEnglishText(a.title));
+      if (!latestBdArt) {
+        return res.status(404).json({ error: 'No BD News article found to upload' });
       }
-      targetArticleId = latestArt._id;
+      targetArticleId = latestBdArt._id;
     }
 
     const result = await worker.uploadShortForArticle(targetArticleId);

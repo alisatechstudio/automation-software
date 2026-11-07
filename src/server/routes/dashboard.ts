@@ -1316,6 +1316,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <div class="text-red-300 font-semibold flex items-center gap-1 text-[11px]">
                   <span>✓</span> First Comment News Link
                 </div>
+                <div class="text-emerald-300 font-semibold flex items-center gap-1 text-[11px] pt-1 border-t border-red-900/40">
+                  <span>🛡️</span> BD News Channel Dedicated (Trending News Isolated)
+                </div>
               </div>
             </div>
           </div>
