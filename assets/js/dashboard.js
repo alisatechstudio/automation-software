@@ -198,9 +198,9 @@
       let targetBtnId = 'nav-btn-overview';
       let tabNameLabel = 'Overview';
 
-      if (tabId === 'overview' || tabId === 'queue') {
+      if (tabId === 'overview') {
         targetBtnId = 'nav-btn-overview';
-        tabNameLabel = tabId === 'overview' ? 'Overview' : 'Queue & Logs';
+        tabNameLabel = 'Overview';
       } else if (tabId === 'sources' || tabId === 'reels' || tabId === 'preview') {
         targetBtnId = 'nav-btn-input';
         tabNameLabel = tabId === 'sources' ? 'RSS Sources' : tabId === 'reels' ? 'Reel Templates' : 'Preview';
@@ -270,7 +270,6 @@
       updateNavActiveState(tabId);
 
       if (tabId === 'overview') loadOverview();
-      if (tabId === 'queue') loadQueue();
       if (tabId === 'sources') loadSources();
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
