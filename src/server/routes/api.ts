@@ -12,6 +12,7 @@ import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { LocalReelService } from '../../services/local-reels/service.js';
+import { GDriveReelService } from '../../services/gdrive/service.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -24,6 +25,7 @@ const reelRenderer = new ReelVideoRenderer();
 const ytClient = new YouTubeClient();
 const dedupeService = new ArticleDedupeService();
 const localReelService = new LocalReelService();
+const gdriveReelService = new GDriveReelService();
 
 // 1. Dashboard Overview Stats
 apiRouter.get('/stats', async (req: Request, res: Response) => {
@@ -972,6 +974,125 @@ apiRouter.post('/local-reels/reset-history', async (req: Request, res: Response)
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// -------------------------------------------------------------
+// GOOGLE DRIVE REELS AUTOMATION API (CLOUD 24/7)
+// -------------------------------------------------------------
+
+// 1. Get status & drive scan
+apiRouter.get('/gdrive-reels/status', async (req: Request, res: Response) => {
+  try {
+    const config = await gdriveReelService.getConfig();
+    const scan = await gdriveReelService.scanFolder();
+    res.json({
+      success: true,
+      config,
+      scan,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Scan a specific drive folder link or ID
+apiRouter.post('/gdrive-reels/scan', async (req: Request, res: Response) => {
+  try {
+    const { folderUrlOrId, apiKey } = req.body;
+    const scan = await gdriveReelService.scanFolder(folderUrlOrId, apiKey);
+    res.json({ success: true, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Save configuration
+apiRouter.post('/gdrive-reels/config', async (req: Request, res: Response) => {
+  try {
+    const updates = req.body;
+    const updatedConfig = await gdriveReelService.saveConfig(updates);
+    const scan = await gdriveReelService.scanFolder(updatedConfig.folderUrlOrId, updatedConfig.apiKey);
+    res.json({ success: true, config: updatedConfig, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Publish next video from Google Drive
+apiRouter.post('/gdrive-reels/publish-next', async (req: Request, res: Response) => {
+  try {
+    const result = await gdriveReelService.publishNext();
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Publish specific file from Google Drive
+apiRouter.post('/gdrive-reels/publish-file', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.body;
+    if (!fileId) {
+      res.status(400).json({ error: 'fileId is required' });
+      return;
+    }
+    const result = await gdriveReelService.publishSpecificFile(fileId);
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Reset posted history
+apiRouter.post('/gdrive-reels/reset-history', async (req: Request, res: Response) => {
+  try {
+    await gdriveReelService.resetPostedHistory();
+    const config = await gdriveReelService.getConfig();
+    const scan = await gdriveReelService.scanFolder();
+    res.json({ success: true, config, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// VERCEL CRON WEBHOOK (/api/cron)
+// -------------------------------------------------------------
+apiRouter.get('/cron', async (req: Request, res: Response) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[Vercel Cron] Triggered at ${timestamp}`);
+
+  const results: any = { timestamp, rss: null, gdriveReel: null };
+
+  // 1. Trigger RSS Poll
+  try {
+    const rssResult = await dedupeService.pollAllActiveSources();
+    results.rss = rssResult;
+  } catch (e: any) {
+    results.rssError = e.message;
+  }
+
+  // 2. Trigger Google Drive Reel automation (if active)
+  try {
+    const conf = await gdriveReelService.getConfig();
+    if (conf.isActive) {
+      results.gdriveReel = await gdriveReelService.publishNext();
+    } else {
+      results.gdriveReel = { status: 'skipped', reason: 'Google Drive Reel automation is not active' };
+    }
+  } catch (e: any) {
+    results.gdriveError = e.message;
+  }
+
+  res.json({ success: true, ...results });
 });
 
 // -------------------------------------------------------------

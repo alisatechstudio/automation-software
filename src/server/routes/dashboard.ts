@@ -262,10 +262,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <span>🎬 Reels (রিলস)</span>
       </button>
-      <button onclick="switchTab('local-reels')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
-        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-        <span>📁 Local Reels (ফোল্ডার রিলস)</span>
-        <span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-500/30 font-mono">Auto</span>
+      <button onclick="switchTab('gdrive-reels')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
+        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+        <span>☁️ Google Drive Reels</span>
+        <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30 font-mono">24/7 Vercel</span>
       </button>
       <button onclick="switchTab('youtube')" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition-all flex items-center gap-2">
         <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
@@ -1096,31 +1096,31 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     </div>
 
 
-    <!-- 6.4. LOCAL FOLDER REELS TAB -->
-    <div id="tab-local-reels" class="tab-content hidden space-y-8">
+    <!-- 6.4. GOOGLE DRIVE CLOUD REELS TAB -->
+    <div id="tab-gdrive-reels" class="tab-content hidden space-y-8">
       
       <!-- Header Banner -->
       <div class="glass-panel p-6 sm:p-8 rounded-2xl relative overflow-hidden">
-        <div class="absolute -right-12 -top-12 w-64 h-64 bg-amber-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -right-12 -top-12 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40 uppercase tracking-wider">Local Video Library</span>
-              <span id="local-reel-status-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Loading Status...</span>
+              <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 uppercase tracking-wider">Cloud 24/7 Automation</span>
+              <span id="gdrive-reel-status-badge" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Loading Status...</span>
             </div>
             <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-              Local Folder Reels Automation
+              <svg class="w-7 h-7 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              Google Drive Cloud Reels Automation
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              আপনার কম্পিউটার বা সার্ভারের নির্দিষ্ট ফোল্ডার থেকে স্বয়ংক্রিয়ভাবে ভিডিও রিলস হিসেবে ফেসবুক পেজে শিডিউল ও আপলোড করুন। ফাইল টাইটেল অনুযায়ী অটোমেটিক মেটা ভাইরাল হ্যাশট্যাগ তৈরি হবে।
+              আপনার গুগল ড্রাইভ ফোল্ডারে ভিডিওগুলো রেখে দিন। আপনার কম্পিউটার বন্ধ থাকলেও Vercel ক্লাউড স্বয়ংক্রিয়ভাবে প্রতি ২ ঘণ্টা পর পর নতুন রিলস ফেসবুক পেজে পোস্ট করবে। সার্ভার বা ডাটাবেজে কোনো ফাইল জমা হবে না (0 Disk Space Used)!
             </p>
           </div>
 
           <div class="flex items-center gap-3">
-            <button onclick="publishNextLocalReel()" id="btn-publish-next-local" class="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg transition active:scale-95">
+            <button onclick="publishNextGDriveReel()" id="btn-publish-next-gdrive" class="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg transition active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <span>Post Next Video Now (এখনই আপলোড)</span>
+              <span>Post Next Video Now (এখনই ড্রাইভ থেকে পোস্ট)</span>
             </button>
           </div>
         </div>
@@ -1129,24 +1129,24 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       <!-- Quick Stats Grid -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
-          <div class="text-[11px] uppercase font-mono text-slate-400 mb-1">Total Detected</div>
-          <div id="stat-local-total" class="text-2xl font-black text-white font-mono">0</div>
-          <div class="text-[10px] text-slate-500 mt-0.5">Videos in directory</div>
+          <div class="text-[11px] uppercase font-mono text-slate-400 mb-1">Total in Drive</div>
+          <div id="stat-gdrive-total" class="text-2xl font-black text-white font-mono">0</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Videos in folder</div>
         </div>
         <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
           <div class="text-[11px] uppercase font-mono text-emerald-400 mb-1">🟢 Ready To Post</div>
-          <div id="stat-local-pending" class="text-2xl font-black text-emerald-400 font-mono">0</div>
+          <div id="stat-gdrive-pending" class="text-2xl font-black text-emerald-400 font-mono">0</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Unposted videos</div>
         </div>
         <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
           <div class="text-[11px] uppercase font-mono text-cyan-400 mb-1">✓ Published</div>
-          <div id="stat-local-posted" class="text-2xl font-black text-cyan-400 font-mono">0</div>
+          <div id="stat-gdrive-posted" class="text-2xl font-black text-cyan-400 font-mono">0</div>
           <div class="text-[10px] text-slate-500 mt-0.5">Already published</div>
         </div>
         <div class="glass-panel p-4 rounded-xl border border-slate-800/80">
           <div class="text-[11px] uppercase font-mono text-amber-400 mb-1">⏰ Schedule Rate</div>
-          <div id="stat-local-interval" class="text-sm font-bold text-amber-300 font-mono mt-1">Every 2 Hours</div>
-          <div id="stat-local-last-post" class="text-[10px] text-slate-500 mt-0.5 truncate">Last: Never</div>
+          <div id="stat-gdrive-interval" class="text-sm font-bold text-amber-300 font-mono mt-1">Every 2 Hours</div>
+          <div id="stat-gdrive-last-post" class="text-[10px] text-slate-500 mt-0.5 truncate">Last: Never</div>
         </div>
       </div>
 
@@ -1157,36 +1157,46 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <div class="lg:col-span-5 glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-              Automation Settings
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+              Cloud Automation Settings
             </h3>
             <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-300">
-              <input type="checkbox" id="local-reel-active-toggle" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-amber-500">
-              <span id="local-reel-active-label" class="text-slate-400">Disabled</span>
+              <input type="checkbox" id="gdrive-reel-active-toggle" class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-emerald-500">
+              <span id="gdrive-reel-active-label" class="text-slate-400">Disabled</span>
             </label>
           </div>
 
-          <form onsubmit="handleSaveLocalReelsConfig(event)" class="space-y-4">
+          <form onsubmit="handleSaveGDriveConfig(event)" class="space-y-4">
             
-            <!-- Folder Path -->
+            <!-- Google Drive Folder Link / ID -->
             <div>
               <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
-                <span>Local Folder Path (ভিডিও ফোল্ডারের পাথ) <span class="text-amber-400">*</span></span>
+                <span>Google Drive Folder Link / ID <span class="text-emerald-400">*</span></span>
               </label>
               <div class="flex gap-2">
-                <input type="text" id="local-reel-folder-input" required placeholder="e.g. D:\Videos\Reels or C:\Users\Videos" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition">
-                <button type="button" onclick="triggerScanLocalReelsFolder()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1 shrink-0">
+                <input type="text" id="gdrive-folder-input" required placeholder="https://drive.google.com/drive/folders/1ABC123... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                <button type="button" onclick="triggerScanGDriveFolder()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1 shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Scan
                 </button>
               </div>
-              <p class="text-[10px] text-slate-500 mt-1">কম্পিউটারের যে ফোল্ডারে আপনার .mp4 / .mov ভিডিওগুলো রয়েছে তার ফুল পাথ দিন।</p>
+              <p class="text-[10px] text-slate-500 mt-1">গুগল ড্রাইভ ফোল্ডারের Share অপশন "Anyone with the link can view" রাখুন অথবা নিচে একটি API Key দিন।</p>
+            </div>
+
+            <!-- Google Drive API Key -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
+                <span>Google Drive API Key (ঐচ্ছিক)</span>
+                <span class="text-[10px] text-slate-500">Google Cloud Console</span>
+              </label>
+              <input type="password" id="gdrive-api-key-input" placeholder="AIzaSy... (পাবলিক ফোল্ডারের জন্য প্রয়োজন নেই)" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+              <p class="text-[10px] text-slate-500 mt-1">ফোল্ডার 'Anyone with the link' হলে ফাঁকা রাখতে পারেন। বড় ফোল্ডার বা প্রাইভেটের জন্য API Key দিতে পারেন।</p>
             </div>
 
             <!-- Target Facebook Page -->
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Target Facebook Page (কোন পেজে পোস্ট হবে)</label>
-              <select id="local-reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 transition">
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Target Facebook Page (কোন পেজে রিলস পোস্ট হবে)</label>
+              <select id="gdrive-reel-page-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
                 <option value="">Loading pages...</option>
               </select>
             </div>
@@ -1195,9 +1205,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <div>
               <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
                 <span>Posting Schedule (কতো সময় পর পর পোস্ট হবে)</span>
-                <span class="text-[10px] font-mono text-amber-400">Rate Limit Safe</span>
+                <span class="text-[10px] font-mono text-emerald-400">Vercel Cron 24/7</span>
               </label>
-              <select id="local-reel-interval-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 transition font-semibold">
+              <select id="gdrive-reel-interval-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition font-semibold">
                 <option value="1">⏱️ Every 1 Hour (24 Reels / Day)</option>
                 <option value="2" selected>⏱️ Every 2 Hours (12 Reels / Day - Recommended)</option>
                 <option value="3">⏱️ Every 3 Hours (8 Reels / Day)</option>
@@ -1211,7 +1221,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <!-- Order Strategy -->
             <div>
               <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Queue Sequence (ভিডিও সিরিয়াল)</label>
-              <select id="local-reel-order-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 transition">
+              <select id="gdrive-reel-order-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
                 <option value="oldest_first" selected>Oldest Files First (তারিখ অনুযায়ী ক্রমান্বয়ে)</option>
                 <option value="newest_first">Newest Files First (নতুন ভিডিও আগে)</option>
                 <option value="alphabetical">Alphabetical Order (ফাইলের নাম অনুযায়ী A-Z)</option>
@@ -1224,21 +1234,21 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono">Caption Strategy</label>
               <div class="space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                  <input type="radio" name="localCaptionMode" value="viral_hashtags" id="caption-mode-viral" checked onchange="toggleLocalCaptionFields()" class="text-amber-500 focus:ring-amber-500">
+                  <input type="radio" name="gdriveCaptionMode" value="viral_hashtags" id="gdrive-caption-mode-viral" checked onchange="toggleGDriveCaptionFields()" class="text-emerald-500 focus:ring-emerald-500">
                   <span>🔥 Auto-Generate Viral Hashtags (১০-১৪টি মেটা অপ্টিমাইজড ট্যাগ)</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                  <input type="radio" name="localCaptionMode" value="custom" id="caption-mode-custom" onchange="toggleLocalCaptionFields()" class="text-amber-500 focus:ring-amber-500">
+                  <input type="radio" name="gdriveCaptionMode" value="custom" id="gdrive-caption-mode-custom" onchange="toggleGDriveCaptionFields()" class="text-emerald-500 focus:ring-emerald-500">
                   <span>Custom Template (কাস্টম ক্যাপশন ও হ্যাশট্যাগ)</span>
                 </label>
               </div>
             </div>
 
             <!-- Custom Caption Input -->
-            <div id="local-custom-caption-box" class="hidden">
+            <div id="gdrive-custom-caption-box" class="hidden">
               <label class="block text-xs font-semibold text-slate-300 mb-1 uppercase font-mono">Custom Caption Template</label>
-              <textarea id="local-custom-caption-input" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
-              <p class="text-[10px] text-slate-500 mt-0.5">Use <code class="text-amber-400">{title}</code> for video title, <code class="text-amber-400">{hashtags}</code> for viral tags.</p>
+              <textarea id="gdrive-custom-caption-input" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
+              <p class="text-[10px] text-slate-500 mt-0.5">Use <code class="text-emerald-400">{title}</code> for video title, <code class="text-emerald-400">{hashtags}</code> for viral tags.</p>
             </div>
 
             <!-- First Comment -->
@@ -1247,16 +1257,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <span>First Comment (ঐচ্ছিক ১ম কমেন্ট)</span>
                 <span class="text-[10px] text-slate-500">Optional CTA</span>
               </label>
-              <input type="text" id="local-first-comment-input" placeholder="e.g. Follow our page for daily new reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition">
+              <input type="text" id="gdrive-first-comment-input" placeholder="e.g. Follow our page for daily new reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
             </div>
 
             <!-- Submit Button & Reset -->
             <div class="pt-2 flex flex-col sm:flex-row gap-2">
-              <button type="submit" id="btn-save-local-config" class="flex-1 py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-md active:scale-95">
+              <button type="submit" id="btn-save-gdrive-config" class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-md active:scale-95">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                <span>Save Automation Settings</span>
+                <span>Save Cloud Automation Settings</span>
               </button>
-              <button type="button" onclick="confirmResetLocalHistory()" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900/50 font-semibold text-xs flex items-center justify-center gap-1 transition active:scale-95" title="Reset posted history to cycle videos again">
+              <button type="button" onclick="confirmResetGDriveHistory()" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900/50 font-semibold text-xs flex items-center justify-center gap-1 transition active:scale-95" title="Reset posted history to cycle videos again">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 <span>Reset History</span>
               </button>
@@ -1265,17 +1275,17 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </form>
         </div>
 
-        <!-- Video Queue & File Explorer (7 Cols) -->
+        <!-- Video Queue & Drive Explorer (7 Cols) -->
         <div class="lg:col-span-7 glass-panel p-5 sm:p-6 rounded-2xl border border-slate-800 flex flex-col space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
             <div>
               <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                Detected Videos in Folder
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Detected Videos in Google Drive
               </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">সবগুলো ফাইল স্বয়ংক্রিয়ভাবে সিরিয়াল অনুযায়ী পোস্ট হবে। আপনি চাইলে যেকোনো ভিডিও ম্যানুয়ালি এখনই পোস্ট করতে পারেন।</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">সবগুলো ফাইল স্বয়ংক্রিয়ভাবে সিরিয়াল অনুযায়ী Vercel Cron দ্বারা পোস্ট হবে। আপনি চাইলে যেকোনো ভিডিও এখনই পোস্ট করতে পারেন।</p>
             </div>
-            <button onclick="triggerScanLocalReelsFolder()" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition" title="Refresh folder list">
+            <button onclick="triggerScanGDriveFolder()" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition" title="Refresh Google Drive files">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
@@ -1291,10 +1301,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                   <th class="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody id="local-reels-table-body" class="divide-y divide-slate-900">
+              <tbody id="gdrive-reels-table-body" class="divide-y divide-slate-900">
                 <tr>
                   <td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">
-                    Configure a folder path above and click "Scan" to view videos.
+                    Paste a Google Drive folder link above and click "Scan" to view videos.
                   </td>
                 </tr>
               </tbody>
@@ -1744,7 +1754,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (tabId === 'pages') loadPages();
       if (tabId === 'groups') loadGroups();
       if (tabId === 'reels') loadReels();
-      if (tabId === 'local-reels') loadLocalReels();
+      if (tabId === 'gdrive-reels' || tabId === 'local-reels') {
+        const el = document.getElementById('tab-gdrive-reels') || document.getElementById('tab-local-reels');
+        if (el) el.classList.remove('hidden');
+        loadGDriveReels();
+      }
       if (tabId === 'youtube') loadYouTube();
       if (tabId === 'settings') loadSettings();
     }
@@ -3030,19 +3044,20 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
 
-    // --- LOCAL FOLDER REELS AUTOMATION ---
-    let cachedLocalReelConfig = null;
-    let cachedLocalVideos = [];
+    // --- GOOGLE DRIVE CLOUD REELS AUTOMATION ---
+    let cachedGDriveReelConfig = null;
+    let cachedGDriveVideos = [];
 
-    async function loadLocalReels() {
-      await loadLocalReelPages();
-      await refreshLocalReelsStatus();
+    async function loadGDriveReels() {
+      await loadGDriveReelPages();
+      await refreshGDriveReelsStatus();
     }
+    const loadLocalReels = loadGDriveReels;
 
-    async function loadLocalReelPages() {
+    async function loadGDriveReelPages() {
       try {
         const res = await safeFetchJson('/api/pages');
-        const select = document.getElementById('local-reel-page-select');
+        const select = document.getElementById('gdrive-reel-page-select');
         if (!select || !res.ok || !res.data) return;
 
         select.innerHTML = '';
@@ -3053,16 +3068,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           select.appendChild(opt);
         });
       } catch (e) {
-        console.error('Error loading pages for local reels:', e);
+        console.error('Error loading pages for gdrive reels:', e);
       }
     }
 
-    async function refreshLocalReelsStatus() {
-      const statusBadge = document.getElementById('local-reel-status-badge');
-      if (statusBadge) statusBadge.innerText = 'Scanning folder...';
+    async function refreshGDriveReelsStatus() {
+      const statusBadge = document.getElementById('gdrive-reel-status-badge');
+      if (statusBadge) statusBadge.innerText = 'Scanning Google Drive...';
 
       try {
-        const res = await safeFetchJson('/api/local-reels/status');
+        const res = await safeFetchJson('/api/gdrive-reels/status');
         if (!res.ok || !res.data) {
           if (statusBadge) {
             statusBadge.innerText = '⚠️ Scan Error';
@@ -3073,102 +3088,107 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
         const config = res.data.config || {};
         const scan = res.data.scan || {};
-        cachedLocalReelConfig = config;
-        cachedLocalVideos = scan.videos || [];
+        cachedGDriveReelConfig = config;
+        cachedGDriveVideos = scan.videos || [];
 
         // Update form fields
-        if (document.getElementById('local-reel-folder-input')) {
-          document.getElementById('local-reel-folder-input').value = config.folderPath || '';
+        if (document.getElementById('gdrive-folder-input')) {
+          document.getElementById('gdrive-folder-input').value = config.folderUrlOrId || '';
         }
-        if (document.getElementById('local-reel-page-select') && config.pageId) {
-          document.getElementById('local-reel-page-select').value = config.pageId;
+        if (document.getElementById('gdrive-api-key-input') && config.apiKey) {
+          document.getElementById('gdrive-api-key-input').value = config.apiKey;
         }
-        if (document.getElementById('local-reel-interval-select') && config.scheduleIntervalHours) {
-          document.getElementById('local-reel-interval-select').value = String(config.scheduleIntervalHours);
+        if (document.getElementById('gdrive-reel-page-select') && config.pageId) {
+          document.getElementById('gdrive-reel-page-select').value = config.pageId;
         }
-        if (document.getElementById('local-reel-order-select') && config.orderStrategy) {
-          document.getElementById('local-reel-order-select').value = config.orderStrategy;
+        if (document.getElementById('gdrive-reel-interval-select') && config.scheduleIntervalHours) {
+          document.getElementById('gdrive-reel-interval-select').value = String(config.scheduleIntervalHours);
         }
-        if (document.getElementById('local-first-comment-input')) {
-          document.getElementById('local-first-comment-input').value = config.firstCommentText || '';
+        if (document.getElementById('gdrive-reel-order-select') && config.orderStrategy) {
+          document.getElementById('gdrive-reel-order-select').value = config.orderStrategy;
         }
-        if (document.getElementById('local-custom-caption-input')) {
-          document.getElementById('local-custom-caption-input').value = config.customCaption || '';
+        if (document.getElementById('gdrive-first-comment-input')) {
+          document.getElementById('gdrive-first-comment-input').value = config.firstCommentText || '';
+        }
+        if (document.getElementById('gdrive-custom-caption-input')) {
+          document.getElementById('gdrive-custom-caption-input').value = config.customCaption || '';
         }
 
         // Active Toggle
-        const activeToggle = document.getElementById('local-reel-active-toggle');
-        const activeLabel = document.getElementById('local-reel-active-label');
+        const activeToggle = document.getElementById('gdrive-reel-active-toggle');
+        const activeLabel = document.getElementById('gdrive-reel-active-label');
         if (activeToggle) {
           activeToggle.checked = Boolean(config.isActive);
           if (activeLabel) {
             activeLabel.innerText = config.isActive ? 'Active (Auto-Running)' : 'Disabled';
-            activeLabel.className = config.isActive ? 'text-amber-400 font-bold' : 'text-slate-400';
+            activeLabel.className = config.isActive ? 'text-emerald-400 font-bold' : 'text-slate-400';
           }
         }
 
         // Caption strategy radio
         if (config.captionStrategy === 'custom') {
-          const radioCustom = document.getElementById('caption-mode-custom');
+          const radioCustom = document.getElementById('gdrive-caption-mode-custom');
           if (radioCustom) radioCustom.checked = true;
         } else {
-          const radioViral = document.getElementById('caption-mode-viral');
+          const radioViral = document.getElementById('gdrive-caption-mode-viral');
           if (radioViral) radioViral.checked = true;
         }
-        toggleLocalCaptionFields();
+        toggleGDriveCaptionFields();
 
         // Update stats
-        if (document.getElementById('stat-local-total')) document.getElementById('stat-local-total').innerText = scan.totalVideos || 0;
-        if (document.getElementById('stat-local-pending')) document.getElementById('stat-local-pending').innerText = scan.pendingCount || 0;
-        if (document.getElementById('stat-local-posted')) document.getElementById('stat-local-posted').innerText = scan.postedCount || 0;
-        if (document.getElementById('stat-local-interval')) {
-          document.getElementById('stat-local-interval').innerText = config.scheduleIntervalHours === 1 ? 'Every 1 Hour' : 'Every ' + (config.scheduleIntervalHours || 2) + ' Hours';
+        if (document.getElementById('stat-gdrive-total')) document.getElementById('stat-gdrive-total').innerText = scan.totalVideos || 0;
+        if (document.getElementById('stat-gdrive-pending')) document.getElementById('stat-gdrive-pending').innerText = scan.pendingCount || 0;
+        if (document.getElementById('stat-gdrive-posted')) document.getElementById('stat-gdrive-posted').innerText = scan.postedCount || 0;
+        if (document.getElementById('stat-gdrive-interval')) {
+          document.getElementById('stat-gdrive-interval').innerText = config.scheduleIntervalHours === 1 ? 'Every 1 Hour' : 'Every ' + (config.scheduleIntervalHours || 2) + ' Hours';
         }
 
-        const lastPostEl = document.getElementById('stat-local-last-post');
+        const lastPostEl = document.getElementById('stat-gdrive-last-post');
         if (lastPostEl) {
           lastPostEl.innerText = config.lastPostedAt ? 'Last: ' + new Date(config.lastPostedAt).toLocaleTimeString() : 'Last: Never';
         }
 
         // Badge
         if (statusBadge) {
-          if (!config.folderPath) {
+          if (!config.folderUrlOrId) {
             statusBadge.innerText = '⚙️ Folder Not Configured';
             statusBadge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700';
-          } else if (!scan.exists) {
-            statusBadge.innerText = '❌ Path Inaccessible';
+          } else if (scan.error) {
+            statusBadge.innerText = '❌ ' + (scan.error.length > 25 ? scan.error.substring(0, 22) + '...' : scan.error);
             statusBadge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-red-950/80 text-red-400 border border-red-800';
           } else if (config.isActive) {
             statusBadge.innerText = '🟢 Scheduler Active (' + (scan.pendingCount || 0) + ' Queued)';
             statusBadge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800';
           } else {
             statusBadge.innerText = '⏸️ Standby (' + (scan.pendingCount || 0) + ' Ready)';
-            statusBadge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-950/80 text-amber-400 border border-amber-800';
+            statusBadge.className = 'px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/80';
           }
         }
 
         // Render Table
-        renderLocalReelsTable(scan.videos || []);
+        renderGDriveReelsTable(scan.videos || []);
       } catch (e) {
-        console.error('Failed to refresh local reels status:', e);
+        console.error('Failed to refresh gdrive reels status:', e);
       }
     }
+    const refreshLocalReelsStatus = refreshGDriveReelsStatus;
 
-    function toggleLocalCaptionFields() {
-      const isCustom = document.getElementById('caption-mode-custom')?.checked;
-      const box = document.getElementById('local-custom-caption-box');
+    function toggleGDriveCaptionFields() {
+      const isCustom = document.getElementById('gdrive-caption-mode-custom')?.checked;
+      const box = document.getElementById('gdrive-custom-caption-box');
       if (box) {
         if (isCustom) box.classList.remove('hidden');
         else box.classList.add('hidden');
       }
     }
+    const toggleLocalCaptionFields = toggleGDriveCaptionFields;
 
-    function renderLocalReelsTable(videos) {
-      const tbody = document.getElementById('local-reels-table-body');
+    function renderGDriveReelsTable(videos) {
+      const tbody = document.getElementById('gdrive-reels-table-body');
       if (!tbody) return;
 
       if (!videos || videos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in folder. Check path or add videos.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in Google Drive folder. Paste a folder link above and click Scan.</td></tr>';
         return;
       }
 
@@ -3178,8 +3198,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">🟢 Ready</span>';
 
         const publishBtn = v.isPosted
-          ? '<button data-idx="' + idx + '" onclick="onLocalReelActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
-          : '<button data-idx="' + idx + '" onclick="onLocalReelActionClick(this)" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
+          ? '<button data-idx="' + idx + '" onclick="onGDriveActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
+          : '<button data-idx="' + idx + '" onclick="onGDriveActionClick(this)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
 
         return '<tr class="hover:bg-slate-900/60 transition">' +
           '<td class="py-2.5 px-3 max-w-[240px] truncate">' +
@@ -3193,63 +3213,68 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }).join('');
     }
 
-    function onLocalReelActionClick(btn) {
+    function onGDriveActionClick(btn) {
       const idx = parseInt(btn.getAttribute('data-idx') || '-1', 10);
-      if (isNaN(idx) || idx < 0 || !cachedLocalVideos[idx]) return;
-      const file = cachedLocalVideos[idx];
-      publishSpecificLocalReel(file.name);
+      if (isNaN(idx) || idx < 0 || !cachedGDriveVideos[idx]) return;
+      const file = cachedGDriveVideos[idx];
+      publishSpecificGDriveReel(file.id, file.cleanTitle || file.name);
     }
+    const onLocalReelActionClick = onGDriveActionClick;
 
-    async function triggerScanLocalReelsFolder() {
-      const folderPath = document.getElementById('local-reel-folder-input')?.value.trim();
-      if (!folderPath) {
-        showToast('Please enter a folder path to scan', true);
+    async function triggerScanGDriveFolder() {
+      const folderUrlOrId = document.getElementById('gdrive-folder-input')?.value.trim();
+      const apiKey = document.getElementById('gdrive-api-key-input')?.value.trim();
+      if (!folderUrlOrId) {
+        showToast('Please enter a Google Drive folder link or ID to scan', true);
         return;
       }
 
-      showToast('Scanning directory: ' + folderPath + '...');
+      showToast('Scanning Google Drive folder...');
       try {
-        const res = await safeFetchJson('/api/local-reels/scan', {
+        const res = await safeFetchJson('/api/gdrive-reels/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folderPath })
+          body: JSON.stringify({ folderUrlOrId, apiKey })
         });
         if (res.ok && res.data && res.data.scan) {
           const scan = res.data.scan;
-          if (scan.exists) {
-            showToast('✓ Found ' + scan.totalVideos + ' video files (' + scan.pendingCount + ' ready)');
+          if (scan.error) {
+            showToast(scan.error, true);
           } else {
-            showToast(scan.error || 'Folder not found', true);
+            showToast('✓ Found ' + scan.totalVideos + ' video files (' + scan.pendingCount + ' ready)');
           }
-          await refreshLocalReelsStatus();
+          await refreshGDriveReelsStatus();
         } else {
-          showToast(res.error || 'Failed to scan folder', true);
+          showToast(res.error || 'Failed to scan Google Drive folder', true);
         }
       } catch (e) {
-        showToast('Error scanning folder: ' + e.message, true);
+        showToast('Error scanning Google Drive: ' + e.message, true);
       }
     }
+    const triggerScanLocalReelsFolder = triggerScanGDriveFolder;
 
-    async function handleSaveLocalReelsConfig(e) {
+    async function handleSaveGDriveConfig(e) {
       if (e) e.preventDefault();
-      const folderPath = document.getElementById('local-reel-folder-input')?.value.trim();
-      const pageId = document.getElementById('local-reel-page-select')?.value;
-      const intervalHours = parseInt(document.getElementById('local-reel-interval-select')?.value || '2', 10) || 2;
-      const orderStrategy = document.getElementById('local-reel-order-select')?.value || 'oldest_first';
-      const isActive = document.getElementById('local-reel-active-toggle')?.checked || false;
-      const captionStrategy = document.getElementById('caption-mode-custom')?.checked ? 'custom' : 'viral_hashtags';
-      const customCaption = document.getElementById('local-custom-caption-input')?.value || '';
-      const firstCommentText = document.getElementById('local-first-comment-input')?.value.trim() || '';
+      const folderUrlOrId = document.getElementById('gdrive-folder-input')?.value.trim();
+      const apiKey = document.getElementById('gdrive-api-key-input')?.value.trim();
+      const pageId = document.getElementById('gdrive-reel-page-select')?.value;
+      const intervalHours = parseInt(document.getElementById('gdrive-reel-interval-select')?.value || '2', 10) || 2;
+      const orderStrategy = document.getElementById('gdrive-reel-order-select')?.value || 'oldest_first';
+      const isActive = document.getElementById('gdrive-reel-active-toggle')?.checked || false;
+      const captionStrategy = document.getElementById('gdrive-caption-mode-custom')?.checked ? 'custom' : 'viral_hashtags';
+      const customCaption = document.getElementById('gdrive-custom-caption-input')?.value || '';
+      const firstCommentText = document.getElementById('gdrive-first-comment-input')?.value.trim() || '';
 
-      const btn = document.getElementById('btn-save-local-config');
+      const btn = document.getElementById('btn-save-gdrive-config');
       if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
 
       try {
-        const res = await safeFetchJson('/api/local-reels/config', {
+        const res = await safeFetchJson('/api/gdrive-reels/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            folderPath,
+            folderUrlOrId,
+            apiKey,
             pageId,
             scheduleIntervalHours: intervalHours,
             orderStrategy,
@@ -3261,8 +3286,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         });
 
         if (res.ok) {
-          showToast('✓ Local Reels Automation settings saved successfully!');
-          await refreshLocalReelsStatus();
+          showToast('✓ Google Drive Automation settings saved successfully!');
+          await refreshGDriveReelsStatus();
         } else {
           showToast('Failed to save settings: ' + (res.error || 'Unknown error'), true);
         }
@@ -3271,28 +3296,29 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Save Automation Settings</span>';
+          btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Save Cloud Automation Settings</span>';
         }
       }
     }
+    const handleSaveLocalReelsConfig = handleSaveGDriveConfig;
 
-    async function publishNextLocalReel() {
-      const btn = document.getElementById('btn-publish-next-local');
+    async function publishNextGDriveReel() {
+      const btn = document.getElementById('btn-publish-next-gdrive');
       if (btn) {
         btn.disabled = true;
         btn.classList.add('opacity-50');
       }
 
-      showToast('⏳ Uploading next video reel from local folder to Facebook...');
+      showToast('⏳ Downloading video from Google Drive & uploading to Facebook Reels...');
       try {
-        const res = await safeFetchJson('/api/local-reels/publish-next', {
+        const res = await safeFetchJson('/api/gdrive-reels/publish-next', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
 
         if (res.ok && res.data && res.data.success) {
           showToast('✓ Published Reel "' + res.data.cleanTitle + '" successfully!');
-          await refreshLocalReelsStatus();
+          await refreshGDriveReelsStatus();
         } else {
           showToast(res.data?.error || res.error || 'Publish failed', true);
         }
@@ -3305,21 +3331,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         }
       }
     }
+    const publishNextLocalReel = publishNextGDriveReel;
 
-    async function publishSpecificLocalReel(filename) {
-      if (!confirm('Are you sure you want to publish "' + filename + '" to your Facebook Page now?')) return;
+    async function publishSpecificGDriveReel(fileId, title) {
+      if (!confirm('Are you sure you want to publish "' + title + '" from Google Drive to your Facebook Page now?')) return;
 
-      showToast('⏳ Uploading "' + filename + '" to Facebook Reels...');
+      showToast('⏳ Streaming "' + title + '" from Google Drive to Facebook Reels...');
       try {
-        const res = await safeFetchJson('/api/local-reels/publish-file', {
+        const res = await safeFetchJson('/api/gdrive-reels/publish-file', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename })
+          body: JSON.stringify({ fileId })
         });
 
         if (res.ok && res.data && res.data.success) {
           showToast('✓ Reel "' + res.data.cleanTitle + '" published successfully!');
-          await refreshLocalReelsStatus();
+          await refreshGDriveReelsStatus();
         } else {
           showToast(res.data?.error || res.error || 'Publish failed', true);
         }
@@ -3327,15 +3354,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Error: ' + e.message, true);
       }
     }
+    const publishSpecificLocalReel = publishSpecificGDriveReel;
 
-    async function confirmResetLocalHistory() {
-      if (!confirm('Do you want to reset the posted video history? All videos in your folder will be marked as "Ready to Post" again.')) return;
+    async function confirmResetGDriveHistory() {
+      if (!confirm('Do you want to reset the posted video history? All videos in your Google Drive folder will be marked as "Ready to Post" again.')) return;
 
       try {
-        const res = await safeFetchJson('/api/local-reels/reset-history', { method: 'POST' });
+        const res = await safeFetchJson('/api/gdrive-reels/reset-history', { method: 'POST' });
         if (res.ok) {
           showToast('✓ Posted history reset! All videos ready to post.');
-          await refreshLocalReelsStatus();
+          await refreshGDriveReelsStatus();
         } else {
           showToast('Reset failed: ' + (res.error || 'Unknown error'), true);
         }
@@ -3343,6 +3371,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         showToast('Error: ' + e.message, true);
       }
     }
+    const confirmResetLocalHistory = confirmResetGDriveHistory;
 
 
     // --- YOUTUBE SHORTS AUTOMATION ---

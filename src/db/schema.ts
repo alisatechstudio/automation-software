@@ -226,3 +226,26 @@ export interface LocalReelPostLog {
   errorMessage?: string;
 }
 
+export interface GDriveReelConfig {
+  _id: string; // Identifier e.g. 'default_gdrive_reels'
+  folderUrlOrId: string; // Full Drive folder URL or ID
+  folderId: string; // Clean extracted Google Drive Folder ID
+  apiKey?: string; // Google Drive API Key
+  pageId: string; // Target Facebook Page ID
+  pageName?: string;
+  isActive: boolean; // Automated scheduling ON/OFF
+  scheduleIntervalHours: number; // e.g. 2, 3, 4, 6
+  cronExpression?: string; // e.g. "0 */2 * * *"
+  captionStrategy: 'viral_hashtags' | 'custom';
+  customCaption?: string;
+  firstCommentText?: string;
+  orderStrategy: 'oldest_first' | 'newest_first' | 'alphabetical' | 'random';
+  postedVideoIds: string[]; // List of Google Drive file IDs already published
+  postedVideoNames: string[]; // List of file names published
+  lastPostedAt?: Date | null;
+  lastPostedFile?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+
