@@ -2451,11 +2451,12 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
       AUTO_POST_YOUTUBE: 'true',
-      CRONJOB_API_KEY: config.CRONJOB_API_KEY || process.env.CRONJOB_API_KEY || '',
     };
 
     for (const r of rows) {
-      settingsMap[r._id] = r.value;
+      if (r._id !== 'CRONJOB_API_KEY') {
+        settingsMap[r._id] = r.value;
+      }
     }
 
     res.json(settingsMap);
@@ -2471,6 +2472,7 @@ apiRouter.post('/settings', async (req: Request, res: Response) => {
     const settingsCol = db.collection<Setting>('settings');
 
     for (const [key, value] of Object.entries(body)) {
+      if (key === 'CRONJOB_API_KEY') continue;
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         await settingsCol.updateOne(
           { _id: key },
@@ -2484,6 +2486,9 @@ apiRouter.post('/settings', async (req: Request, res: Response) => {
         );
       }
     }
+
+    // Always ensure CRONJOB_API_KEY is purged from database
+    await settingsCol.deleteOne({ _id: 'CRONJOB_API_KEY' }).catch(() => null);
 
     res.json({ success: true });
   } catch (err: any) {
@@ -2894,115 +2899,54 @@ apiRouter.get('/cron-jobs/system-webhooks', async (req: Request, res: Response) 
   }
 });
 
-// 8.1.1c. One-Click Setup / Sync All Distinct Webhooks to cron-job.org
+// 8.1.1c. Sync All Disabled (Prevents recreating deleted cron jobs)
 apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
+  res.json({
+    success: false,
+    disabled: true,
+    message: 'cron-job.org sync has been permanently disabled. No jobs were created or modified.',
+  });
+});
+
+// 8.1.1d. Purge / Delete All Cron Jobs from cron-job.org & Remove API Key
+apiRouter.all(['/cron-jobs/delete-all', '/cron-jobs/purge', '/cron-jobs/wipe'], async (req: Request, res: Response) => {
   try {
-    const rawBaseUrl = req.body.baseUrl || `${req.protocol}://${req.get('host')}`;
-    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
-    const cronSecret = process.env.CRON_SECRET;
-    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+    const apiKey = await getCronJobApiKey();
+    const deletedJobs: any[] = [];
 
-    const webhookDefs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
+    if (apiKey) {
+      try {
+        const existing = await callCronJobApiWithRetry('/jobs', { apiKey }, 2);
+        const existingJobs: any[] = existing.jobs || [];
 
-    // Fetch existing jobs from cron-job.org with retry
-    const existing = await callCronJobApiWithRetry('/jobs');
-    const existingJobs: any[] = existing.jobs || [];
-
-    const results: any[] = [];
-    const matchedJobIds = new Set<number>();
-
-    for (const def of webhookDefs) {
-      const fullUrl = def.fullUrl;
-
-      // Intelligent match by pageId, channelId, slug, title, or exact path
-      const matched = existingJobs.find((j: any) => {
-        if (matchedJobIds.has(j.jobId)) return false;
-        const jUrl = j.url || '';
-        const jTitle = (j.title || '').toLowerCase();
-        const defTitle = def.title.toLowerCase();
-
-        // 1. Exact match by pageId query param
-        if (def.pageId && jUrl.includes(`pageId=${def.pageId}`)) return true;
-        // 2. Exact match by channelId query param
-        if (def.channelId && jUrl.includes(`channelId=${def.channelId}`)) return true;
-        // 3. Exact path match
-        if (jUrl.includes(def.path)) return true;
-        // 4. Exact title match
-        if (jTitle === defTitle) return true;
-        // 5. Page name in title match
-        if (def.pageName && jTitle.includes(def.pageName.toLowerCase())) return true;
-        // 6. Old generic publish job fallback for first unmapped publisher def
-        if (def.type === 'publish' && (jTitle.includes('facebook publisher') || jUrl.endsWith('/api/cron/'))) return true;
-        // 7. Special fallback for RSS poller
-        if (def.slug === 'rss' && (jTitle.includes('rss ingestion') || jUrl.includes('/api/cron/rss'))) return true;
-        // 8. Special fallback for GDrive global
-        if (def.slug === 'gdrive' && (jTitle.includes('google drive') || jUrl.includes('/api/cron/gdrive-reels'))) return true;
-
-        return false;
-      });
-
-      // 650ms delay between API calls to respect cron-job.org rate limits
-      await new Promise((r) => setTimeout(r, 650));
-
-      const schedule = parseCronJobSchedule(def.preset, 'Asia/Dhaka', def.customMinutes);
-
-      if (matched) {
-        matchedJobIds.add(matched.jobId);
-        await callCronJobApiWithRetry(`/jobs/${matched.jobId}`, {
-          method: 'PATCH',
-          body: {
-            job: {
-              title: def.title,
-              url: fullUrl,
-              enabled: true,
-              schedule,
-              requestMethod: def.method,
-            },
-          },
-        });
-        results.push({
-          action: 'updated',
-          jobId: matched.jobId,
-          title: def.title,
-          url: fullUrl,
-        });
-      } else {
-        const created = await callCronJobApiWithRetry('/jobs', {
-          method: 'PUT',
-          body: {
-            job: {
-              title: def.title,
-              url: fullUrl,
-              enabled: true,
-              saveResponses: true,
-              schedule,
-              requestMethod: def.method,
-            },
-          },
-        });
-        if (created?.jobId) {
-          matchedJobIds.add(created.jobId);
+        for (const j of existingJobs) {
+          try {
+            await callCronJobApiWithRetry(`/jobs/${j.jobId}`, { method: 'DELETE', apiKey }, 2);
+            deletedJobs.push({ jobId: j.jobId, title: j.title });
+            await new Promise((r) => setTimeout(r, 650));
+          } catch (delErr: any) {
+            console.warn(`[cron-job.org] Failed to delete job ${j.jobId}:`, delErr.message);
+          }
         }
-        results.push({
-          action: 'created',
-          jobId: created.jobId,
-          title: def.title,
-          url: fullUrl,
-        });
+      } catch (queryErr: any) {
+        console.warn('[cron-job.org] Could not query jobs for deletion:', queryErr.message);
       }
+    }
+
+    if (isDbConnected()) {
+      const db = getDatabase();
+      await db.collection('settings').deleteOne({ _id: 'CRONJOB_API_KEY' }).catch(() => null);
     }
 
     res.json({
       success: true,
-      baseUrl,
-      results,
-      message: `Successfully synchronized ${results.length} distinct webhooks on cron-job.org for all configured pages`,
+      deletedCount: deletedJobs.length,
+      deletedJobs,
+      apiKeyRemoved: true,
+      message: `Permanently deleted ${deletedJobs.length} jobs from cron-job.org and removed API key from system.`,
     });
   } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -3023,49 +2967,12 @@ apiRouter.get('/cron-jobs/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 8.1.3. Create new cron job
+// 8.1.3. Create new cron job (Disabled)
 apiRouter.post('/cron-jobs', async (req: Request, res: Response) => {
-  try {
-    const { title, url, enabled, schedule, preset, timezone, requestMethod, saveResponses, customMinutes, customHours } = req.body;
-
-    if (!title || !title.trim()) {
-      res.status(400).json({ success: false, error: 'Job title is required' });
-      return;
-    }
-    if (!url || !url.trim() || !url.startsWith('http')) {
-      res.status(400).json({ success: false, error: 'A valid http/https URL is required' });
-      return;
-    }
-
-    const finalSchedule = schedule && typeof schedule === 'object' && schedule.timezone
-      ? schedule
-      : parseCronJobSchedule(preset || '10m', timezone || 'Asia/Dhaka', customMinutes, customHours);
-
-    const jobPayload: any = {
-      title: title.trim(),
-      url: url.trim(),
-      enabled: enabled !== false,
-      saveResponses: saveResponses !== false,
-      schedule: finalSchedule,
-      requestMethod: typeof requestMethod === 'number' ? requestMethod : 0,
-    };
-
-    const data = await callCronJobApi('/jobs', {
-      method: 'PUT',
-      body: { job: jobPayload },
-    });
-
-    res.json({
-      success: true,
-      jobId: data.jobId,
-      message: 'Cron job created successfully',
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
-  }
+  res.status(400).json({
+    success: false,
+    error: 'Creating cron jobs on cron-job.org has been disabled.',
+  });
 });
 
 // 8.1.4. Update existing cron job
