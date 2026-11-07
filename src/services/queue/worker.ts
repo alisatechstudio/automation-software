@@ -184,14 +184,28 @@ export class QueueWorker {
       }
 
       const selectedTemplateId = templateId || source?.templateId || 'template-canva-bdnews';
+      const targetJobPageId = job.pageId || job.payload?.pageId || '';
       const isEnglish =
         selectedTemplateId.includes('trendingnews') ||
+        (targetJobPageId === '1526917347161119') ||
+        Boolean((job as any).page_name && (job as any).page_name.includes('Trending')) ||
+        Boolean(job.payload?.pageName && job.payload.pageName.includes('Trending')) ||
         isEnglishText(article.title) ||
         isEnglishText(article.category) ||
         Boolean(article.link && article.link.includes('trendingnews'));
 
-      const defaultCategory = isEnglish ? 'BREAKING NEWS' : 'বিশেষ খবর';
-      const effectiveCategory = article.category || defaultCategory;
+      let effectiveCategory = article.category;
+      if (isEnglish) {
+        if (!effectiveCategory || effectiveCategory === 'সাধারণ' || !isEnglishText(effectiveCategory)) {
+          effectiveCategory = 'BREAKING NEWS';
+        } else {
+          effectiveCategory = effectiveCategory.toUpperCase();
+        }
+      } else {
+        if (!effectiveCategory) {
+          effectiveCategory = 'বিশেষ খবর';
+        }
+      }
       const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
 
       const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
@@ -234,6 +248,10 @@ export class QueueWorker {
             theme: targetReelTheme,
             durationSeconds: reelDuration,
             fps: reelFps,
+            website: effectiveWebsite,
+            isEnglish: isEnglish,
+            pageName: (job as any).page_name || job.payload?.pageName,
+            pageId: targetJobPageId || undefined,
           });
         } catch (reelErr: any) {
           console.warn(`[QueueWorker] ⚠️ MP4 Reel video rendering failed (${reelErr.message}). Gracefully falling back to 1080x1080 JPG News Card...`);
@@ -650,11 +668,15 @@ export class QueueWorker {
             try {
               reelBuffer = await this.reelRenderer.renderReel({
                 headline: article.title,
-                category: article.category || 'বিশেষ খবর',
+                category: effectiveCategory,
                 imageUrl: article.imageUrl || undefined,
                 theme: targetReelTheme,
                 durationSeconds: reelDuration,
                 fps: 24,
+                website: effectiveWebsite,
+                isEnglish: isEnglish,
+                pageName: page.name,
+                pageId: page._id,
               });
             } catch (rErr: any) {
               console.warn(`[QueueWorker] Reel render failed on shared host (${rErr.message}). Skipping reel for this article.`);
@@ -663,11 +685,17 @@ export class QueueWorker {
             if (reelBuffer) {
               const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
               const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-              const viralReelCaption = generateViralReelHashtags({
-                category: article.category,
-                headline: article.title,
-                userTags: configuredHashtags,
-              });
+              const viralReelCaption = isEnglish
+                ? generateTrendingNewsHashtags({
+                    category: effectiveCategory,
+                    headline: article.title,
+                    userTags: configuredHashtags,
+                  })
+                : generateViralReelHashtags({
+                    category: effectiveCategory,
+                    headline: article.title,
+                    userTags: configuredHashtags,
+                  });
 
               const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
                 page._id,
@@ -993,24 +1021,55 @@ export class QueueWorker {
       console.log(`[QueueWorker] 🔄 Rolling Rotation selected: "${selectedTheme}" for article: "${article.title}"`);
     }
 
+    const isEnglish =
+      (page._id === '1526917347161119') ||
+      Boolean(page.name && page.name.includes('Trending')) ||
+      isEnglishText(article.title) ||
+      isEnglishText(article.category) ||
+      Boolean(article.link && article.link.includes('trendingnews'));
+
+    let effectiveCategory = article.category;
+    if (isEnglish) {
+      if (!effectiveCategory || effectiveCategory === 'সাধারণ' || !isEnglishText(effectiveCategory)) {
+        effectiveCategory = 'BREAKING NEWS';
+      } else {
+        effectiveCategory = effectiveCategory.toUpperCase();
+      }
+    } else {
+      if (!effectiveCategory) {
+        effectiveCategory = 'বিশেষ খবর';
+      }
+    }
+    const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+
     const startTime = Date.now();
     const reelBuffer = await this.reelRenderer.renderReel({
       headline: article.title,
-      category: article.category || 'বিশেষ খবর',
+      category: effectiveCategory,
       imageUrl: article.imageUrl || undefined,
       theme: selectedTheme,
       durationSeconds,
       fps: 24,
+      website: effectiveWebsite,
+      isEnglish: isEnglish,
+      pageName: page.name,
+      pageId: page._id,
     });
 
     // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const caption = generateViralReelHashtags({
-      category: article.category,
-      headline: article.title,
-      userTags: configuredHashtags,
-    });
+    const caption = isEnglish
+      ? generateTrendingNewsHashtags({
+          category: effectiveCategory,
+          headline: article.title,
+          userTags: configuredHashtags,
+        })
+      : generateViralReelHashtags({
+          category: effectiveCategory,
+          headline: article.title,
+          userTags: configuredHashtags,
+        });
 
     try {
       const { videoId, postId } = await this.fbClient.publishReel(
@@ -1139,22 +1198,49 @@ export class QueueWorker {
       throw new Error(`Article ${articleId} not found`);
     }
 
+    const isEnglish =
+      isEnglishText(article.title) ||
+      isEnglishText(article.category) ||
+      Boolean(article.link && article.link.includes('trendingnews'));
+
+    let effectiveCategory = article.category;
+    if (isEnglish) {
+      if (!effectiveCategory || effectiveCategory === 'সাধারণ' || !isEnglishText(effectiveCategory)) {
+        effectiveCategory = 'BREAKING NEWS';
+      } else {
+        effectiveCategory = effectiveCategory.toUpperCase();
+      }
+    } else {
+      if (!effectiveCategory) {
+        effectiveCategory = 'বিশেষ খবর';
+      }
+    }
+    const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+
     const reelBuffer = await this.reelRenderer.renderReel({
       headline: article.title,
-      category: article.category || 'বিশেষ খবর',
+      category: effectiveCategory,
       imageUrl: article.imageUrl || undefined,
       theme: 'vertical-916', // YouTube Shorts prefers 9:16 vertical fullscreen
       durationSeconds: 18, // 15-20s duration
       fps: 24,
+      website: effectiveWebsite,
+      isEnglish: isEnglish,
     });
 
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const shortsHashtags = generateViralShortsHashtags({
-      category: article.category,
-      headline: article.title,
-      userTags: configuredHashtags,
-    });
+    const shortsHashtags = isEnglish
+      ? generateTrendingNewsHashtags({
+          category: effectiveCategory,
+          headline: article.title,
+          userTags: configuredHashtags,
+        })
+      : generateViralShortsHashtags({
+          category: effectiveCategory,
+          headline: article.title,
+          userTags: configuredHashtags,
+        });
 
     const ytStartTime = Date.now();
     try {
@@ -1162,7 +1248,9 @@ export class QueueWorker {
         {
           videoBuffer: reelBuffer,
           title: article.title,
-          description: `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
+          description: isEnglish
+            ? `${shortsHashtags}\n\nFull story: ${article.link}`
+            : `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
         },
         config.DRY_RUN
       );

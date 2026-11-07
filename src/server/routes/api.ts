@@ -705,15 +705,39 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       return;
     }
 
+    const isEnglish =
+      (page._id === '1526917347161119') ||
+      Boolean(page.name && page.name.includes('Trending')) ||
+      isEnglishText(targetHeadline) ||
+      isEnglishText(targetCategory);
+
+    let effectiveCategory = targetCategory;
+    if (isEnglish) {
+      if (!effectiveCategory || effectiveCategory === 'সাধারণ' || !isEnglishText(effectiveCategory)) {
+        effectiveCategory = 'BREAKING NEWS';
+      } else {
+        effectiveCategory = effectiveCategory.toUpperCase();
+      }
+    } else {
+      if (!effectiveCategory) {
+        effectiveCategory = 'বিশেষ খবর';
+      }
+    }
+    const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+
     console.log(`[Reels API] Rendering ${durationSeconds}s MP4 Reel (${targetTheme}) for "${targetHeadline}"...`);
     const startTime = Date.now();
     const reelBuffer = await reelRenderer.renderReel({
       headline: targetHeadline,
-      category: targetCategory,
+      category: effectiveCategory,
       imageUrl: targetImageUrl || undefined,
       theme: targetTheme,
       durationSeconds,
-      fps: 20,
+      fps: 24,
+      website: effectiveWebsite,
+      isEnglish: isEnglish,
+      pageName: page.name,
+      pageId: page._id,
     });
 
     const fbClient = new FacebookGraphClient();
@@ -722,11 +746,17 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     const customHashtags = (hashtags || '').trim();
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const caption = generateViralReelHashtags({
-      category: targetCategory,
-      headline: targetHeadline,
-      userTags: customHashtags || configuredHashtags,
-    });
+    const caption = isEnglish
+      ? generateTrendingNewsHashtags({
+          category: effectiveCategory,
+          headline: targetHeadline,
+          userTags: customHashtags || configuredHashtags,
+        })
+      : generateViralReelHashtags({
+          category: effectiveCategory,
+          headline: targetHeadline,
+          userTags: customHashtags || configuredHashtags,
+        });
 
     console.log(`[Reels API] Publishing ${durationSeconds}s Reel with viral hashtags: "${caption}"...`);
     const { videoId, postId } = await fbClient.publishReel(

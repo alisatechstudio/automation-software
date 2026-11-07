@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
+import { isEnglishText } from '../../config/constants.js';
 
 export interface ParsedArticle {
   guid: string;
@@ -67,7 +68,8 @@ export class RssParserService {
           item['content:encoded'] || item.content || item.summary || item.description || ''
         );
 
-        let category = 'সাধারণ'; // Default category: General in Bengali
+        const isEnglishArticle = isEnglishText(title) || link.includes('trendingnews') || (feed.title && isEnglishText(feed.title));
+        let category = isEnglishArticle ? 'Breaking News' : 'সাধারণ'; // Smart default: English or Bengali
         if (Array.isArray(item.categories) && item.categories.length > 0) {
           category = this.cleanText(item.categories[0]);
         } else if (typeof item.category === 'string') {

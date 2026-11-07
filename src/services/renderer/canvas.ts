@@ -260,15 +260,24 @@ export class CanvasCardRenderer implements ImageRenderer {
     const textX = brandStartX + logoSize + brandGap;
 
     // Render circular logo
-    const logoCandidates = [
-      input.logoUrl,
-      path.join(config.ASSETS_DIR, 'images', 'bdnews-logo.png'),
-      path.join(config.ASSETS_DIR, 'images', 'favicon.png'),
-      path.join(process.cwd(), 'assets', 'images', 'bdnews-logo.png'),
-      path.join(process.cwd(), 'assets', 'images', 'favicon.png'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'images', 'bdnews-logo.png'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'images', 'favicon.png'),
-    ].filter(Boolean) as string[];
+    const logoCandidates = (
+      isEnglish
+        ? [
+            input.logoUrl,
+            path.join(config.ASSETS_DIR, 'images', 'trendingnews-logo.png'),
+            path.join(process.cwd(), 'assets', 'images', 'trendingnews-logo.png'),
+            path.join(__dirname, '..', '..', '..', 'assets', 'images', 'trendingnews-logo.png'),
+          ]
+        : [
+            input.logoUrl,
+            path.join(config.ASSETS_DIR, 'images', 'bdnews-logo.png'),
+            path.join(config.ASSETS_DIR, 'images', 'favicon.png'),
+            path.join(process.cwd(), 'assets', 'images', 'bdnews-logo.png'),
+            path.join(process.cwd(), 'assets', 'images', 'favicon.png'),
+            path.join(__dirname, '..', '..', '..', 'assets', 'images', 'bdnews-logo.png'),
+            path.join(__dirname, '..', '..', '..', 'assets', 'images', 'favicon.png'),
+          ]
+    ).filter(Boolean) as string[];
 
     const finalLogoPath = logoCandidates.find((p) => p && (p.startsWith('http') || fs.existsSync(p)));
     let logoRendered = false;

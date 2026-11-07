@@ -996,9 +996,20 @@ export function generateTrendingNewsHashtags(options?: GenerateViralHashtagsOpti
     pushTag(t);
   }
 
-  // 3. User configured tags (from DB settings)
+  // 3. User configured tags (from DB settings) - filter out Bangladesh/Bengali regional tags
   if (userTagsRaw) {
     for (const t of userTagsRaw.split(/\s+/).filter(Boolean)) {
+      const lower = t.toLowerCase();
+      if (
+        /[\u0980-\u09FF]/.test(t) ||
+        lower.includes('bangla') ||
+        lower.includes('bangladesh') ||
+        lower.includes('bdnews') ||
+        lower === '#bd' ||
+        lower === 'bd'
+      ) {
+        continue;
+      }
       pushTag(t);
     }
   }

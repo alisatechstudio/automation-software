@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { spawn } from 'child_process';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
-import { resolveCategoryTheme } from '../../config/constants.js';
+import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 
 let ffmpegPath: string = '';
 try {
@@ -261,6 +261,9 @@ export interface ReelRenderInput {
   width?: number;
   height?: number;
   theme?: ReelTheme | string;
+  isEnglish?: boolean;
+  pageName?: string;
+  pageId?: string;
 }
 
 export class ReelVideoRenderer {
@@ -360,8 +363,30 @@ export class ReelVideoRenderer {
 
     const rawTheme = input.theme || 'auto-category';
     const headline = (input.headline || '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি').trim();
-    const category = (input.category || 'আন্তর্জাতিক').trim();
-    const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const isEnglish = Boolean(
+      input.isEnglish ||
+      (input.website && input.website.includes('trendingnews')) ||
+      (input.pageName && input.pageName.includes('Trending')) ||
+      (input.pageId === '1526917347161119') ||
+      (typeof rawTheme === 'string' && rawTheme.includes('trendingnews')) ||
+      isEnglishText(headline)
+    );
+
+    let category = (input.category || '').trim();
+    if (isEnglish) {
+      if (!category || category === 'সাধারণ' || !isEnglishText(category)) {
+        category = 'BREAKING NEWS';
+      } else {
+        category = category.toUpperCase();
+      }
+    } else {
+      if (!category) {
+        category = 'আন্তর্জাতিক';
+      }
+    }
+
+    const defaultSite = isEnglish ? 'trendingnews.world' : 'bdnews.site';
+    const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
     if (theme === 'auto-category') {
@@ -381,11 +406,11 @@ export class ReelVideoRenderer {
       } catch (e) {}
     }
 
-    const logoImg = await this.loadLogoImage();
+    const logoImg = await this.loadLogoImage(isEnglish);
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    this.renderFrameByTheme(theme, ctx, width, height, 0.4, 8, articleImg, logoImg, headline, category, website);
+    this.renderFrameByTheme(theme, ctx, width, height, 0.4, 8, articleImg, logoImg, headline, category, website, isEnglish);
     return canvas.toBuffer('image/jpeg', 92);
   }
 
@@ -397,8 +422,30 @@ export class ReelVideoRenderer {
 
     const rawTheme = input.theme || 'auto-category';
     const headline = (input.headline || '').trim();
-    const category = (input.category || 'বিশেষ খবর').trim();
-    const website = (input.website || 'bdnews.site').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const isEnglish = Boolean(
+      input.isEnglish ||
+      (input.website && input.website.includes('trendingnews')) ||
+      (input.pageName && input.pageName.includes('Trending')) ||
+      (input.pageId === '1526917347161119') ||
+      (typeof rawTheme === 'string' && rawTheme.includes('trendingnews')) ||
+      isEnglishText(headline)
+    );
+
+    let category = (input.category || '').trim();
+    if (isEnglish) {
+      if (!category || category === 'সাধারণ' || !isEnglishText(category)) {
+        category = 'BREAKING NEWS';
+      } else {
+        category = category.toUpperCase();
+      }
+    } else {
+      if (!category) {
+        category = 'বিশেষ খবর';
+      }
+    }
+
+    const defaultSite = isEnglish ? 'trendingnews.world' : 'bdnews.site';
+    const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
     if (theme === 'auto-category') {
@@ -426,8 +473,8 @@ export class ReelVideoRenderer {
       }
     }
 
-    // 2. Preload channel logo
-    const logoImg = await this.loadLogoImage();
+    // 2. Preload channel logo (English or Bengali channel)
+    const logoImg = await this.loadLogoImage(isEnglish);
 
     // 3. Audio soundtrack check - resolve dedicated category audio or category audio filter
     const activeCategoryStyle = CATEGORY_STYLES[theme] || CATEGORY_STYLES[resolveCategoryTheme(category)];
@@ -549,7 +596,7 @@ export class ReelVideoRenderer {
       const progress = f / totalFrames; // 0.0 -> 1.0
 
       ctx.clearRect(0, 0, width, height);
-      this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
 
       // Write frame to ffmpeg stdin safely with flow control
       const frameBuffer = canvas.toBuffer('image/jpeg', 80);
@@ -626,14 +673,20 @@ export class ReelVideoRenderer {
     }
   }
 
-  private async loadLogoImage(): Promise<any> {
-    const logoCandidates = [
+  private async loadLogoImage(isEnglish: boolean = false): Promise<any> {
+    const englishCandidates = [
+      path.join(config.ASSETS_DIR, 'images', 'trendingnews-logo.png'),
+      path.join(process.cwd(), 'assets', 'images', 'trendingnews-logo.png'),
+      path.join(__dirname, '..', '..', '..', 'assets', 'images', 'trendingnews-logo.png'),
+    ];
+    const bdCandidates = [
       path.join(config.ASSETS_DIR, 'images', 'bdnews-logo.png'),
       path.join(config.ASSETS_DIR, 'images', 'favicon.png'),
       path.join(process.cwd(), 'assets', 'images', 'bdnews-logo.png'),
       path.join(process.cwd(), 'assets', 'images', 'favicon.png'),
       path.join(__dirname, '..', '..', '..', 'assets', 'images', 'bdnews-logo.png'),
     ];
+    const logoCandidates = isEnglish ? englishCandidates : bdCandidates;
     const finalLogoPath = logoCandidates.find((p) => fs.existsSync(p));
     if (finalLogoPath) {
       try {
@@ -657,33 +710,34 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     if (height === 1920 || theme === 'vertical-916') {
-      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
 
     if (theme === 'auto-category' || (typeof theme === 'string' && theme.startsWith('cat-'))) {
       const resolvedKey = theme === 'auto-category' ? resolveCategoryTheme(category) : theme;
       const catStyle = CATEGORY_STYLES[resolvedKey] || CATEGORY_STYLES['cat-international'];
-      this.renderCategoryReelFrame(catStyle, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+      this.renderCategoryReelFrame(catStyle, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
 
     switch (theme) {
       case 'breaking-bold':
-        this.renderFrameBreakingBold(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        this.renderFrameBreakingBold(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
         break;
       case 'dark-cinema':
-        this.renderFrameDarkCinema(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        this.renderFrameDarkCinema(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
         break;
       case 'studio-red':
-        this.renderFrameStudioRed(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        this.renderFrameStudioRed(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
         break;
       case 'viral-gradient':
       default:
-        this.renderCategoryReelFrame(CATEGORY_STYLES['cat-international'], ctx, width, height, progress, f, articleImg, logoImg, headline, category, website);
+        this.renderCategoryReelFrame(CATEGORY_STYLES['cat-international'], ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
         break;
     }
   }
@@ -703,20 +757,21 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // 1. Theme Configuration
     let bgColors = ['#3d0202', '#1a0000', '#0f172a', '#020617'];
     let strapBg = '#b91c1c';
     let strapAccent = '#f59e0b';
-    let strapText = 'ব্রেকিং নিউজ | BREAKING NEWS';
+    let strapText = isEnglish ? 'BREAKING NEWS • SPECIAL DISPATCH' : 'ব্রেকিং নিউজ | BREAKING NEWS';
     let deskColor = '#fecaca';
     let cardBg = '#ffffff';
     let cardBorderColor = 'rgba(185, 28, 28, 0.3)';
     let headlineColor = '#7f1d1d';
     let pillBg = '#ef4444';
     let pillText = '#ffffff';
-    let pillPrefix = 'লাইভ • ';
+    let pillPrefix = isEnglish ? 'LIVE • ' : 'লাইভ • ';
     let commentPillBg = '#ffffff';
     let commentPillText = '#0f172a';
     let ribbonBg = 'rgba(185, 28, 28, 0.95)';
@@ -843,13 +898,14 @@ export class ReelVideoRenderer {
     }
 
     // Channel name watermark
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 30px sans-serif' : 'bold 36px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 10;
-    ctx.fillText('বিডি নিউজ ২৪/৭', 128, logoCenterY);
+    ctx.fillText(brandText, 128, logoCenterY);
 
     // Live Category Badge (Top Right)
     const pillW = 280;
@@ -865,10 +921,11 @@ export class ReelVideoRenderer {
     ctx.arc(pillX + 30, logoCenterY, dotRadius, 0, Math.PI * 2);
     ctx.fill();
 
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : category;
     ctx.fillStyle = pillText;
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(pillPrefix + category, pillX + pillW / 2 + 12, logoCenterY);
+    ctx.fillText(pillPrefix + displayCategory, pillX + pillW / 2 + 12, logoCenterY);
     ctx.restore();
 
     // 4. FULL-WIDTH Breaking News Category Strap (1080px Edge-to-Edge!)
@@ -889,16 +946,16 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 30px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(strapText, 62, strapY + strapH / 2);
 
     // Right category desk
-    ctx.font = 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'right';
     ctx.fillStyle = deskColor;
-    ctx.fillText(category + ' ডেস্ক', width - 35, strapY + strapH / 2);
+    ctx.fillText(isEnglish ? displayCategory + ' DESK' : category + ' ডেস্ক', width - 35, strapY + strapH / 2);
     ctx.restore();
 
     // 5. FULL-WIDTH Headline Banner (1080px Edge-to-Edge!)
@@ -918,14 +975,14 @@ export class ReelVideoRenderer {
     if (headline.length > 85) fontSize = 54;
     if (headline.length > 115) fontSize = 48;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
     ctx.fillStyle = headlineColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     const maxTextWidth = width - 80;
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.35);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.35));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
@@ -952,11 +1009,12 @@ export class ReelVideoRenderer {
     ctx.arc(65, actionY + 33, 6, 0, Math.PI * 2);
     ctx.fill();
 
+    const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toUpperCase();
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText((website || 'BDNEWS.SITE').toUpperCase(), 85, actionY + 33);
+    ctx.fillText(cleanWebsite, 85, actionY + 33);
 
     // Comment Link Pill (Right)
     const comPillX = width - 25 - actionPillW;
@@ -979,10 +1037,10 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = commentPillText;
-    ctx.font = 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('বিস্তারিত প্রথম কমেন্টে দেখুন', cIconX + 22, actionY + 33);
+    ctx.fillText(isEnglish ? 'Full story in first comment' : 'বিস্তারিত প্রথম কমেন্টে দেখুন', cIconX + 22, actionY + 33);
     ctx.restore();
 
     // 7. FULL-WIDTH Follow Ticker Strip (1080px Edge-to-Edge!)
@@ -998,10 +1056,10 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = ribbonText;
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ', width / 2, ribbonY + ribbonH / 2);
+    ctx.fillText(isEnglish ? 'Follow & Share • Trending News World Official Page' : 'ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ', width / 2, ribbonY + ribbonH / 2);
     ctx.restore();
   }
 
@@ -1018,7 +1076,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // A. Studio Red Gradient Background
     const bgGrad = ctx.createRadialGradient(540, 360, 40, 540, 540, 780);
@@ -1073,10 +1132,10 @@ export class ReelVideoRenderer {
       ctx.fillRect(photoX, photoY, photoW, photoH);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 32px "Hind Siliguri", sans-serif';
+      ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 32px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('BD News 24/7 • শীর্ষ সংবাদ', photoX + photoW / 2, photoY + photoH / 2);
+      ctx.fillText(isEnglish ? 'Trending News World • Special Report' : 'BD News 24/7 • শীর্ষ সংবাদ', photoX + photoW / 2, photoY + photoH / 2);
     }
     ctx.restore();
 
@@ -1091,8 +1150,8 @@ export class ReelVideoRenderer {
 
     // C. Top Category Badge with Pulsing Live Indicator
     ctx.save();
-    ctx.font = 'bold 28px "Hind Siliguri", sans-serif';
-    const catTextWidth = ctx.measureText(category).width;
+    ctx.font = isEnglish ? 'bold 26px sans-serif' : 'bold 28px "Hind Siliguri", sans-serif';
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'SPECIAL REPORT') : (category || 'SPECIAL REPORT');
     const dotRadius = 5 + Math.sin(f * 0.4) * 1.5;
 
     ctx.beginPath();
@@ -1106,20 +1165,20 @@ export class ReelVideoRenderer {
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SPECIAL REPORT', 78, 52);
+    ctx.fillText(displayCategory, 78, 52);
 
     ctx.font = '500 20px sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.textAlign = 'right';
-    ctx.fillText('LIKE & FOLLOW for more', width - 45, 52);
+    ctx.fillText(isEnglish ? 'LIKE & FOLLOW for updates' : 'LIKE & FOLLOW for more', width - 45, 52);
     ctx.restore();
 
-    // D. Centered Brand Bar (Logo + "বিডি নিউজ ২৪/৭")
+    // D. Centered Brand Bar (Logo + Brand Name)
     const brandCenterY = 545;
     const logoSize = 72;
     ctx.save();
-    ctx.font = 'bold 44px "Hind Siliguri", sans-serif';
-    const brandText = 'বিডি নিউজ ২৪/৭';
+    ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 44px "Hind Siliguri", sans-serif';
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     const brandTextWidth = ctx.measureText(brandText).width;
     const brandGap = 18;
     const totalBrandWidth = logoSize + brandGap + brandTextWidth;
@@ -1140,6 +1199,23 @@ export class ReelVideoRenderer {
       ctx.beginPath();
       ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (isEnglish) {
+      ctx.save();
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(logoX + logoSize / 2, brandCenterY, 14, logoSize / 2 - 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(logoX + 8, brandCenterY);
+      ctx.lineTo(logoX + logoSize - 8, brandCenterY);
+      ctx.stroke();
+      ctx.restore();
     }
 
     ctx.fillStyle = '#ffffff';
@@ -1176,9 +1252,9 @@ export class ReelVideoRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // Bengali Headline Text
+    // Headline Text
     ctx.save();
-    ctx.fillStyle = '#800000';
+    ctx.fillStyle = isEnglish ? '#0b1329' : '#800000';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
@@ -1190,9 +1266,9 @@ export class ReelVideoRenderer {
     if (headline.length > 145) fontSize = 35;
     if (headline.length > 180) fontSize = 31;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.38);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
@@ -1234,13 +1310,14 @@ export class ReelVideoRenderer {
     ctx.textBaseline = 'middle';
     ctx.fillText('Follow us on :', iconCenterX + iconRadius + 10, iconCenterY);
 
+    const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toLowerCase();
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(website, iconCenterX + iconRadius + 130, iconCenterY);
+    ctx.fillText(cleanWebsite, iconCenterX + iconRadius + (isEnglish ? 120 : 130), iconCenterY);
     ctx.restore();
 
     ctx.save();
-    const ribbonW = 210;
+    const ribbonW = isEnglish ? 275 : 210;
     const ribbonX = width - 45 - ribbonW;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -1265,10 +1342,10 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 18px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, footerY + footerH / 2 + 1);
+    ctx.fillText(isEnglish ? 'Full Story in Comments' : 'বিস্তারিত কমেন্টে', cIconX + (isEnglish ? 14 : 18), footerY + footerH / 2 + 1);
     ctx.restore();
   }
 
@@ -1285,7 +1362,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // A. Dark TV Newsroom Background
     const bgRad = ctx.createRadialGradient(540, 540, 60, 540, 540, 750);
@@ -1311,12 +1389,12 @@ export class ReelVideoRenderer {
     ctx.fillRect(0, 80, width, 6);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 30px sans-serif' : 'bold 36px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
     ctx.shadowBlur = 10;
-    ctx.fillText('⚡ ব্রেকিং নিউজ • BREAKING NEWS ⚡', width / 2, 42);
+    ctx.fillText(isEnglish ? '⚡ BREAKING NEWS • SPECIAL DISPATCH ⚡' : '⚡ ব্রেকিং নিউজ • BREAKING NEWS ⚡', width / 2, 42);
     ctx.restore();
 
     // C. Photo Box with Gold & Crimson Dual Border
@@ -1381,12 +1459,12 @@ export class ReelVideoRenderer {
     }
     ctx.save();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 8;
-    ctx.fillText('BD NEWS 24/7', photoX + 90, photoY + 48);
+    ctx.fillText(isEnglish ? 'TRENDING NEWS WORLD' : 'BD NEWS 24/7', photoX + 90, photoY + 48);
     ctx.restore();
 
     // D. High-Visibility Headline Box
@@ -1421,7 +1499,7 @@ export class ReelVideoRenderer {
     ctx.fill();
     ctx.restore();
 
-    // Bengali Headline Text with Yellow Accent
+    // Headline Text with Yellow Accent
     ctx.save();
     const maxTextWidth = boxW - 120;
     let fontSize = 52;
@@ -1430,12 +1508,12 @@ export class ReelVideoRenderer {
     if (headline.length > 115) fontSize = 39;
     if (headline.length > 145) fontSize = 34;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.38);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
     const startY = boxY + (boxH - totalTextHeight) / 2;
 
@@ -1462,10 +1540,16 @@ export class ReelVideoRenderer {
 
     const tickerOffset = (progress * 300) % 600;
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🔴 BD NEWS 24/7 • শীর্ষ সংবাদ আপডেট • চোখ রাখুন আমাদের পেজে • বিস্তারিত কমেন্টে 🔴', width / 2 - tickerOffset + 150, 990);
+    ctx.fillText(
+      isEnglish
+        ? '🔴 TRENDING NEWS WORLD • TOP DISPATCHES • FOLLOW FOR LIVE UPDATES • FULL STORY IN COMMENTS 🔴'
+        : '🔴 BD NEWS 24/7 • শীর্ষ সংবাদ আপডেট • চোখ রাখুন আমাদের পেজে • বিস্তারিত কমেন্টে 🔴',
+      width / 2 - tickerOffset + 150,
+      990
+    );
     ctx.restore();
   }
 
@@ -1482,7 +1566,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // A. Obsidian Background with Ambient Cyan Glow
     const bgRad = ctx.createRadialGradient(540, 200, 60, 540, 540, 800);
@@ -1509,15 +1594,16 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = '#22d3ee';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(category, 86, 51);
+    const catText = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'WORLD DESK') : (category || 'আন্তর্জাতিক');
+    ctx.fillText(catText, 86, 51);
 
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 18px monospace';
     ctx.textAlign = 'right';
-    ctx.fillText('BD NEWS 24/7 DIGITAL', width - 45, 51);
+    ctx.fillText(isEnglish ? 'TRENDING NEWS WORLD WIRE' : 'BD NEWS 24/7 DIGITAL', width - 45, 51);
     ctx.restore();
 
     // C. Letterboxed Photo Frame
@@ -1579,10 +1665,10 @@ export class ReelVideoRenderer {
 
     ctx.save();
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 38px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 38px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2 - 60, brandCenterY + 2);
+    ctx.fillText(isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭', width / 2 - 60, brandCenterY + 2);
     ctx.restore();
 
     // E. Frosted Dark Glass Headline Card
@@ -1620,13 +1706,13 @@ export class ReelVideoRenderer {
     if (headline.length > 115) fontSize = 36;
     if (headline.length > 145) fontSize = 32;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
     ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.38);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
@@ -1646,11 +1732,12 @@ export class ReelVideoRenderer {
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toLowerCase();
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🌐 ' + website, 75, footerY + 25);
+    ctx.fillText('🌐 ' + cleanWebsite, 75, footerY + 25);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
@@ -1661,9 +1748,9 @@ export class ReelVideoRenderer {
     ctx.stroke();
 
     ctx.fillStyle = '#e2e8f0';
-    ctx.font = 'bold 20px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 18px sans-serif' : 'bold 20px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('💬 বিস্তারিত কমেন্টে পড়ুন', width - 45 - 140, footerY + 25);
+    ctx.fillText(isEnglish ? '💬 Full story in comments' : '💬 বিস্তারিত কমেন্টে পড়ুন', width - 45 - 140, footerY + 25);
     ctx.restore();
   }
 
@@ -1681,7 +1768,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // A. Multi-stop Category Background Gradient
     const bgGrad = ctx.createLinearGradient(0, 0, width, height);
@@ -1712,11 +1800,13 @@ export class ReelVideoRenderer {
     ctx.restore();
 
     // C. Top Category Badge with Animated Live Pulsing Beacon
-    const displayCategory = (category || style.banglaName || 'সংবাদ').trim();
+    const displayCategory = isEnglish
+      ? (isEnglishText(category) && category !== 'সাধারণ' ? category.toUpperCase() : 'BREAKING NEWS')
+      : (category || style.banglaName || 'সংবাদ').trim();
     ctx.save();
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     const textWidth = ctx.measureText(displayCategory).width;
-    const badgeW = Math.max(220, textWidth + 80);
+    const badgeW = Math.max(isEnglish ? 240 : 220, textWidth + 80);
     const badgeH = 48;
     const badgeX = 50;
     const badgeY = 28;
@@ -1761,11 +1851,11 @@ export class ReelVideoRenderer {
 
     // Top Right Follow CTA
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'right';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     ctx.shadowBlur = 8;
-    ctx.fillText('লাইক ও ফলো করুন', width - 50, beaconY);
+    ctx.fillText(isEnglish ? 'LIKE & FOLLOW' : 'লাইক ও ফলো করুন', width - 50, beaconY);
     ctx.restore();
 
     // D. Floating 3D Framed Photo Box with Ken Burns Motion
@@ -1822,19 +1912,28 @@ export class ReelVideoRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // E. Center Brand Section with Pulsing Logo Halo
+    // E. Center Brand Section with Dynamic Logo + Channel Typography
     const brandCenterY = 538;
     const logoSize = 68;
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     ctx.save();
+    ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 42px "Hind Siliguri", sans-serif';
+    const brandTextWidth = ctx.measureText(brandText).width;
+    const brandGap = 16;
+    const totalBrandWidth = logoSize + brandGap + brandTextWidth;
+    const brandStartX = (width - totalBrandWidth) / 2;
+    const logoCenterX = brandStartX + logoSize / 2;
+    const textStartX = brandStartX + logoSize + brandGap;
+
     if (logoImg) {
       // Circular Logo
       ctx.save();
       ctx.beginPath();
-      ctx.arc(width / 2 - 110, brandCenterY, logoSize / 2, 0, Math.PI * 2);
+      ctx.arc(logoCenterX, brandCenterY, logoSize / 2, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(
         logoImg,
-        width / 2 - 110 - logoSize / 2,
+        logoCenterX - logoSize / 2,
         brandCenterY - logoSize / 2,
         logoSize,
         logoSize
@@ -1845,20 +1944,35 @@ export class ReelVideoRenderer {
       ctx.strokeStyle = `rgba(255, 255, 255, ${0.45 + Math.sin(f * 0.25) * 0.3})`;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(width / 2 - 110, brandCenterY, logoSize / 2 + 3, 0, Math.PI * 2);
+      ctx.arc(logoCenterX, brandCenterY, logoSize / 2 + 3, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (isEnglish) {
+      // Clean Globe Vector Emblem Fallback
+      ctx.save();
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.arc(logoCenterX, brandCenterY, logoSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(logoCenterX, brandCenterY, 12, logoSize / 2 - 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(logoCenterX - logoSize / 2 + 6, brandCenterY);
+      ctx.lineTo(logoCenterX + logoSize / 2 - 6, brandCenterY);
+      ctx.stroke();
+      ctx.restore();
     }
-    ctx.restore();
 
     // Brand Name Typography
-    ctx.save();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
     ctx.shadowBlur = 12;
-    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2 - 60, brandCenterY + 2);
+    ctx.fillText(brandText, textStartX, brandCenterY + 2);
     ctx.restore();
 
     // F. Headline White Card with Smooth Slide Entrance and Organic Float
@@ -1889,7 +2003,7 @@ export class ReelVideoRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // Headline Bengali Typography
+    // Headline Typography
     ctx.save();
     const maxTextWidth = cardW - 80;
     let fontSize = 52;
@@ -1898,13 +2012,13 @@ export class ReelVideoRenderer {
     if (headline.length > 115) fontSize = 40;
     if (headline.length > 145) fontSize = 35;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
     ctx.fillStyle = style.headlineColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.38);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
@@ -1918,6 +2032,7 @@ export class ReelVideoRenderer {
     const footerY = 935;
 
     // Website Pill (Left)
+    const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toLowerCase();
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.beginPath();
     ctx.roundRect(50, footerY, 460, 52, 26);
@@ -1933,14 +2048,14 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText((website || 'bdnews.site').toLowerCase(), 98, footerY + 26);
+    ctx.fillText(cleanWebsite, 98, footerY + 26);
 
-    // Call-To-Action Pill "বিস্তারিত কমেন্টে" (Right) with Attention Bounce
+    // Call-To-Action Pill (Right) with Attention Bounce
     const btnFloat = Math.sin(f * 0.22) * 2;
-    const rightPillW = 280;
+    const rightPillW = isEnglish ? 300 : 280;
     const rightPillX = width - 50 - rightPillW;
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
@@ -1953,7 +2068,7 @@ export class ReelVideoRenderer {
 
     // Vector Chat Bubble Icon
     ctx.fillStyle = style.gradientStops[1];
-    const cIconX = rightPillX + 35;
+    const cIconX = rightPillX + (isEnglish ? 28 : 35);
     const cIconY = footerY + btnFloat + 26;
     ctx.beginPath();
     ctx.roundRect(cIconX - 10, cIconY - 8, 18, 13, 3);
@@ -1965,10 +2080,10 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = style.gradientStops[0];
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('বিস্তারিত কমেন্টে', cIconX + 18, cIconY);
+    ctx.fillText(isEnglish ? 'Full Story in Comments' : 'বিস্তারিত কমেন্টে', cIconX + 16, cIconY);
     ctx.restore();
   }
 
@@ -1985,7 +2100,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     this.renderCategoryReelFrame(
       CATEGORY_STYLES['cat-international'],
@@ -1998,7 +2114,8 @@ export class ReelVideoRenderer {
       logoImg,
       headline,
       category,
-      website
+      website,
+      isEnglish
     );
   }
 
@@ -2015,7 +2132,8 @@ export class ReelVideoRenderer {
     logoImg: any,
     headline: string,
     category: string,
-    website: string
+    website: string,
+    isEnglish: boolean = false
   ): void {
     // A. 9:16 Vertical Gradient Background (1080x1920)
     const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
@@ -2048,12 +2166,12 @@ export class ReelVideoRenderer {
 
     ctx.save();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 46px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 40px sans-serif' : 'bold 46px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 12;
-    ctx.fillText('বিডি নিউজ ২৪/৭', width / 2, 225);
+    ctx.fillText(isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭', width / 2, 225);
 
     // Live pill
     ctx.fillStyle = '#ef4444';
@@ -2067,9 +2185,10 @@ export class ReelVideoRenderer {
     ctx.fillStyle = '#ffffff';
     ctx.fill();
 
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : category;
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
-    ctx.fillText('লাইভ ব্রেকিং • ' + category, width / 2 + 10, 279);
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.fillText(isEnglish ? 'LIVE BREAKING • ' + displayCategory : 'লাইভ ব্রেকিং • ' + category, width / 2 + 10, 279);
     ctx.restore();
 
     // C. Massive Central Photo Box (1000x880)
@@ -2141,7 +2260,7 @@ export class ReelVideoRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // Bengali Headline Text
+    // Headline Text
     ctx.save();
     const maxTextWidth = cardW - 100;
     let fontSize = 54;
@@ -2150,13 +2269,13 @@ export class ReelVideoRenderer {
     if (headline.length > 115) fontSize = 42;
     if (headline.length > 145) fontSize = 38;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
-    ctx.fillStyle = '#7f1d1d';
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.fillStyle = isEnglish ? '#0b1329' : '#7f1d1d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * 1.4);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.4));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
@@ -2173,11 +2292,12 @@ export class ReelVideoRenderer {
     ctx.roundRect(40, pillY, 460, 60, 30);
     ctx.fill();
 
+    const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toLowerCase();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🌐 ' + website, 75, pillY + 30);
+    ctx.fillText('🌐 ' + cleanWebsite, 75, pillY + 30);
 
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -2185,9 +2305,9 @@ export class ReelVideoRenderer {
     ctx.fill();
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('💬 বিস্তারিত কমেন্টে', width - 40 - 120, pillY + 30);
+    ctx.fillText(isEnglish ? '💬 Full story in comments' : '💬 বিস্তারিত কমেন্টে', width - 40 - 120, pillY + 30);
 
     // Follow Ribbon (y: 1800)
     const ribbonY = 1800;
@@ -2200,9 +2320,9 @@ export class ReelVideoRenderer {
     ctx.stroke();
 
     ctx.fillStyle = '#fca5a5';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('👆 ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ', width / 2, ribbonY + 30);
+    ctx.fillText(isEnglish ? '👆 Follow & Share • Trending News World Official Page' : '👆 ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ', width / 2, ribbonY + 30);
     ctx.restore();
   }
 }
