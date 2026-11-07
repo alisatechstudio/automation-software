@@ -210,9 +210,7 @@
       } else if (tabId === 'pages' || tabId === 'groups' || tabId === 'youtube' || tabId === 'tiktok') {
         targetBtnId = 'nav-btn-output';
         tabNameLabel = tabId === 'pages' ? 'Facebook Pages' : tabId === 'groups' ? 'Facebook Groups' : tabId === 'youtube' ? 'YouTube Shorts' : 'TikTok IDs';
-      } else if (tabId === 'settings') {
-        targetBtnId = 'nav-btn-settings';
-        tabNameLabel = 'Settings';
+
       }
 
       const activeBtn = document.getElementById(targetBtnId);
@@ -280,7 +278,6 @@
       if (tabId === 'gdrive-reels') loadGDriveReels();
       if (tabId === 'youtube') loadYouTube();
       if (tabId === 'tiktok') loadTikTokTab();
-      if (tabId === 'settings') loadSettings();
     }
 
     // --- SAFE JSON FETCHER ---
@@ -1287,75 +1284,6 @@
         loadTikTokTab();
       } else {
         showToast(res.data?.error || 'Failed saving TikTok settings', true);
-      }
-    }
-
-    async function loadSettings() {
-      initCronPills();
-      const res = await safeFetchJson('/api/settings');
-      const d = res.data || {};
-      document.getElementById('setting-cron').value = d.POLL_INTERVAL_CRON || '*/10 * * * *';
-      document.getElementById('setting-age').value = d.MAX_ARTICLE_AGE_HOURS || 24;
-      document.getElementById('setting-cap').value = d.MAX_POSTS_PER_HOUR || 10;
-      document.getElementById('setting-min-delay').value = d.MIN_DELAY_SECONDS || 30;
-      document.getElementById('setting-max-delay').value = d.MAX_DELAY_SECONDS || 60;
-      document.getElementById('setting-hashtags').value = d.DEFAULT_HASHTAGS || '';
-      document.getElementById('setting-caption-format').value = d.DEFAULT_CAPTION_FORMAT || '';
-      document.getElementById('setting-comment-format').value = d.DEFAULT_COMMENT_FORMAT || '';
-      try {
-        const tikRes = await safeFetchJson('/api/tiktok/status');
-        if (tikRes.ok && document.getElementById('setting-tiktok-badge')) {
-          const badge = document.getElementById('setting-tiktok-badge');
-          badge.innerText = tikRes.data?.configured ? 'Active (Live API)' : 'Safe Simulated Mode';
-          badge.className = 'px-1.5 py-0.2 rounded text-[9px] font-mono ' + (tikRes.data?.configured ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40' : 'bg-slate-800 text-slate-400');
-        }
-      } catch {}
-    }
-
-    function setHashtagPreset(type) {
-      const el = document.getElementById('setting-hashtags');
-      if (!el) return;
-      if (type === 'usa') {
-        el.value = '#TrendingNewsWorld #USNews #BreakingNews #WorldNews #TrendingNews #NewsUpdate #USA #Headlines';
-      } else {
-        el.value = '#BreakingNews #BanglaNews #ViralNews #Bangladesh #NewsUpdate';
-      }
-    }
-
-    async function handleSaveSettings(e) {
-      e.preventDefault();
-      const payload = {
-        POLL_INTERVAL_CRON: document.getElementById('setting-cron').value,
-        MAX_ARTICLE_AGE_HOURS: document.getElementById('setting-age').value,
-        MAX_POSTS_PER_HOUR: document.getElementById('setting-cap').value,
-        MIN_DELAY_SECONDS: document.getElementById('setting-min-delay').value,
-        MAX_DELAY_SECONDS: document.getElementById('setting-max-delay').value,
-        DEFAULT_HASHTAGS: document.getElementById('setting-hashtags').value,
-        DEFAULT_CAPTION_FORMAT: document.getElementById('setting-caption-format').value,
-        DEFAULT_COMMENT_FORMAT: document.getElementById('setting-comment-format').value,
-      };
-
-      const res = await safeFetchJson('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const tikTokToken = document.getElementById('setting-tiktok-token')?.value;
-      const tikTokKey = document.getElementById('setting-tiktok-key')?.value;
-      if (tikTokToken || tikTokKey) {
-        await safeFetchJson('/api/tiktok/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accessToken: tikTokToken, clientKey: tikTokKey })
-        });
-      }
-
-      if (res.data?.success) {
-        showToast('Pipeline configuration saved!');
-        loadSettings();
-      } else {
-        showToast(res.data?.error || 'Failed to save settings', true);
       }
     }
 
