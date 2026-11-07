@@ -1,17 +1,20 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { ArticleDedupeService } from '../rss/dedupe.js';
 import { QueueWorker } from '../queue/worker.js';
+import { LocalReelService } from '../local-reels/service.js';
 import { isMongoConnected, initMongoDb } from '../../db/index.js';
 import { config } from '../../config/env.js';
 
 export class PipelineCoordinator {
   private dedupeService: ArticleDedupeService;
   private worker: QueueWorker;
+  private localReelService: LocalReelService;
   private cronTask: ScheduledTask | null = null;
 
   constructor() {
     this.dedupeService = new ArticleDedupeService();
     this.worker = new QueueWorker();
+    this.localReelService = new LocalReelService();
   }
 
   public async start(): Promise<void> {
@@ -20,7 +23,14 @@ export class PipelineCoordinator {
     // 1. Start queue worker
     this.worker.start();
 
-    // 2. Perform initial RSS poll upon startup if MongoDB is ready
+    // 2. Start local folder reels automated scheduler
+    try {
+      await this.localReelService.startScheduler();
+    } catch (lErr: any) {
+      console.warn('[Coordinator] Note starting Local Reel scheduler:', lErr.message);
+    }
+
+    // 3. Perform initial RSS poll upon startup if MongoDB is ready
     if (isMongoConnected()) {
       console.log('[Coordinator] Triggering initial RSS poll on startup...');
       this.dedupeService
@@ -30,7 +40,7 @@ export class PipelineCoordinator {
       console.log('[Coordinator] Waiting for MongoDB connection before initial RSS poll...');
     }
 
-    // 3. Schedule cron job
+    // 4. Schedule cron job
     const cronExpr = config.POLL_INTERVAL_CRON;
     if (cron.validate(cronExpr)) {
       this.cronTask = cron.schedule(cronExpr, async () => {
@@ -57,8 +67,10 @@ export class PipelineCoordinator {
       this.cronTask.stop();
       this.cronTask = null;
     }
+    this.localReelService.stopScheduler();
     this.worker.stop();
     console.log('[Coordinator] Pipeline coordinator stopped cleanly.');
   }
 }
+
 
