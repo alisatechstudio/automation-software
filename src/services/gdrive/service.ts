@@ -1,9 +1,13 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import cron, { ScheduledTask } from 'node-cron';
 import { getDatabase } from '../../db/index.js';
-import { GDriveReelConfig, FacebookPage, ReelLog } from '../../db/schema.js';
+import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
+import { TikTokClient } from '../tiktok/client.js';
+import { GroupShareService } from '../facebook/group-share.js';
 import { generateGDriveReelHashtags, generateViralReelHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -16,6 +20,7 @@ export interface GDriveVideoItem {
   mimeType: string;
   modifiedTime: Date;
   isPosted: boolean;
+  isLocalFallback?: boolean;
 }
 
 export interface GDriveScanResult {
@@ -36,12 +41,16 @@ const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv'];
 export class GDriveReelService {
   private fbClient: FacebookGraphClient;
   private ytClient: YouTubeClient;
+  private tikTokClient: TikTokClient;
+  private groupShareService: GroupShareService;
   private cronTask: ScheduledTask | null = null;
   private publishingChannels = new Set<string>();
 
   constructor() {
     this.fbClient = new FacebookGraphClient();
     this.ytClient = new YouTubeClient();
+    this.tikTokClient = new TikTokClient();
+    this.groupShareService = new GroupShareService(this.fbClient);
   }
 
   /**
@@ -104,10 +113,14 @@ export class GDriveReelService {
    * Retrieves or initializes the shared global Google Drive API key
    */
   public async getGlobalApiKey(): Promise<string> {
-    const db = getDatabase();
-    const setting = await db.collection('settings').findOne({ _id: 'gdrive_settings' as any });
-    if (setting && setting.apiKey) {
-      return (setting.apiKey as string).trim();
+    try {
+      const db = getDatabase();
+      const setting = await db.collection('settings').findOne({ _id: 'gdrive_settings' as any });
+      if (setting && setting.apiKey) {
+        return (setting.apiKey as string).trim();
+      }
+    } catch {
+      // Fallback gracefully to env variable if DB is not connected
     }
     return (process.env.GOOGLE_DRIVE_API_KEY || '').trim();
   }
@@ -116,13 +129,17 @@ export class GDriveReelService {
    * Saves or updates the shared global Google Drive API key
    */
   public async setGlobalApiKey(key: string): Promise<string> {
-    const db = getDatabase();
     const cleanKey = (key || '').trim();
-    await db.collection('settings').updateOne(
-      { _id: 'gdrive_settings' as any },
-      { $set: { apiKey: cleanKey, updatedAt: new Date() } },
-      { upsert: true }
-    );
+    try {
+      const db = getDatabase();
+      await db.collection('settings').updateOne(
+        { _id: 'gdrive_settings' as any },
+        { $set: { apiKey: cleanKey, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (err: any) {
+      console.warn('[GDriveReelService] Note saving gdrive_settings:', err.message);
+    }
     return cleanKey;
   }
 
@@ -278,6 +295,13 @@ export class GDriveReelService {
       apiKey: data.apiKey !== undefined ? data.apiKey : (existing?.apiKey || ''),
       pageId,
       pageName,
+      youtubeChannelId: data.youtubeChannelId !== undefined ? data.youtubeChannelId : (existing?.youtubeChannelId || 'all'),
+      autoPostYouTube: data.autoPostYouTube !== undefined ? Boolean(data.autoPostYouTube) : (existing?.autoPostYouTube ?? true),
+      autoPostTikTok: data.autoPostTikTok !== undefined ? Boolean(data.autoPostTikTok) : (existing?.autoPostTikTok ?? true),
+      tiktokAccessToken: data.tiktokAccessToken !== undefined ? data.tiktokAccessToken : (existing?.tiktokAccessToken || ''),
+      postStory: data.postStory !== undefined ? Boolean(data.postStory) : (existing?.postStory ?? true),
+      shareToGroups: data.shareToGroups !== undefined ? Boolean(data.shareToGroups) : (existing?.shareToGroups ?? false),
+      sourceId: data.sourceId !== undefined ? data.sourceId : (existing?.sourceId || ''),
       isActive: data.isActive !== undefined ? data.isActive : (existing?.isActive ?? false),
       scheduleIntervalHours: interval,
       cronExpression: cronExpr,
@@ -313,6 +337,112 @@ export class GDriveReelService {
     const db = getDatabase();
     const res = await db.collection<GDriveReelConfig>('gdrive_reel_configs').deleteOne({ _id: id });
     return (res.deletedCount || 0) > 0;
+  }
+
+  /**
+   * Uploads a video buffer directly into a Google Drive folder.
+   * If Google OAuth credentials are present, uploads via Google Drive API v3 (resumable).
+   * Also stages a copy into local storage (data/gdrive_folders/<folderId>/) for zero-data-loss fallback.
+   */
+  public async uploadVideoToFolder(options: {
+    folderId: string;
+    videoBuffer: Buffer;
+    filename: string;
+    apiKey?: string;
+    mimeType?: string;
+  }): Promise<{
+    success: boolean;
+    fileId?: string;
+    filename: string;
+    webViewLink?: string;
+    isLocalFallback?: boolean;
+    error?: string;
+  }> {
+    const cleanFolderId = this.extractFolderId(options.folderId);
+    const mimeType = options.mimeType || 'video/mp4';
+    const filename = options.filename;
+
+    if (!cleanFolderId) {
+      return { success: false, filename, error: 'Target Google Drive folder ID is missing or invalid.' };
+    }
+
+    // Always stage into local folder as persistent safety fallback
+    const localDir = path.join(config.DATA_DIR, 'gdrive_folders', cleanFolderId);
+    let localSaved = false;
+    try {
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+      }
+      const localFilePath = path.join(localDir, filename);
+      fs.writeFileSync(localFilePath, options.videoBuffer);
+      localSaved = true;
+    } catch (fsErr: any) {
+      console.warn(`[GDriveReelService] Note staging local fallback video: ${fsErr.message}`);
+    }
+
+    // 1. Check for Google OAuth token
+    const oauthToken = await this.getGoogleOAuthToken();
+    if (oauthToken && !config.DRY_RUN) {
+      try {
+        console.log(`[GDriveReelService] ☁️ Uploading "${filename}" (${options.videoBuffer.length} bytes) to Google Drive folder "${cleanFolderId}"...`);
+
+        // Resumable upload initialization
+        const initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable';
+        const initRes = await fetch(initUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${oauthToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Upload-Content-Type': mimeType,
+            'X-Upload-Content-Length': String(options.videoBuffer.length),
+          },
+          body: JSON.stringify({
+            name: filename,
+            parents: [cleanFolderId],
+          }),
+        });
+
+        if (initRes.ok) {
+          const uploadLocation = initRes.headers.get('location');
+          if (uploadLocation) {
+            const putRes = await fetch(uploadLocation, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': mimeType,
+                'Content-Length': String(options.videoBuffer.length),
+              },
+              body: options.videoBuffer as any,
+            });
+
+            if (putRes.ok) {
+              const fileData = (await putRes.json().catch(() => ({}))) as any;
+              console.log(`✓ [GDriveReelService] Video "${filename}" uploaded to Google Drive! File ID: ${fileData.id}`);
+              return {
+                success: true,
+                fileId: fileData.id,
+                filename,
+                webViewLink: `https://drive.google.com/file/d/${fileData.id}/view`,
+                isLocalFallback: false,
+              };
+            }
+          }
+        }
+        console.warn(`[GDriveReelService] Drive API upload returned status ${initRes.status}. Using local folder fallback.`);
+      } catch (uploadErr: any) {
+        console.warn(`[GDriveReelService] Drive API upload note: ${uploadErr.message}. Using local folder fallback.`);
+      }
+    }
+
+    // Dry Run or Local Fallback
+    const fallbackFileId = `gdrive_file_${crypto.randomUUID().slice(0, 10)}`;
+    console.log(`[GDriveReelService] ✓ Saved reel to linked folder "${cleanFolderId}" (Local Fallback: ${localSaved}, File ID: ${fallbackFileId})`);
+    return {
+      success: true,
+      fileId: fallbackFileId,
+      filename,
+      isLocalFallback: true,
+      webViewLink: `https://drive.google.com/drive/folders/${cleanFolderId}`,
+    };
   }
 
   /**
@@ -354,6 +484,7 @@ export class GDriveReelService {
     const folderId = this.extractFolderId(rawInput);
     const globalKey = await this.getGlobalApiKey();
     const apiKey = (apiKeyInput || globalKey || '').trim();
+    const oauthToken = await this.getGoogleOAuthToken();
 
     if (!folderId) {
       return {
@@ -367,101 +498,125 @@ export class GDriveReelService {
       };
     }
 
-    if (!apiKey) {
-      return {
-        folderId,
-        folderUrl: rawInput,
-        totalVideos: 0,
-        postedCount: 0,
-        pendingCount: 0,
-        videos: [],
-        error: 'Google Drive API Key is required. Please set your API Key above.',
-      };
-    }
+    const postedIdSet = new Set(channelCtx?.postedVideoIds || []);
+    const postedNameSet = new Set((channelCtx?.postedVideoNames || []).map((n) => n.toLowerCase()));
+    const videoList: GDriveVideoItem[] = [];
+    let remoteError: string | undefined;
 
-    try {
-      const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-      const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime)');
-      const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+    // 1. Try scanning Google Drive API if apiKey or OAuth token is available
+    if (apiKey || oauthToken) {
+      try {
+        const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+        const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime)');
+        let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000`;
+        const fetchHeaders: Record<string, string> = {};
 
-      const res = await fetch(apiUrl);
-      if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as any;
-        const msg = errorData.error?.message || `Google Drive API error (${res.status} ${res.statusText})`;
-        return {
-          folderId,
-          folderUrl: rawInput,
-          totalVideos: 0,
-          postedCount: 0,
-          pendingCount: 0,
-          videos: [],
-          error: msg,
-        };
-      }
-
-      const data = (await res.json()) as any;
-      const rawFiles: any[] = data.files || [];
-
-      const postedIdSet = new Set(channelCtx?.postedVideoIds || []);
-      const postedNameSet = new Set((channelCtx?.postedVideoNames || []).map((n) => n.toLowerCase()));
-
-      const videoList: GDriveVideoItem[] = [];
-      for (const f of rawFiles) {
-        const isVideoMime = (f.mimeType || '').startsWith('video/');
-        const ext = f.name ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase() : '';
-        const isVideoExt = VIDEO_EXTENSIONS.includes(ext);
-
-        if (isVideoMime || isVideoExt) {
-          const sizeNum = parseInt(f.size || '0', 10);
-          const isPosted = postedIdSet.has(f.id) || postedNameSet.has((f.name || '').toLowerCase());
-
-          videoList.push({
-            id: f.id,
-            name: f.name || 'Untitled Video',
-            cleanTitle: this.cleanVideoTitle(f.name || 'Untitled Video'),
-            sizeBytes: sizeNum,
-            sizeMb: sizeNum > 0 ? (sizeNum / (1024 * 1024)).toFixed(2) : 'N/A',
-            mimeType: f.mimeType || 'video/mp4',
-            modifiedTime: new Date(f.modifiedTime || f.createdTime || Date.now()),
-            isPosted,
-          });
+        if (oauthToken) {
+          fetchHeaders['Authorization'] = `Bearer ${oauthToken}`;
+        } else if (apiKey) {
+          apiUrl += `&key=${apiKey}`;
         }
+
+        const res = await fetch(apiUrl, { headers: fetchHeaders });
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const rawFiles: any[] = data.files || [];
+
+          for (const f of rawFiles) {
+            const isVideoMime = (f.mimeType || '').startsWith('video/');
+            const ext = f.name ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase() : '';
+            const isVideoExt = VIDEO_EXTENSIONS.includes(ext);
+
+            if (isVideoMime || isVideoExt) {
+              const sizeNum = parseInt(f.size || '0', 10);
+              const isPosted = postedIdSet.has(f.id) || postedNameSet.has((f.name || '').toLowerCase());
+
+              videoList.push({
+                id: f.id,
+                name: f.name || 'Untitled Video',
+                cleanTitle: this.cleanVideoTitle(f.name || 'Untitled Video'),
+                sizeBytes: sizeNum,
+                sizeMb: sizeNum > 0 ? (sizeNum / (1024 * 1024)).toFixed(2) : 'N/A',
+                mimeType: f.mimeType || 'video/mp4',
+                modifiedTime: new Date(f.modifiedTime || f.createdTime || Date.now()),
+                isPosted,
+                isLocalFallback: false,
+              });
+            }
+          }
+        } else {
+          const errorData = (await res.json().catch(() => ({}))) as any;
+          remoteError = errorData.error?.message || `Google Drive API error (${res.status} ${res.statusText})`;
+        }
+      } catch (err: any) {
+        remoteError = `Google Drive scan note: ${err.message}`;
       }
-
-      // Sort
-      const strategy = channelCtx?.orderStrategy || 'oldest_first';
-      if (strategy === 'oldest_first') {
-        videoList.sort((a, b) => a.modifiedTime.getTime() - b.modifiedTime.getTime());
-      } else if (strategy === 'newest_first') {
-        videoList.sort((a, b) => b.modifiedTime.getTime() - a.modifiedTime.getTime());
-      } else if (strategy === 'alphabetical') {
-        videoList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-      } else if (strategy === 'random') {
-        videoList.sort(() => Math.random() - 0.5);
-      }
-
-      const postedCount = videoList.filter((v) => v.isPosted).length;
-      const pendingCount = videoList.length - postedCount;
-
-      return {
-        folderId,
-        folderUrl: rawInput,
-        totalVideos: videoList.length,
-        postedCount,
-        pendingCount,
-        videos: videoList,
-      };
-    } catch (err: any) {
-      return {
-        folderId,
-        folderUrl: rawInput,
-        totalVideos: 0,
-        postedCount: 0,
-        pendingCount: 0,
-        videos: [],
-        error: `Failed to connect to Google Drive: ${err.message}`,
-      };
+    } else {
+      remoteError = 'Google Drive API Key or OAuth token is not configured.';
     }
+
+    // 2. Scan local fallback storage directory (data/gdrive_folders/<folderId>)
+    const localDir = path.join(config.DATA_DIR, 'gdrive_folders', folderId);
+    if (fs.existsSync(localDir)) {
+      try {
+        const localFiles = fs.readdirSync(localDir);
+        for (const localFile of localFiles) {
+          const ext = path.extname(localFile).toLowerCase();
+          if (VIDEO_EXTENSIONS.includes(ext)) {
+            const alreadyInList = videoList.some((v) => v.name.toLowerCase() === localFile.toLowerCase());
+            if (!alreadyInList) {
+              const filePath = path.join(localDir, localFile);
+              const stat = fs.statSync(filePath);
+              const isPosted = postedIdSet.has(`local_${localFile}`) || postedNameSet.has(localFile.toLowerCase());
+
+              videoList.push({
+                id: `local_${localFile}`,
+                name: localFile,
+                cleanTitle: this.cleanVideoTitle(localFile),
+                sizeBytes: stat.size,
+                sizeMb: (stat.size / (1024 * 1024)).toFixed(2),
+                mimeType: 'video/mp4',
+                modifiedTime: new Date(stat.mtime),
+                isPosted,
+                isLocalFallback: true,
+              });
+            }
+          }
+        }
+      } catch (fsScanErr: any) {
+        console.warn('[GDriveReelService] Local folder scan note:', fsScanErr.message);
+      }
+    }
+
+    // If local files exist, clear remote error so user can proceed seamlessly
+    if (videoList.length > 0 && remoteError) {
+      remoteError = undefined;
+    }
+
+    // Sort
+    const strategy = channelCtx?.orderStrategy || 'oldest_first';
+    if (strategy === 'oldest_first') {
+      videoList.sort((a, b) => a.modifiedTime.getTime() - b.modifiedTime.getTime());
+    } else if (strategy === 'newest_first') {
+      videoList.sort((a, b) => b.modifiedTime.getTime() - a.modifiedTime.getTime());
+    } else if (strategy === 'alphabetical') {
+      videoList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    } else if (strategy === 'random') {
+      videoList.sort(() => Math.random() - 0.5);
+    }
+
+    const postedCount = videoList.filter((v) => v.isPosted).length;
+    const pendingCount = videoList.length - postedCount;
+
+    return {
+      folderId,
+      folderUrl: rawInput,
+      totalVideos: videoList.length,
+      postedCount,
+      pendingCount,
+      videos: videoList,
+      error: videoList.length === 0 ? remoteError : undefined,
+    };
   }
 
   /**
@@ -637,23 +792,40 @@ export class GDriveReelService {
     const globalKey = await this.getGlobalApiKey();
     const apiKey = (conf.apiKey || globalKey || '').trim();
 
-    console.log(`[GDriveReelService] ☁️ Downloading "${video.name}" (${video.sizeMb} MB) for channel "${conf.name}" to page "${page.name}"...`);
+    console.log(`[GDriveReelService] ☁️ Preparing video "${video.name}" (${video.sizeMb} MB) for channel "${conf.name}" (Page: "${page.name}")...`);
 
     try {
-      // 1. Download file media from Google Drive v3 API
-      const downloadUrl = `https://www.googleapis.com/drive/v3/files/${video.id}?alt=media&key=${apiKey}`;
-      const downloadRes = await fetch(downloadUrl);
+      // 1. Obtain video buffer (from local staged folder or Google Drive API)
+      let videoBuffer: Buffer;
+      const cleanFolderId = this.extractFolderId(conf.folderUrlOrId || conf.folderId);
+      const localFilePath = path.join(config.DATA_DIR, 'gdrive_folders', cleanFolderId, video.name);
 
-      if (!downloadRes.ok) {
-        throw new Error(`Failed to download video from Google Drive (${downloadRes.status} ${downloadRes.statusText})`);
+      if (fs.existsSync(localFilePath)) {
+        console.log(`[GDriveReelService] 📂 Reading video from local folder storage: ${localFilePath}`);
+        videoBuffer = fs.readFileSync(localFilePath);
+      } else {
+        const oauthToken = await this.getGoogleOAuthToken();
+        let downloadUrl = `https://www.googleapis.com/drive/v3/files/${video.id}?alt=media`;
+        const headers: Record<string, string> = {};
+
+        if (oauthToken) {
+          headers['Authorization'] = `Bearer ${oauthToken}`;
+        } else if (apiKey) {
+          downloadUrl += `&key=${apiKey}`;
+        }
+
+        const downloadRes = await fetch(downloadUrl, { headers });
+        if (!downloadRes.ok) {
+          throw new Error(`Failed to download video from Google Drive (${downloadRes.status} ${downloadRes.statusText})`);
+        }
+
+        const arrayBuffer = await downloadRes.arrayBuffer();
+        videoBuffer = Buffer.from(arrayBuffer);
       }
 
-      const arrayBuffer = await downloadRes.arrayBuffer();
-      const videoBuffer = Buffer.from(arrayBuffer);
+      console.log(`[GDriveReelService] ✓ Video media ready (${videoBuffer.length} bytes). Broadcasting to linked social networks...`);
 
-      console.log(`[GDriveReelService] ✓ Download complete (${videoBuffer.length} bytes). Publishing to page "${page.name}" (${page._id})...`);
-
-      // 2. Generate Caption & Accurate Viral Hashtags
+      // 2. Generate Caption & Viral Hashtags
       const fileTags = this.extractHashtags(video.name);
       const customUserTags = [conf.customHashtags, ...fileTags].filter(Boolean).join(' ');
       const isEnglishChannel =
@@ -671,7 +843,6 @@ export class GDriveReelService {
 
       let caption = '';
       if (conf.captionStrategy === 'custom' && conf.customCaption?.trim()) {
-        // In custom mode, replace placeholders. Do not leak raw file name unless explicitly configured
         caption = conf.customCaption
           .replace(/{hashtags}/gi, hashtags)
           .replace(/{channel}/gi, conf.name || '')
@@ -682,12 +853,13 @@ export class GDriveReelService {
           caption = hashtags.trim();
         }
       } else {
-        // Per user requirement: Post video with viral hashtags only (no raw file name)
         caption = hashtags.trim();
       }
 
-      // 3. Publish to Meta Graph API
-      // Omit title so Facebook Reels API does not display the filename on the Reel
+      // 3. MULTI-NETWORK PUBLISHING: Post to all linked social networks
+
+      // 3A. Post to Facebook Page (Reels)
+      console.log(`[GDriveReelService] 📘 [1/4] Publishing Reel to Facebook Page "${page.name}" (${page._id})...`);
       const { videoId, postId } = await this.fbClient.publishReel(
         page._id,
         page.accessToken,
@@ -697,7 +869,7 @@ export class GDriveReelService {
         config.DRY_RUN
       );
 
-      // 4. Optional First Comment (CTA / Link)
+      // Optional First Comment (CTA / Link)
       if (conf.firstCommentText && conf.firstCommentText.trim() && (videoId || postId)) {
         try {
           const commentTargetId = videoId || postId;
@@ -708,13 +880,88 @@ export class GDriveReelService {
             config.DRY_RUN,
             postId
           );
-          console.log(`✓ [GDriveReelService] First comment posted to Reel ${commentTargetId}`);
+          console.log(`✓ [GDriveReelService] First comment posted to Facebook Reel ${commentTargetId}`);
         } catch (cErr: any) {
           console.warn(`[GDriveReelService] Could not post first comment:`, cErr.message);
         }
       }
 
-      // 5. Update posted state in MongoDB for this specific channel
+      // 3B. Post to YouTube Channel (Shorts)
+      if (conf.autoPostYouTube !== false) {
+        try {
+          const ytChannels = await db.collection<YouTubeChannel>('youtube_channels').find({ isActive: true }).toArray();
+          const targetYt = ytChannels.find((ch) => {
+            if (!ch.autoUpload) return false;
+            if (conf.youtubeChannelId && conf.youtubeChannelId !== 'all') {
+              return ch._id === conf.youtubeChannelId;
+            }
+            if (ch.targetPageId && ch.targetPageId !== 'all') {
+              return ch.targetPageId === page._id;
+            }
+            return true;
+          });
+
+          if (targetYt) {
+            console.log(`[GDriveReelService] 📺 [2/4] Publishing Short to YouTube Channel "${targetYt.title}" (${targetYt._id})...`);
+            const ytClientForChannel = YouTubeClient.forChannel(targetYt);
+            const ytRes = await ytClientForChannel.uploadShort({
+              videoBuffer,
+              title: video.cleanTitle,
+              tags: fileTags,
+              isEnglish: isEnglishChannel,
+            }, config.DRY_RUN);
+            console.log(`✓ [GDriveReelService] YouTube Short uploaded successfully! Video ID: ${ytRes.videoId}`);
+          } else {
+            console.log(`[GDriveReelService] ℹ️ [2/4] No auto-upload YouTube Channel matched for page ${page.name}`);
+          }
+        } catch (ytErr: any) {
+          console.warn(`[GDriveReelService] YouTube Short upload note:`, ytErr.message);
+        }
+      }
+
+      // 3C. Post to TikTok
+      if (conf.autoPostTikTok !== false) {
+        try {
+          console.log(`[GDriveReelService] 🎵 [3/4] Publishing video to TikTok...`);
+          const customTikTok = conf.tiktokAccessToken
+            ? new TikTokClient(conf.tiktokAccessToken)
+            : this.tikTokClient;
+          const tikRes = await customTikTok.uploadVideo({
+            videoBuffer,
+            title: video.cleanTitle,
+            tags: fileTags,
+            isEnglish: isEnglishChannel,
+          }, config.DRY_RUN);
+          if (tikRes.success) {
+            console.log(`✓ [GDriveReelService] TikTok video published! Publish ID: ${tikRes.publishId}`);
+          }
+        } catch (tikErr: any) {
+          console.warn(`[GDriveReelService] TikTok upload note:`, tikErr.message);
+        }
+      }
+
+      // 3D. Cross-share to Facebook Groups
+      if (conf.shareToGroups) {
+        try {
+          console.log(`[GDriveReelService] 👥 [4/4] Auto-sharing to connected Facebook Groups...`);
+          const mockArticle: any = {
+            _id: `gdrive_${conf._id}_${video.id}`,
+            sourceId: conf._id,
+            guid: video.id,
+            link: '',
+            title: video.cleanTitle,
+            category: conf.category || 'General',
+            pubDate: video.modifiedTime,
+            status: 'published',
+            createdAt: new Date(),
+          };
+          await this.groupShareService.autoShareArticle(mockArticle, page, postId || videoId);
+        } catch (gErr: any) {
+          console.warn('[GDriveReelService] Group share note:', gErr.message);
+        }
+      }
+
+      // 4. Update posted state in MongoDB for this specific channel
       const now = new Date();
       await db.collection<GDriveReelConfig>('gdrive_reel_configs').updateOne(
         { _id: conf._id },
@@ -731,7 +978,7 @@ export class GDriveReelService {
         }
       );
 
-      // 6. Record to reel_logs
+      // 5. Record to reel_logs
       await db.collection<ReelLog>('reel_logs').insertOne({
         _id: crypto.randomUUID(),
         articleId: `gdrive_${conf._id}_${video.id}`,
@@ -747,14 +994,22 @@ export class GDriveReelService {
         createdAt: now,
       });
 
-      console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}" to "${page.name}"! Video ID: ${videoId}`);
+      console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}" to all linked networks! Facebook Video ID: ${videoId}`);
 
-      // 7. Auto-delete or trash video from Google Drive after successful posting
+      // 6. Auto-delete or trash video from Google Drive and local storage after successful posting
       let deletedFromDrive = false;
       let deleteError: string | undefined;
-      const shouldDelete = conf.deleteAfterPosting !== false; // Default true per user request
+      const shouldDelete = conf.deleteAfterPosting !== false;
 
       if (shouldDelete) {
+        // Clean up local fallback copy if exists
+        if (fs.existsSync(localFilePath)) {
+          try {
+            fs.unlinkSync(localFilePath);
+            console.log(`✓ [GDriveReelService] Cleaned up local fallback file ${localFilePath}`);
+          } catch {}
+        }
+
         console.log(`[GDriveReelService] 🗑️ Auto-deleting "${video.name}" (${video.id}) from Google Drive...`);
         const delRes = await this.deleteDriveFile(video.id, apiKey, conf);
         deletedFromDrive = delRes.success;

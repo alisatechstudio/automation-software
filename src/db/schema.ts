@@ -14,6 +14,10 @@ export interface RssSource {
   url: string;
   pageId: string;
   templateId: string;
+  gdriveFolderUrlOrId?: string; // Linked Google Drive folder URL or ID for rendered reels
+  gdriveFolderId?: string; // Clean Google Drive folder ID
+  reelTheme?: string; // Predefined reel visual theme/template (e.g. auto-category, studio-red, breaking-bold)
+  reelDuration?: number; // Target video duration in seconds (default 18s)
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -24,6 +28,7 @@ export type ArticleStatus =
   | 'queued'
   | 'rendering'
   | 'rendered'
+  | 'uploaded_to_drive'
   | 'publishing'
   | 'published'
   | 'failed'
@@ -40,6 +45,10 @@ export interface NewsArticle {
   pubDate: Date;
   imageUrl?: string | null;
   status: ArticleStatus;
+  gdriveFileId?: string | null; // Google Drive File ID once uploaded to Drive folder
+  gdriveFolderId?: string | null; // Linked Google Drive Folder ID
+  renderedVideoPath?: string | null; // Local rendered MP4 path
+  gdriveUploadStatus?: 'pending' | 'uploaded' | 'failed' | 'skipped';
   createdAt: Date;
 }
 
@@ -209,6 +218,13 @@ export interface GDriveReelConfig {
   apiKey?: string; // Google Drive API Key (or fallback to global)
   pageId: string; // Target Facebook Page ID
   pageName?: string;
+  youtubeChannelId?: string; // Linked YouTube Channel ID ('all', 'auto', or specific UCxxxx ID)
+  autoPostYouTube?: boolean; // Auto-post to linked YouTube Channel as Short
+  autoPostTikTok?: boolean; // Auto-post to linked TikTok account
+  tiktokAccessToken?: string; // Optional per-folder TikTok Access Token
+  postStory?: boolean; // Auto-post story poster to Facebook Stories
+  shareToGroups?: boolean; // Auto-share post to connected Facebook Groups
+  sourceId?: string; // Optional directly linked RSS source ID
   isActive: boolean; // Automated scheduling ON/OFF
   scheduleIntervalHours: number; // e.g. 1, 2, 3, 4, 6, 12, 24
   cronExpression?: string; // e.g. "0 */2 * * *"
@@ -227,5 +243,19 @@ export interface GDriveReelConfig {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface TikTokUploadLog {
+  _id: string;
+  videoTitle: string;
+  channelId?: string;
+  channelName?: string;
+  gdriveFileId?: string | null;
+  publishId?: string | null;
+  status: 'success' | 'failed' | 'dry_run';
+  errorMessage?: string | null;
+  durationMs?: number | null;
+  createdAt: Date;
+}
+
 
 

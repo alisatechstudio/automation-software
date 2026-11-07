@@ -13,6 +13,8 @@ import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
+import { InputPipelineService } from '../../services/pipeline/input-pipeline.js';
+import { TikTokClient } from '../../services/tiktok/client.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags, generateTrendingNewsHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -25,6 +27,8 @@ const reelRenderer = new ReelVideoRenderer();
 const ytClient = new YouTubeClient();
 const dedupeService = new ArticleDedupeService();
 const gdriveReelService = new GDriveReelService();
+const inputPipeline = new InputPipelineService();
+const tikTokClient = new TikTokClient();
 
 // 1. Dashboard Overview Stats
 apiRouter.get('/stats', async (req: Request, res: Response) => {
@@ -74,32 +78,24 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
 apiRouter.get('/sources', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const sources = await db
-      .collection('rss_sources')
-      .aggregate([
-        {
-          $lookup: {
-            from: 'facebook_pages',
-            localField: 'pageId',
-            foreignField: '_id',
-            as: 'pageDoc',
-          },
-        },
-        {
-          $project: {
-            id: '$_id',
-            name: 1,
-            url: 1,
-            page_id: '$pageId',
-            template_id: '$templateId',
-            is_active: '$isActive',
-            created_at: '$createdAt',
-            page_name: { $arrayElemAt: ['$pageDoc.name', 0] },
-          },
-        },
-        { $sort: { created_at: -1 } },
-      ])
-      .toArray();
+    const rawSources = await db.collection<RssSource>('rss_sources').find({}).toArray();
+    const pages = await db.collection<FacebookPage>('facebook_pages').find({}).toArray();
+    const pageMap = new Map(pages.map((p) => [p._id, p.name]));
+
+    const sources = rawSources.map((s: any) => ({
+      id: s._id,
+      name: s.name,
+      url: s.url,
+      page_id: s.pageId || s.page_id,
+      template_id: s.templateId || s.template_id,
+      gdrive_folder_url: s.gdriveFolderUrlOrId || s.gdrive_folder_url || s.gdriveFolderId || '',
+      gdrive_folder_id: s.gdriveFolderId || s.gdrive_folder_id || '',
+      reel_theme: s.reelTheme || s.reel_theme || 'auto-category',
+      reel_duration: s.reelDuration || s.reel_duration || 18,
+      is_active: s.isActive !== undefined ? s.isActive : (s.is_active ?? true),
+      created_at: s.createdAt || s.created_at || new Date(),
+      page_name: pageMap.get(s.pageId || s.page_id) || 'Unknown Page',
+    }));
 
     res.json(sources);
   } catch (err: any) {
@@ -108,7 +104,7 @@ apiRouter.get('/sources', async (req: Request, res: Response) => {
 });
 
 apiRouter.post('/sources', async (req: Request, res: Response) => {
-  const { name, url, page_id, template_id, is_active } = req.body;
+  const { name, url, page_id, template_id, is_active, gdrive_folder_url, reel_theme, reel_duration } = req.body;
   if (!name || !url || !page_id) {
     res.status(400).json({ error: 'Name, URL, and Facebook Page are required' });
     return;
@@ -116,6 +112,8 @@ apiRouter.post('/sources', async (req: Request, res: Response) => {
 
   const db = getDatabase();
   const id = crypto.randomUUID();
+  const folderUrlOrId = (gdrive_folder_url || req.body.gdriveFolderUrlOrId || '').trim();
+  const folderId = gdriveReelService.extractFolderId(folderUrlOrId);
 
   try {
     const doc: RssSource = {
@@ -124,6 +122,10 @@ apiRouter.post('/sources', async (req: Request, res: Response) => {
       url: url.trim(),
       pageId: page_id,
       templateId: template_id || 'template-square-breaking',
+      gdriveFolderUrlOrId: folderUrlOrId,
+      gdriveFolderId: folderId,
+      reelTheme: reel_theme || req.body.reelTheme || 'auto-category',
+      reelDuration: parseInt(reel_duration || req.body.reelDuration || '18', 10) || 18,
       isActive: is_active !== undefined ? Boolean(is_active) : true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1206,23 +1208,69 @@ function safeWaitUntil(promise: Promise<any>): void {
   }
 }
 
-// Handler: 1. RSS Ingestion
-async function executeRssCron(req: Request, res: Response) {
+// Handler: 1. Input Cron (Stage 1: RSS Ingestion -> Video Reels -> Save to Linked Drive Folder)
+async function executeInputCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
     const targetPageId = (req.query.pageId as string) || (req.query.page as string);
-    const results = await dedupeService.pollAllActiveSources(targetPageId);
+    const targetSourceId = (req.query.sourceId as string) || (req.query.source as string);
+    const force = req.query.force !== 'false';
+    const maxArticles = parseInt((req.query.max as string) || '5', 10) || 5;
+
+    console.log(`[Input Cron] 📥 Starting Input Pipeline (pageId: ${targetPageId || 'all'}, sourceId: ${targetSourceId || 'all'})...`);
+    const inputResult = await inputPipeline.runInputCron({
+      pageId: targetPageId,
+      sourceId: targetSourceId,
+      force,
+      maxArticlesPerSource: maxArticles,
+    });
+
     res.json({
-      success: true,
-      job: 'rss_poll',
+      ...inputResult,
+      job: 'input_cron',
+      stage: '1_input_ingest_render_drive',
       pageId: targetPageId || 'all',
-      timestamp: new Date().toISOString(),
-      durationMs: Date.now() - startTime,
-      results,
+      sourceId: targetSourceId || 'all',
     });
   } catch (err: any) {
-    console.error('[RSS Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'rss_poll', error: err.message });
+    console.error('[Input Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'input_cron', error: err.message });
+  }
+}
+
+// Handler: 1B. Legacy RSS Cron wrapper (points to Input Cron)
+async function executeRssCron(req: Request, res: Response) {
+  return executeInputCron(req, res);
+}
+
+// Handler: 2B. Output Cron (Stage 2: Folder-wise Drive -> Facebook + YouTube + TikTok)
+async function executeOutputCron(req: Request, res: Response) {
+  const startTime = Date.now();
+  try {
+    const pageId = (req.query.pageId as string) || (req.query.page as string);
+    const channelId = (req.query.channelId as string) || (req.query.channel as string);
+    const force = req.query.force !== 'false';
+
+    console.log(`[Output Cron] 📤 Starting Output Pipeline (folder-wise -> FB + YouTube + TikTok)...`);
+    const result = await gdriveReelService.publishAllDueChannels({
+      force,
+      channelId,
+      pageId,
+    });
+
+    res.json({
+      success: true,
+      job: 'output_cron',
+      stage: '2_output_drive_post_social_networks',
+      pageId: pageId || 'all',
+      channelId: channelId || 'all',
+      timestamp: new Date().toISOString(),
+      durationMs: Date.now() - startTime,
+      result,
+    });
+  } catch (err: any) {
+    console.error('[Output Cron] Error:', err);
+    res.status(500).json({ success: false, job: 'output_cron', error: err.message });
   }
 }
 
@@ -1666,77 +1714,70 @@ async function executeCleanupCron(req: Request, res: Response) {
 }
 
 // -------------------------------------------------------------
-// DISTINCT CRON-JOB.ORG ENDPOINTS
+// DISTINCT AUTOMATION WEBHOOK ENDPOINTS (INPUT & OUTPUT CRONS)
 // -------------------------------------------------------------
 
-// 1. RSS Ingestion Endpoint
-apiRouter.all(['/cron/rss', '/cron/poll', '/cron/ingest'], async (req: Request, res: Response) => {
+// 1. Stage 1: Input Cron (Fetch RSS -> Render Video Reels -> Save to Linked Drive Folder)
+apiRouter.all(['/cron/input', '/cron/rss', '/cron/poll', '/cron/ingest'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
-  await executeRssCron(req, res);
+  await executeInputCron(req, res);
 });
 
-// 2. Facebook Post/Reels Publishing Endpoint
-apiRouter.all(['/cron/publish', '/cron/queue', '/cron/post'], async (req: Request, res: Response) => {
+// 2. Stage 2: Output Cron (Folder-wise Get Oldest from Drive -> Post to FB, YouTube, TikTok)
+apiRouter.all(['/cron/output', '/cron/publish', '/cron/gdrive-reels', '/cron/gdrive', '/cron/drive', '/cron/post'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
-  await executePublishCron(req, res);
+  await executeOutputCron(req, res);
 });
 
-// 3. Google Drive Multi-Channel Reels Endpoint
-apiRouter.all(['/cron/gdrive-reels', '/cron/gdrive', '/cron/drive'], async (req: Request, res: Response) => {
-  if (!verifyCronAuth(req, res)) return;
-  await executeGdriveCron(req, res);
-});
-
-// 4. Facebook Stories Endpoint
+// 3. Facebook Stories Endpoint
 apiRouter.all(['/cron/stories', '/cron/story'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeStoriesCron(req, res);
 });
 
-// 5. YouTube Shorts Endpoint
+// 4. YouTube Shorts Endpoint
 apiRouter.all(['/cron/youtube', '/cron/shorts'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeYoutubeCron(req, res);
 });
 
-// 6. Queue Maintenance & Cleanup Endpoint
+// 5. Queue Maintenance & Cleanup Endpoint
 apiRouter.all(['/cron/cleanup', '/cron/maintain', '/cron/repair'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeCleanupCron(req, res);
 });
 
-// 7. Unified Pipeline Endpoint (Polls RSS for page & immediately publishes)
-apiRouter.all(['/cron/pipeline', '/cron/page-rss'], async (req: Request, res: Response) => {
+// 6. Unified Full Pipeline Endpoint (Runs Input Cron, then runs Output Cron)
+apiRouter.all(['/cron/pipeline', '/cron/all', '/cron/page-rss'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   const targetPageId = (req.query.pageId as string) || (req.query.page as string);
   try {
-    await dedupeService.pollAllActiveSources(targetPageId);
+    console.log('[Pipeline Cron] 🔄 Step 1: Running Input Cron...');
+    await inputPipeline.runInputCron({ pageId: targetPageId });
   } catch (err: any) {
-    console.warn('[Pipeline Cron] Note polling RSS:', err.message);
+    console.warn('[Pipeline Cron] Note in Input step:', err.message);
   }
-  await executePublishCron(req, res);
+  console.log('[Pipeline Cron] 🔄 Step 2: Running Output Cron (Folder-wise publish)...');
+  await executeOutputCron(req, res);
 });
 
-// 8. Universal Gateway Endpoint (/api/cron)
+// 7. Universal Gateway Endpoint (/api/cron)
 apiRouter.all('/cron', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
 
   const jobParam = ((req.query.job as string) || '').toLowerCase().trim();
-  if (jobParam === 'rss' || jobParam === 'poll' || jobParam === 'ingest') {
-    return executeRssCron(req, res);
+  if (jobParam === 'input' || jobParam === 'rss' || jobParam === 'poll' || jobParam === 'ingest') {
+    return executeInputCron(req, res);
   }
-  if (jobParam === 'publish' || jobParam === 'queue' || jobParam === 'post') {
-    return executePublishCron(req, res);
+  if (jobParam === 'output' || jobParam === 'publish' || jobParam === 'gdrive' || jobParam === 'gdrive-reels' || jobParam === 'drive' || jobParam === 'post') {
+    return executeOutputCron(req, res);
   }
-  if (jobParam === 'gdrive' || jobParam === 'gdrive-reels' || jobParam === 'drive') {
-    return executeGdriveCron(req, res);
-  }
-  if (jobParam === 'pipeline' || jobParam === 'page-rss') {
+  if (jobParam === 'pipeline' || jobParam === 'all' || jobParam === 'page-rss') {
     const targetPageId = (req.query.pageId as string) || (req.query.page as string);
     try {
-      await dedupeService.pollAllActiveSources(targetPageId);
+      await inputPipeline.runInputCron({ pageId: targetPageId });
     } catch {}
-    return executePublishCron(req, res);
+    return executeOutputCron(req, res);
   }
   if (jobParam === 'stories' || jobParam === 'story') {
     return executeStoriesCron(req, res);
@@ -2135,6 +2176,132 @@ apiRouter.post('/poll-now', async (req: Request, res: Response) => {
       processedJob: !!job,
       jobId: job ? job._id : null,
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7a. Dedicated Automation Architecture Endpoints (Input Cron & Output Cron)
+apiRouter.post('/pipeline/run-input', async (req: Request, res: Response) => {
+  try {
+    const { sourceId, pageId, force, maxArticles } = req.body || {};
+    console.log('[API] 📥 Manual trigger: Running Input Cron (RSS -> Reels -> Drive Folder)...');
+    const result = await inputPipeline.runInputCron({
+      sourceId,
+      pageId,
+      force: force !== false,
+      maxArticlesPerSource: maxArticles || 5,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiRouter.post('/pipeline/run-output', async (req: Request, res: Response) => {
+  try {
+    const { channelId, pageId } = req.body || {};
+    console.log('[API] 📤 Manual trigger: Running Output Cron (Folder-wise Drive -> FB, YT, TikTok)...');
+    const result = await gdriveReelService.publishAllDueChannels({
+      force: true,
+      channelId,
+      pageId,
+    });
+    res.json({ success: true, result });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiRouter.get('/pipeline/status', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const sourcesCount = await db.collection('rss_sources').countDocuments({
+      $or: [{ isActive: true }, { isActive: { $ne: false } }, { is_active: true }],
+    });
+    const channels = await gdriveReelService.getAllChannels();
+    const activeChannels = channels.filter((c) => c.isActive);
+    const pagesCount = await db.collection('facebook_pages').countDocuments({ isActive: true });
+    const ytCount = await db.collection('youtube_channels').countDocuments({ isActive: true });
+    await tikTokClient.initCredentials();
+
+    res.json({
+      success: true,
+      architecture: {
+        stage1_input: {
+          name: 'Input Cron',
+          description: 'Fetch RSS data ➔ Create 9:16 Video Reels ➔ Save to source-wise linked Google Drive folder',
+          activeSourcesCount: sourcesCount,
+          cronSchedule: config.POLL_INTERVAL_CRON,
+          endpoint: '/api/cron/input',
+        },
+        stage2_output: {
+          name: 'Output Cron (Folder-wise)',
+          description: 'Scan Drive folder ➔ Get oldest video ➔ Broadcast to Facebook Page, YouTube Channel, TikTok',
+          activeFoldersCount: activeChannels.length,
+          totalFoldersCount: channels.length,
+          connectedPages: pagesCount,
+          connectedYouTubeChannels: ytCount,
+          tikTokConfigured: tikTokClient.isConfigured(),
+          endpoint: '/api/cron/output',
+        },
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// TikTok Integration API
+apiRouter.get('/tiktok/status', async (req: Request, res: Response) => {
+  try {
+    await tikTokClient.initCredentials();
+    const db = getDatabase();
+    const logs = await db
+      .collection('tiktok_upload_logs')
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .toArray();
+
+    res.json({
+      configured: tikTokClient.isConfigured(),
+      recentUploads: logs,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/tiktok/settings', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { accessToken, clientKey, clientSecret } = req.body;
+
+    if (accessToken !== undefined) {
+      await db.collection('settings').updateOne(
+        { _id: 'TIKTOK_ACCESS_TOKEN' as any },
+        { $set: { value: (accessToken || '').trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (clientKey !== undefined) {
+      await db.collection('settings').updateOne(
+        { _id: 'TIKTOK_CLIENT_KEY' as any },
+        { $set: { value: (clientKey || '').trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+    if (clientSecret !== undefined) {
+      await db.collection('settings').updateOne(
+        { _id: 'TIKTOK_CLIENT_SECRET' as any },
+        { $set: { value: (clientSecret || '').trim(), updatedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    await tikTokClient.initCredentials();
+    res.json({ success: true, configured: tikTokClient.isConfigured() });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

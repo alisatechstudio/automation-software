@@ -140,16 +140,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </span>
         </div>
 
-        <!-- Poll RSS Button -->
-        <button onclick="triggerPollNow()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-cyan-500/50 flex items-center gap-1.5 transition active:scale-95 shadow-sm">
-          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span class="hidden sm:inline">Poll RSS</span>
+        <!-- Input Cron Action -->
+        <button onclick="triggerInputCronNow()" class="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Stage 1: Fetch RSS data -> Create 9:16 Reels -> Save in linked Google Drive folder">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>📥 Input Cron</span>
         </button>
 
-        <!-- Publish Now Button -->
-        <button onclick="publishNextNow()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white flex items-center gap-1.5 transition active:scale-95 shadow-glow-red border border-red-400/30">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-          <span>Publish Now</span>
+        <!-- Output Cron Action -->
+        <button onclick="triggerOutputCronNow()" class="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black flex items-center gap-1.5 transition active:scale-95 shadow border border-emerald-400/40" title="Stage 2: Get oldest reel from Drive -> Post to all linked social networks (Facebook, YouTube, TikTok)">
+          <svg class="w-3.5 h-3.5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/></svg>
+          <span>📤 Output Cron</span>
         </button>
       </div>
 
@@ -310,39 +310,61 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </div>
         </div>
 
-        <!-- Pipeline Steps -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden">
+        <!-- 2-Stage Automation Pipeline Architecture Blueprint -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-slate-800">
           <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-              Automated Pipeline Blueprint
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              New Automation Architecture
             </h3>
-            <span class="text-[10px] font-mono text-slate-400">5 Continuous Steps</span>
+            <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">2-Stage Decoupled</span>
           </div>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <div class="text-cyan-400 font-bold mb-0.5 text-[11px]">1. RSS Ingestion</div>
-              <div class="text-slate-400 text-[10px]">GUID dedupe & age filter</div>
-            </div>
-            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <div class="text-purple-400 font-bold mb-0.5 text-[11px]">2. Queue Matrix</div>
-              <div class="text-slate-400 text-[10px]">FIFO schedule & retries</div>
-            </div>
-            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <div class="text-amber-400 font-bold mb-0.5 text-[11px]">3. Canva Banner</div>
-              <div class="text-slate-400 text-[10px]">Auto-fit Bengali card</div>
-            </div>
-            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <div class="text-emerald-400 font-bold mb-0.5 text-[11px]">4. FB Publishing</div>
-              <div class="text-slate-400 text-[10px]">Clean photo & caption</div>
-            </div>
-            <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 col-span-1 sm:col-span-2 flex items-center justify-between">
-              <div>
-                <div class="text-blue-400 font-bold mb-0.5 text-[11px]">5. First-Comment Link</div>
-                <div class="text-slate-400 text-[10px]">Instant comment with verified news article link</div>
+
+          <div class="space-y-3">
+            <!-- Stage 1 Box -->
+            <div class="p-3 rounded-lg bg-cyan-950/20 border border-cyan-500/30">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                  <span>📥 STAGE 1: INPUT CRON</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-900/50 text-cyan-200 font-mono">/api/cron/input</span>
+                </span>
+                <button onclick="triggerInputCronNow()" class="text-[10px] text-cyan-400 hover:text-white px-2 py-0.5 rounded bg-cyan-900/40 hover:bg-cyan-800 border border-cyan-700/50 transition">Run Stage 1</button>
               </div>
-              <span class="text-base">💬</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">1.</span>
+                  <span>Fetch data from RSS source</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">2.</span>
+                  <span>Create 9:16 reels with templates</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-cyan-400 font-bold font-mono">3.</span>
+                  <span>Save to linked Drive folder</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stage 2 Box -->
+            <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <span>📤 STAGE 2: OUTPUT CRON (FOLDER-WISE)</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-200 font-mono">/api/cron/output</span>
+                </span>
+                <button onclick="triggerOutputCronNow()" class="text-[10px] text-emerald-400 hover:text-white px-2 py-0.5 rounded bg-emerald-900/40 hover:bg-emerald-800 border border-emerald-700/50 transition">Run Stage 2</button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-emerald-400 font-bold font-mono">1.</span>
+                  <span>Scan Drive & get oldest video</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <span class="text-emerald-400 font-bold font-mono">2.</span>
+                  <span>Post to FB, YouTube, TikTok</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -470,6 +492,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Target Page</label>
               <select id="source-page" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
                 <option value="">Select Connected Page</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Linked Google Drive Folder (URL / ID)</label>
+              <input type="text" id="source-gdrive-folder" placeholder="https://drive.google.com/drive/folders/... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition font-mono">
+              <p class="text-[10px] text-slate-500 mt-0.5">Where rendered reels are saved. If empty, uses Page default Drive folder.</p>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Reel Visual Theme</label>
+              <select id="source-reel-theme" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <option value="auto-category" selected>⚡ Auto Category-Themed (Sports, Politics, Tech, Economy, etc.)</option>
+                <option value="studio-red">Studio Red (Broadcast News)</option>
+                <option value="breaking-bold">Breaking Bold (Crimson Alert)</option>
+                <option value="dark-cinema">Dark Cinema (Modern Minimalist)</option>
+                <option value="viral-gradient">Viral Gradient (High Engagement)</option>
+                <option value="rolling">Rolling Round-Robin Rotation</option>
               </select>
             </div>
             <div>
@@ -1174,6 +1212,29 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 <textarea id="gdrive-form-custom-caption" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500" placeholder="{title}&#10;&#10;{hashtags}"></textarea>
               </div>
 
+              <!-- Linked Social Networks -->
+              <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-2">
+                <span class="text-[11px] font-bold text-slate-300 uppercase font-mono">Linked Social Networks (Output Broadcast)</span>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-yt-toggle" checked class="rounded text-red-500">
+                    <span class="text-slate-300 font-medium">📺 YouTube Shorts</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-tiktok-toggle" checked class="rounded text-cyan-400">
+                    <span class="text-slate-300 font-medium">🎵 TikTok</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-story-toggle" checked class="rounded text-purple-400">
+                    <span class="text-slate-300 font-medium">📸 FB Stories</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="gdrive-form-groups-toggle" class="rounded text-emerald-400">
+                    <span class="text-slate-300 font-medium">👥 FB Groups</span>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">First Comment (Optional)</label>
                 <input type="text" id="gdrive-form-first-comment" placeholder="e.g. Follow for daily reels! 🔥" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
@@ -1677,6 +1738,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               <button type="button" onclick="toggleApiKeyVisibility('setting-cronjob-api-key')" class="px-2.5 py-1.5 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Show/Hide Key">👁️</button>
             </div>
             <span class="text-[10px] text-slate-500 mt-0.5 block">Used to manage, create, toggle, and trigger scheduled jobs via API v2</span>
+          </div>
+
+          <!-- TikTok API Settings -->
+          <div class="pt-3 border-t border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold text-cyan-300 uppercase font-mono flex items-center gap-1.5">
+                <span>🎵 TikTok API Integration</span>
+                <span id="setting-tiktok-badge" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-800 text-slate-400">Checking...</span>
+              </label>
+              <button type="button" onclick="testTikTokConnection()" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/50 hover:bg-cyan-800 transition">Test Connection</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input type="password" id="setting-tiktok-token" placeholder="TikTok Access Token" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition">
+              <input type="text" id="setting-tiktok-key" placeholder="TikTok Client Key (Optional)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition">
+            </div>
+            <span class="text-[10px] text-slate-500 block">Required for automatically posting videos to TikTok in Output Cron. If empty, runs in safe simulated mode.</span>
           </div>
 
           <div class="pt-2 flex justify-end">
@@ -2426,6 +2503,38 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     // --- ACTIONS ---
+    async function triggerInputCronNow() {
+      showToast('📥 Starting Input Cron: Fetching RSS ➔ Creating Reels ➔ Saving to Drive Folder...');
+      const res = await safeFetchJson('/api/pipeline/run-input', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true })
+      });
+      if (res.ok && res.data?.success) {
+        showToast('✓ Input Cron Complete: Created ' + (res.data.totalReelsCreated || 0) + ' reels & saved to Drive!');
+        loadOverview();
+        if (typeof loadSources === 'function') loadSources();
+      } else {
+        showToast(res.data?.error || res.error || 'Input Cron failed', true);
+      }
+    }
+
+    async function triggerOutputCronNow() {
+      showToast('📤 Starting Output Cron: Getting oldest videos from Drive ➔ Broadcasting to FB, YouTube, TikTok...');
+      const res = await safeFetchJson('/api/pipeline/run-output', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true })
+      });
+      if (res.ok && res.data?.success) {
+        showToast('✓ Output Cron Complete! Broadcasted oldest reels to linked social networks.');
+        loadOverview();
+        if (typeof refreshGDriveChannels === 'function') refreshGDriveChannels();
+      } else {
+        showToast(res.data?.error || res.error || 'Output Cron failed', true);
+      }
+    }
+
     async function triggerPollNow() {
       showToast('Polling RSS feeds...');
       const res = await safeFetchJson('/api/poll-now', { method: 'POST' });
@@ -2648,19 +2757,24 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         return;
       }
 
-      list.innerHTML = pageSources.map(s => 
-        '<div class="flex items-center justify-between p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition">' +
+      list.innerHTML = pageSources.map(s => {
+        const driveLabel = s.gdrive_folder_url
+          ? '📁 Drive: ' + (s.gdrive_folder_id || s.gdrive_folder_url.slice(0, 20))
+          : '📁 Drive: Page Default';
+        const themeLabel = s.reel_theme || 'auto-category';
+        return '<div class="flex items-center justify-between p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition">' +
           '<div class="min-w-0 flex-1 pr-3">' +
             '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5 truncate">' +
               '<span>' + s.name + '</span>' +
               '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>' +
+              '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">' + driveLabel + '</span>' +
             '</div>' +
             '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
-            '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | ' + s.template_id + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | Theme: ' + themeLabel + ' | Template: ' + s.template_id + '</div>' +
           '</div>' +
           '<button onclick="deleteSource(\\\'' + s.id + '\\\')" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
-        '</div>'
-      ).join('');
+        '</div>';
+      }).join('');
 
       renderPagination('sources-pagination', page, totalPages, total, 'changeSourcesPage', SOURCES_PAGE_SIZE);
     }
@@ -2690,6 +2804,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         url: document.getElementById('source-url').value,
         page_id: document.getElementById('source-page').value,
         template_id: document.getElementById('source-template').value,
+        gdrive_folder_url: document.getElementById('source-gdrive-folder') ? document.getElementById('source-gdrive-folder').value : '',
+        reel_theme: document.getElementById('source-reel-theme') ? document.getElementById('source-reel-theme').value : 'auto-category',
       };
 
       const res = await safeFetchJson('/api/sources', {
@@ -2698,7 +2814,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         body: JSON.stringify(payload)
       });
       if (res.data?.success) {
-        showToast('Source added successfully!');
+        showToast('Source added successfully with linked Drive folder!');
         document.getElementById('add-source-form').reset();
         loadSources();
       } else {
@@ -3212,6 +3328,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     // --- SETTINGS ---
+    async function testTikTokConnection() {
+      showToast('Checking TikTok status...');
+      const res = await safeFetchJson('/api/tiktok/status');
+      if (res.ok && res.data?.configured) {
+        showToast('✓ TikTok is configured and ready for video posting!');
+      } else {
+        showToast('TikTok access token not set; running in safe simulated dry-run mode.');
+      }
+    }
+
     async function loadSettings() {
       initCronPills();
       loadCronJobs();
@@ -3229,6 +3355,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (document.getElementById('setting-cronjob-api-key')) {
         document.getElementById('setting-cronjob-api-key').value = d.CRONJOB_API_KEY || '';
       }
+      try {
+        const tikRes = await safeFetchJson('/api/tiktok/status');
+        if (tikRes.ok && document.getElementById('setting-tiktok-badge')) {
+          const badge = document.getElementById('setting-tiktok-badge');
+          badge.innerText = tikRes.data?.configured ? 'Active (Live API)' : 'Safe Simulated Mode';
+          badge.className = 'px-1.5 py-0.2 rounded text-[9px] font-mono ' + (tikRes.data?.configured ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40' : 'bg-slate-800 text-slate-400');
+        }
+      } catch {}
     }
 
     function setHashtagPreset(type) {
@@ -3260,9 +3394,21 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      const tikTokToken = document.getElementById('setting-tiktok-token')?.value;
+      const tikTokKey = document.getElementById('setting-tiktok-key')?.value;
+      if (tikTokToken || tikTokKey) {
+        await safeFetchJson('/api/tiktok/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: tikTokToken, clientKey: tikTokKey })
+        });
+      }
+
       if (res.data?.success) {
         showToast('Pipeline configuration saved!');
         loadCronJobs();
+        loadSettings();
       } else {
         showToast(res.data?.error || 'Failed to save settings', true);
       }
@@ -4656,6 +4802,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-custom-hashtags').value = '';
       document.getElementById('gdrive-form-active-toggle').checked = true;
       document.getElementById('gdrive-form-delete-toggle').checked = true;
+      if (document.getElementById('gdrive-form-yt-toggle')) document.getElementById('gdrive-form-yt-toggle').checked = true;
+      if (document.getElementById('gdrive-form-tiktok-toggle')) document.getElementById('gdrive-form-tiktok-toggle').checked = true;
+      if (document.getElementById('gdrive-form-story-toggle')) document.getElementById('gdrive-form-story-toggle').checked = true;
+      if (document.getElementById('gdrive-form-groups-toggle')) document.getElementById('gdrive-form-groups-toggle').checked = false;
       document.getElementById('gdrive-form-mode-viral').checked = true;
       toggleFormCaptionBox();
 
@@ -4682,6 +4832,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-custom-caption').value = channel.customCaption || '';
       document.getElementById('gdrive-form-active-toggle').checked = Boolean(channel.isActive);
       document.getElementById('gdrive-form-delete-toggle').checked = channel.deleteAfterPosting !== false;
+      if (document.getElementById('gdrive-form-yt-toggle')) document.getElementById('gdrive-form-yt-toggle').checked = channel.autoPostYouTube !== false;
+      if (document.getElementById('gdrive-form-tiktok-toggle')) document.getElementById('gdrive-form-tiktok-toggle').checked = channel.autoPostTikTok !== false;
+      if (document.getElementById('gdrive-form-story-toggle')) document.getElementById('gdrive-form-story-toggle').checked = channel.postStory !== false;
+      if (document.getElementById('gdrive-form-groups-toggle')) document.getElementById('gdrive-form-groups-toggle').checked = Boolean(channel.shareToGroups);
 
       if (channel.captionStrategy === 'custom') {
         document.getElementById('gdrive-form-mode-custom').checked = true;
@@ -4722,6 +4876,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         isActive: document.getElementById('gdrive-form-active-toggle')?.checked || false,
         deleteAfterPosting: document.getElementById('gdrive-form-delete-toggle')?.checked ?? true,
         deleteAction: 'trash',
+        autoPostYouTube: document.getElementById('gdrive-form-yt-toggle')?.checked ?? true,
+        autoPostTikTok: document.getElementById('gdrive-form-tiktok-toggle')?.checked ?? true,
+        postStory: document.getElementById('gdrive-form-story-toggle')?.checked ?? true,
+        shareToGroups: document.getElementById('gdrive-form-groups-toggle')?.checked ?? false,
         captionStrategy: document.getElementById('gdrive-form-mode-custom')?.checked ? 'custom' : 'viral_hashtags',
         customCaption: document.getElementById('gdrive-form-custom-caption')?.value || '',
         firstCommentText: document.getElementById('gdrive-form-first-comment')?.value.trim() || ''

@@ -24,6 +24,7 @@ export const ALL_COLLECTIONS = [
   'facebook_groups',
   'group_share_logs',
   'gdrive_reel_configs',
+  'tiktok_upload_logs',
   'settings',
 ];
 
