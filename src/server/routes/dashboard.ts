@@ -1932,9 +1932,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
+      const allBtns = Array.from(document.querySelectorAll('.tab-btn'));
       const matchedBtn = (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList) 
         ? event.currentTarget 
-        : document.querySelector('.tab-btn[onclick*="\'' + tabId + '\'"]');
+        : allBtns.find(b => (b.getAttribute('onclick') || '').includes(tabId));
       if (matchedBtn) {
         matchedBtn.classList.add('text-red-400', 'bg-red-950/40', 'border-red-800/50', 'shadow-inner');
         matchedBtn.classList.remove('text-slate-400', 'border-transparent');
@@ -2145,7 +2146,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px]">' + j.attempts + '/' + j.max_attempts + '</td>' +
           '<td class="px-3.5 py-2 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + new Date(j.run_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</td>' +
           '<td class="px-3.5 py-2 text-right">' +
-            '<button onclick="retryJob(\'' + j.id + '\')" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700 transition active:scale-95">Run</button>' +
+            '<button onclick="retryJob(\\\'' + j.id + '\\\')" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-800 hover:bg-red-600/30 text-slate-300 hover:text-red-300 border border-slate-700 transition active:scale-95">Run</button>' +
           '</td>' +
         '</tr>'
       ).join('');
@@ -2266,7 +2267,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
             '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | ' + s.template_id + '</div>' +
           '</div>' +
-          '<button onclick="deleteSource(\'' + s.id + '\')" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+          '<button onclick="deleteSource(\\\'' + s.id + '\\\')" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
         '</div>'
       ).join('');
 
@@ -2357,8 +2358,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               '<div class="text-[10px] text-slate-500 font-mono">' + (p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent Token') + '</div>' +
             '</div>' +
             '<div class="flex gap-1.5">' +
-              '<button onclick="diagnosePageToken(\'' + p.id + '\')" class="text-[11px] text-amber-400 hover:text-amber-300 px-2.5 py-1 bg-amber-950/40 rounded border border-amber-800/50 transition font-mono">Diagnose</button>' +
-              '<button onclick="deletePage(\'' + p.id + '\')" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+              '<button onclick="diagnosePageToken(\\\'' + p.id + '\\\')" class="text-[11px] text-amber-400 hover:text-amber-300 px-2.5 py-1 bg-amber-950/40 rounded border border-amber-800/50 transition font-mono">Diagnose</button>' +
+              '<button onclick="deletePage(\\\'' + p.id + '\\\')" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
             '</div>' +
           '</div>' +
           '<div id="diagnose-result-' + p.id + '" class="hidden text-xs p-2.5 rounded font-mono"></div>' +
@@ -2515,10 +2516,10 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '</div>' +
           '</div>' +
           '<div class="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800">' +
-            '<button onclick="testShareGroup(\'' + g._id + '\', \'' + g.name.replace(/'/g, "\\'") + '\')" class="px-2.5 py-1 rounded bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold transition active:scale-95">🚀 Test</button>' +
+            '<button onclick="testShareGroup(\\\'' + g._id + '\\\')" class="px-2.5 py-1 rounded bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold transition active:scale-95">🚀 Test</button>' +
             '<div class="flex items-center gap-1">' +
-              '<button onclick="toggleGroupAutoShare(\'' + g._id + '\', ' + g.autoShare + ')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] transition">' + (g.autoShare ? 'Pause' : 'Enable') + '</button>' +
-              '<button onclick="deleteGroup(\'' + g._id + '\')" class="px-2 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-[11px] transition">🗑️</button>' +
+              '<button onclick="toggleGroupAutoShare(\\\'' + g._id + '\\\', ' + g.autoShare + ')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] transition">' + (g.autoShare ? 'Pause' : 'Enable') + '</button>' +
+              '<button onclick="deleteGroup(\\\'' + g._id + '\\\')" class="px-2 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-[11px] transition">🗑️</button>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -2708,10 +2709,12 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     async function testShareGroup(id, groupName) {
-      showToast('Sharing to "' + groupName + '"...');
+      const g = (cachedGroupsData || []).find(x => x._id === id);
+      const name = groupName || (g ? g.name : 'group');
+      showToast('Sharing to "' + name + '"...');
       const res = await safeFetchJson('/api/groups/' + id + '/test-share', { method: 'POST' });
       if (res.ok && res.data?.success) {
-        showToast('✓ Shared to "' + groupName + '"!');
+        showToast('✓ Shared to "' + name + '"!');
         loadGroups();
       } else {
         showToast(res.data?.error || res.error || 'Test share failed', true);
@@ -3318,14 +3321,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +
             '<div class="min-w-0 flex-1">' +
               '<div class="flex items-center gap-1.5">' +
-                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" onclick="selectGDriveChannel(\'' + c._id + '\')">' + (c.name || 'Channel') + '</h4>' +
+                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" onclick="selectGDriveChannel(\\\'' + c._id + '\\\')">' + (c.name || 'Channel') + '</h4>' +
                 '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
               '<div class="text-[10px] text-slate-400 truncate">Page: ' + (c.pageName || c.pageId || 'None') + '</div>' +
             '</div>' +
             '<div class="flex items-center gap-1">' +
-              '<button onclick="editGDriveChannel(\'' + c._id + '\')" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
-              '<button onclick="deleteGDriveChannel(\'' + c._id + '\')" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
+              '<button onclick="editGDriveChannel(\\\'' + c._id + '\\\')" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
+              '<button onclick="deleteGDriveChannel(\\\'' + c._id + '\\\')" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
             '</div>' +
           '</div>' +
           '<div class="text-[10px] font-mono text-slate-400 py-1 border-y border-slate-900 flex justify-between">' +
@@ -3334,8 +3337,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '<span class="text-purple-400">✓ ' + postedCount + ' Posted</span>' +
           '</div>' +
           '<div class="flex items-center gap-1.5 pt-1.5">' +
-            '<button onclick="selectGDriveChannel(\'' + c._id + '\')" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
-            '<button onclick="publishNextForGDriveChannel(\'' + c._id + '\')" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
+            '<button onclick="selectGDriveChannel(\\\'' + c._id + '\\\')" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
+            '<button onclick="publishNextForGDriveChannel(\\\'' + c._id + '\\\')" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -3426,7 +3429,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       if (!cachedGDriveVideos[idx]) return;
       const file = cachedGDriveVideos[idx];
 
-      if (!confirm('Move "' + (file.cleanTitle || file.name) + '" to Google Drive Trash?\n\n(This will delete the .mp4 file from Google Drive and remove it from the queue)')) return;
+      if (!confirm('Move "' + (file.cleanTitle || file.name) + '" to Google Drive Trash?')) return;
 
       showToast('Moving file to Google Drive Trash...');
 
