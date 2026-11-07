@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trending News World - Viral Spotlight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@500;600;700;800&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 15%, #180928 0%, #0d0417 45%, #05020a 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 34px 44px 34px 44px;
+      color: #ffffff;
+    }
+
+    /* Ambient neon viral mesh */
+    .mesh-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1080px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(217, 70, 239, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.15) 0%, transparent 55%);
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+      border: 2px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(236, 72, 153, 0.45);
+      flex-shrink: 0;
+    }
+
+    .brand-name-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-headline {
+      font-family: 'Oswald', 'Montserrat', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #f472b6;
+    }
+
+    .viral-pill {
+      background: linear-gradient(135deg, #ec4899 0%, #d946ef 100%);
+      color: #ffffff;
+      padding: 7px 24px;
+      border-radius: 9999px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 16px rgba(236, 72, 153, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Photo Frame */
+    .photo-frame {
+      width: 990px;
+      height: 420px;
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      border: 4px solid #ffffff;
+      background: #0f172a;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-badge {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Tag bar */
+    .mid-strip {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0 6px 0;
+      padding: 0 6px;
+    }
+
+    .mid-tag {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mid-tag span.fire {
+      color: #f43f5e;
+    }
+
+    .mid-date {
+      font-size: 13px;
+      font-weight: 600;
+      color: #a855f7;
+    }
+
+    /* Headline Card */
+    .headline-card {
+      width: 990px;
+      height: 310px;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 44px;
+      text-align: center;
+      overflow: hidden;
+      border: 2px solid rgba(236, 72, 153, 0.25);
+    }
+
+    .headline-text {
+      width: 100%;
+      color: #1e1b4b;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 50px;
+      line-height: 1.25;
+      text-align: center;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      letter-spacing: -0.5px;
+    }
+
+    /* Footer */
+    .footer-bar {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .domain-badge {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 24px;
+      border-radius: 9999px;
+      color: #f1f5f9;
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .domain-badge span.accent {
+      color: #ec4899;
+    }
+
+    .comment-ribbon {
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+      color: #0f172a;
+      padding: 10px 26px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mesh-glow"></div>
+
+  <div class="container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="brand-cluster">
+        <div class="brand-emblem">
+          {{#if logoUrl}}
+            <img src="{{{logoUrl}}}" alt="Logo" style="width:100%;height:100%;object-fit:cover;" />
+          {{else}}
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#ffffff" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          {{/if}}
+        </div>
+        <div class="brand-name-group">
+          <div class="brand-headline">Trending News World</div>
+          <div class="brand-tag">Viral Spotlight • trendingnews.world</div>
+        </div>
+      </div>
+
+      <div class="viral-pill">
+        <span>🔥 {{#if category}}{{category}}{{else}}TRENDING VIRAL{{/if}}</span>
+      </div>
+    </div>
+
+    <!-- Photo Frame -->
+    <div class="photo-frame">
+      <img src="{{{imageUrl}}}" alt="News Photo" onerror="this.src='{{{fallbackImage}}}';" />
+      <div class="photo-badge">
+        <span>TRENDING NOW</span>
+      </div>
+    </div>
+
+    <!-- Mid Strip -->
+    <div class="mid-strip">
+      <div class="mid-tag">
+        <span class="fire">VIRAL EXPLORE</span> • HIGH ENGAGEMENT SPOTLIGHT
+      </div>
+      <div class="mid-date">{{dateText}}</div>
+    </div>
+
+    <!-- Headline Card -->
+    <div class="headline-card" id="headline-container">
+      <h1 class="headline-text" id="headline-text">{{headline}}</h1>
+    </div>
+
+    <!-- Footer Bar -->
+    <div class="footer-bar">
+      <div class="domain-badge">
+        <span>🌐 Follow Us:</span>
+        <span class="accent">trendingnews.world</span>
+      </div>
+      <div class="comment-ribbon">
+        <span>💬</span>
+        Full Story in First Comment
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function autoFit() {
+      const container = document.getElementById('headline-container');
+      const text = document.getElementById('headline-text');
+      if (!container || !text) return;
+
+      let fontSize = 52;
+      const minFontSize = 24;
+      text.style.fontSize = fontSize + 'px';
+      text.style.lineHeight = (fontSize * 1.25) + 'px';
+
+      while (
+        (text.scrollHeight > (container.clientHeight - 20) || text.scrollWidth > (container.clientWidth - 20)) &&
+        fontSize > minFontSize
+      ) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        text.style.lineHeight = (fontSize * 1.25) + 'px';
+      }
+    }
+    autoFit();
+    window.addEventListener('load', autoFit);
+  </script>
+</body>
+</html>
+

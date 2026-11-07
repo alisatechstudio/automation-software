@@ -505,10 +505,18 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <div>
               <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Design Template</label>
               <select id="source-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
-                <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
-                <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
-                <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
-                <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+                <optgroup label="🇺🇸 Trending News World (English / USA)">
+                  <option value="template-trendingnews-breaking" selected>Trending News World - Breaking News (1080x1080)</option>
+                  <option value="template-trendingnews-editorial">Trending News World - US & Politics Editorial (1080x1080)</option>
+                  <option value="template-trendingnews-viral">Trending News World - Viral Spotlight (1080x1080)</option>
+                  <option value="template-trendingnews-landscape">Trending News World - Landscape Share (1200x630)</option>
+                </optgroup>
+                <optgroup label="🇧🇩 BD News 24/7 (Bangla)">
+                  <option value="template-canva-bdnews">BD News 24/7 Red (Canva Replica)</option>
+                  <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
+                  <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
+                  <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+                </optgroup>
               </select>
             </div>
             <button type="submit" class="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Source</button>
@@ -1450,27 +1458,49 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         
         <!-- Controls -->
         <div class="lg:col-span-5 glass-panel p-4 sm:p-5 rounded-xl space-y-3 h-fit">
-          <div class="flex items-center gap-2 pb-2 border-b border-slate-800">
-            <div class="w-7 h-7 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎨</div>
-            <h3 class="text-sm font-bold text-white">Live Canva & Bangla Preview</h3>
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center font-bold text-xs">🎨</div>
+              <h3 class="text-sm font-bold text-white">Live Template Preview</h3>
+            </div>
+          </div>
+
+          <!-- Quick Preset Switcher -->
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="setPreviewPreset('trendingnews')" class="flex-1 py-1.5 px-2 rounded-lg bg-blue-950/80 hover:bg-blue-900 border border-blue-700/60 text-blue-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+              <span>🇺🇸</span>
+              <span>Trending News World</span>
+            </button>
+            <button type="button" onclick="setPreviewPreset('bdnews')" class="flex-1 py-1.5 px-2 rounded-lg bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+              <span>🇧🇩</span>
+              <span>BD News 24/7</span>
+            </button>
           </div>
 
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Template Style</label>
-            <select id="preview-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <option value="template-canva-bdnews" selected>BD News 24/7 Red (Canva Replica)</option>
-              <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
-              <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
-              <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+            <select id="preview-template" onchange="onTemplateStyleChange()" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+              <optgroup label="🇺🇸 Trending News World (English / USA)">
+                <option value="template-trendingnews-breaking" selected>Trending News World - Breaking News (1080x1080)</option>
+                <option value="template-trendingnews-editorial">Trending News World - US & Politics Editorial (1080x1080)</option>
+                <option value="template-trendingnews-viral">Trending News World - Viral Spotlight (1080x1080)</option>
+                <option value="template-trendingnews-landscape">Trending News World - Landscape Share (1200x630)</option>
+              </optgroup>
+              <optgroup label="🇧🇩 BD News 24/7 (Bangla)">
+                <option value="template-canva-bdnews">BD News 24/7 Red (Canva Replica)</option>
+                <option value="template-square-breaking">Square Breaking News (1080x1080)</option>
+                <option value="template-square-editorial">Square Editorial Modern (1080x1080)</option>
+                <option value="template-landscape-standard">Landscape Social Share (1200x630)</option>
+              </optgroup>
             </select>
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Category Badge</label>
-            <input type="text" id="preview-category" value="বিশেষ খবর" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn focus:outline-none focus:border-red-500 transition">
+            <input type="text" id="preview-category" value="US POLITICS" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
           </div>
           <div>
-            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Headline (Bangla Auto-Fit)</label>
-            <textarea id="preview-headline" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 bn leading-relaxed focus:outline-none focus:border-red-500 transition">২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি</textarea>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Headline (Auto-Fit Text)</label>
+            <textarea id="preview-headline" rows="3" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 leading-relaxed focus:outline-none focus:border-red-500 transition">White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote</textarea>
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Image URL (Optional)</label>
@@ -1539,7 +1569,13 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           </div>
 
           <div>
-            <label class="block text-[11px] font-semibold text-slate-400 mb-1 uppercase font-mono">Default Hashtags</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase font-mono">Default Hashtags</label>
+              <div class="flex items-center gap-1.5 text-[10px]">
+                <button type="button" onclick="setHashtagPreset('usa')" class="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-700/60 text-blue-300 hover:bg-blue-900 transition font-sans">🇺🇸 Trending News World (USA)</button>
+                <button type="button" onclick="setHashtagPreset('bd')" class="px-2 py-0.5 rounded bg-red-950/80 border border-red-700/60 text-red-300 hover:bg-red-900 transition font-sans">🇧🇩 BD News 24/7</button>
+              </div>
+            </div>
             <input type="text" id="setting-hashtags" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
           </div>
 
@@ -2746,6 +2782,39 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     // --- TEMPLATE PREVIEW ---
+    function setPreviewPreset(preset) {
+      const templateSel = document.getElementById('preview-template');
+      const catInput = document.getElementById('preview-category');
+      const headlineInput = document.getElementById('preview-headline');
+
+      if (preset === 'trendingnews') {
+        templateSel.value = 'template-trendingnews-breaking';
+        catInput.value = 'US POLITICS';
+        headlineInput.value = 'White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote';
+      } else {
+        templateSel.value = 'template-canva-bdnews';
+        catInput.value = 'বিশেষ খবর';
+        headlineInput.value = '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+      }
+      renderPreview();
+    }
+
+    function onTemplateStyleChange() {
+      const val = document.getElementById('preview-template').value;
+      const isTrending = val.includes('trendingnews');
+      const curHeadline = document.getElementById('preview-headline').value;
+      const isBangla = /[\u0980-\u09FF]/.test(curHeadline);
+
+      if (isTrending && isBangla) {
+        document.getElementById('preview-category').value = 'US POLITICS';
+        document.getElementById('preview-headline').value = 'White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote';
+      } else if (!isTrending && !isBangla) {
+        document.getElementById('preview-category').value = 'বিশেষ খবর';
+        document.getElementById('preview-headline').value = '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+      }
+      renderPreview();
+    }
+
     async function renderPreview() {
       const spinner = document.getElementById('preview-spinner');
       const frame = document.getElementById('preview-frame');
@@ -2753,7 +2822,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const meta = document.getElementById('preview-meta');
 
       if (spinner) spinner.classList.remove('hidden');
-      if (meta) meta.innerText = 'Compiling Bengali layout...';
+      if (meta) meta.innerText = 'Compiling layout...';
 
       const payload = {
         templateId: document.getElementById('preview-template').value,
@@ -2770,10 +2839,21 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         });
 
         if (res.ok && res.data?.html) {
+          const isLandscape = payload.templateId.includes('landscape');
+          if (isLandscape) {
+            frame.style.width = '1200px';
+            frame.style.height = '630px';
+            frame.style.transform = 'scale(0.35)';
+          } else {
+            frame.style.width = '1080px';
+            frame.style.height = '1080px';
+            frame.style.transform = 'scale(0.388)';
+          }
+
           frame.srcdoc = res.data.html;
           frame.classList.remove('hidden');
           placeholder.classList.add('hidden');
-          meta.innerText = '✓ Live Canva Template Ready (1080x1080)';
+          meta.innerText = '✓ Live ' + (payload.templateId.includes('trendingnews') ? 'Trending News World' : 'BD News') + ' Template (' + (isLandscape ? '1200x630' : '1080x1080') + ')';
         } else {
           meta.innerText = res.data?.error || 'Failed to compile template';
         }
@@ -2797,6 +2877,16 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('setting-hashtags').value = d.DEFAULT_HASHTAGS || '';
       document.getElementById('setting-caption-format').value = d.DEFAULT_CAPTION_FORMAT || '';
       document.getElementById('setting-comment-format').value = d.DEFAULT_COMMENT_FORMAT || '';
+    }
+
+    function setHashtagPreset(type) {
+      const el = document.getElementById('setting-hashtags');
+      if (!el) return;
+      if (type === 'usa') {
+        el.value = '#TrendingNewsWorld #USNews #BreakingNews #WorldNews #TrendingNews #NewsUpdate #USA #Headlines';
+      } else {
+        el.value = '#BreakingNews #BanglaNews #ViralNews #Bangladesh #NewsUpdate';
+      }
     }
 
     async function handleSaveSettings(e) {

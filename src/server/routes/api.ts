@@ -13,7 +13,7 @@ import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
-import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
+import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags, generateTrendingNewsHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export const apiRouter = Router();
@@ -1929,17 +1929,21 @@ apiRouter.get('/templates', (req: Request, res: Response) => {
 
 apiRouter.post('/preview/html', (req: Request, res: Response) => {
   try {
-    const { templateId, headline, category, imageUrl } = req.body;
+    const { templateId, headline, category, imageUrl, website } = req.body;
+    const isEnglish = (templateId && templateId.includes('trendingnews')) || isEnglishText(headline) || isEnglishText(category);
 
     const sampleHeadline =
       headline ||
-      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+      (isEnglish
+        ? 'White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote'
+        : '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি');
 
     const html = renderer.compileHtml({
-      templateId: templateId || 'template-canva-bdnews',
+      templateId: templateId || (isEnglish ? 'template-trendingnews-breaking' : 'template-canva-bdnews'),
       headline: sampleHeadline,
-      category: category || 'বিশেষ খবর',
+      category: category || (isEnglish ? 'US POLITICS' : 'বিশেষ খবর'),
       imageUrl: imageUrl || undefined,
+      website: website || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site'),
     });
 
     res.json({
@@ -1953,18 +1957,22 @@ apiRouter.post('/preview/html', (req: Request, res: Response) => {
 
 apiRouter.post('/preview/render', async (req: Request, res: Response) => {
   try {
-    const { templateId, headline, category, imageUrl } = req.body;
+    const { templateId, headline, category, imageUrl, website } = req.body;
+    const isEnglish = (templateId && templateId.includes('trendingnews')) || isEnglishText(headline) || isEnglishText(category);
 
     const sampleHeadline =
       headline ||
-      '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
+      (isEnglish
+        ? 'White House Unveils Major Economic Overhaul as Senate Prepares for High-Stakes Vote'
+        : '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি');
 
     // Instant Skia Canvas 1080x1080 JPG card rendering (40ms)
     const buffer = await canvasRenderer.renderCard({
-      templateId: templateId || 'template-canva-bdnews',
+      templateId: templateId || (isEnglish ? 'template-trendingnews-breaking' : 'template-canva-bdnews'),
       headline: sampleHeadline,
-      category: category || 'বিশেষ খবর',
+      category: category || (isEnglish ? 'US POLITICS' : 'বিশেষ খবর'),
       imageUrl: imageUrl || undefined,
+      website: website || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site'),
     });
 
     const base64Data = `data:image/jpeg;base64,${buffer.toString('base64')}`;

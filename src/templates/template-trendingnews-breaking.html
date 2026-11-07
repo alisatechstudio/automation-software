@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trending News World - Breaking News Template</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Oswald:wght@600;700&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 25%, #0e1e38 0%, #080f1d 50%, #03060c 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px 45px 34px 45px;
+      color: #ffffff;
+    }
+
+    /* Cinematic background ambient light streaks */
+    .bg-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1080px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(225, 29, 72, 0.18) 0%, transparent 45%),
+        radial-gradient(circle at 85% 20%, rgba(37, 99, 235, 0.22) 0%, transparent 50%),
+        radial-gradient(circle at 50% 85%, rgba(15, 23, 42, 0.8) 0%, transparent 60%);
+      z-index: 1;
+    }
+
+    .main-container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Top Broadcast Bar */
+    .top-header-bar {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon-circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.5);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .brand-titles {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title-main {
+      font-family: 'Oswald', 'Inter', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 1.1;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .brand-title-sub {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .category-badge-pill {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #ffffff;
+      padding: 8px 26px;
+      border-radius: 9999px;
+      font-family: 'Oswald', 'Inter', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 16px rgba(220, 38, 38, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .live-pulse-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #ffffff;
+    }
+
+    /* News Photo Section */
+    .photo-frame {
+      width: 990px;
+      height: 420px;
+      border-radius: 24px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+      border: 4px solid rgba(255, 255, 255, 0.95);
+      background: #0f172a;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-gradient-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 90px;
+      background: linear-gradient(to top, rgba(3, 7, 18, 0.7) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .breaking-strap {
+      position: absolute;
+      bottom: 16px;
+      left: 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #facc15;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Brand Strip under Photo */
+    .sub-brand-bar {
+      width: 990px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 10px 0 6px 0;
+      padding: 0 8px;
+    }
+
+    .strap-tagline {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .strap-tagline span.highlight {
+      color: #ef4444;
+    }
+
+    .strap-date {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+
+    /* Headline Card */
+    .headline-card {
+      width: 990px;
+      height: 310px;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 44px;
+      text-align: center;
+      overflow: hidden;
+      border: 2px solid rgba(225, 29, 72, 0.15);
+    }
+
+    .headline-text {
+      width: 100%;
+      color: #0b1329;
+      font-family: 'Montserrat', 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 52px;
+      line-height: 1.25;
+      text-align: center;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      letter-spacing: -0.5px;
+    }
+
+    /* Footer Bar */
+    .footer-bar {
+      width: 990px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .domain-pill {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 24px;
+      border-radius: 9999px;
+      color: #e2e8f0;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    .domain-pill .globe-icon {
+      color: #38bdf8;
+      font-size: 18px;
+    }
+
+    .domain-pill span.website {
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .cta-ribbon {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      color: #0f172a;
+      padding: 10px 28px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cta-ribbon span.chat-icon {
+      color: #dc2626;
+      font-size: 19px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-overlay"></div>
+
+  <div class="main-container">
+    <!-- Top Broadcast Header -->
+    <div class="top-header-bar">
+      <div class="brand-group">
+        <div class="brand-icon-circle">
+          {{#if logoUrl}}
+            <img src="{{{logoUrl}}}" alt="Logo" style="width:100%;height:100%;object-fit:cover;" />
+          {{else}}
+            <!-- Clean Trending News World Globe Vector -->
+            <svg viewBox="0 0 40 40" width="28" height="28" fill="none">
+              <circle cx="20" cy="20" r="17" stroke="#ffffff" stroke-width="2.2" />
+              <ellipse cx="20" cy="20" rx="8" ry="17" stroke="#ffffff" stroke-width="2" />
+              <line x1="3" y1="20" x2="37" y2="20" stroke="#ffffff" stroke-width="2" />
+              <line x1="5" y1="12" x2="35" y2="12" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="1 1" />
+              <line x1="5" y1="28" x2="35" y2="28" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="1 1" />
+            </svg>
+          {{/if}}
+        </div>
+        <div class="brand-titles">
+          <div class="brand-title-main">Trending News World</div>
+          <div class="brand-title-sub">USA & Global Wire • Official Dispatch</div>
+        </div>
+      </div>
+
+      <div class="category-badge-pill">
+        <div class="live-pulse-dot"></div>
+        <span>{{#if category}}{{category}}{{else}}BREAKING NEWS{{/if}}</span>
+      </div>
+    </div>
+
+    <!-- News Photo Frame -->
+    <div class="photo-frame">
+      <img src="{{{imageUrl}}}" alt="News Photo" onerror="this.src='{{{fallbackImage}}}';" />
+      <div class="photo-gradient-bottom"></div>
+      <div class="breaking-strap">
+        <span>⚡ SPECIAL REPORT</span>
+        <span>•</span>
+        <span>USA & WORLD</span>
+      </div>
+    </div>
+
+    <!-- Mid Tagline & Date -->
+    <div class="sub-brand-bar">
+      <div class="strap-tagline">
+        <span class="highlight">TRENDING ALERT</span> • VERIFIED INTERNATIONAL REPORTING
+      </div>
+      <div class="strap-date">{{dateText}}</div>
+    </div>
+
+    <!-- White Headline Box with Auto-Fitting Text -->
+    <div class="headline-card" id="headline-container">
+      <h1 class="headline-text" id="headline-text">{{headline}}</h1>
+    </div>
+
+    <!-- Bottom Footer Elements -->
+    <div class="footer-bar">
+      <div class="domain-pill">
+        <span class="globe-icon">🌐</span>
+        Follow us on: &nbsp;<span class="website">trendingnews.world</span>
+      </div>
+      <div class="cta-ribbon">
+        <span class="chat-icon">💬</span>
+        Full Story in First Comment
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function autoFit() {
+      const container = document.getElementById('headline-container');
+      const text = document.getElementById('headline-text');
+      if (!container || !text) return;
+
+      let fontSize = 54;
+      const minFontSize = 24;
+      text.style.fontSize = fontSize + 'px';
+      text.style.lineHeight = (fontSize * 1.25) + 'px';
+
+      while (
+        (text.scrollHeight > (container.clientHeight - 20) || text.scrollWidth > (container.clientWidth - 20)) &&
+        fontSize > minFontSize
+      ) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        text.style.lineHeight = (fontSize * 1.25) + 'px';
+      }
+    }
+    autoFit();
+    window.addEventListener('load', autoFit);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trending News World - Editorial & US Politics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Merriweather:ital,wght@0,700;0,900;1,700&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      background: #090e1a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 38px 46px;
+      color: #ffffff;
+    }
+
+    /* Subtle ambient editorial lighting */
+    .bg-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1080px;
+      height: 1080px;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 80% 10%, rgba(30, 58, 138, 0.28) 0%, transparent 55%),
+        radial-gradient(circle at 10% 90%, rgba(15, 23, 42, 0.9) 0%, transparent 60%);
+      z-index: 1;
+    }
+
+    .main-wrap {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top Masthead */
+    .top-masthead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 16px;
+    }
+
+    .masthead-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4);
+    }
+
+    .masthead-text-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .masthead-title {
+      font-family: 'Oswald', 'Inter', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .masthead-domain {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2.2px;
+      text-transform: uppercase;
+      color: #38bdf8;
+    }
+
+    .meta-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .category-tag {
+      background: #1e3a8a;
+      color: #93c5fd;
+      border: 1px solid rgba(147, 197, 253, 0.35);
+      padding: 6px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .date-tag {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* News Photo Section */
+    .photo-wrapper {
+      width: 100%;
+      height: 460px;
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      margin: 16px 0;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      background: #0f172a;
+    }
+
+    .photo-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 90px;
+      background: linear-gradient(to top, rgba(9, 14, 26, 0.9) 0%, transparent 100%);
+    }
+
+    .location-tag {
+      position: absolute;
+      bottom: 14px;
+      left: 18px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(6px);
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Headline Container */
+    .headline-box {
+      width: 100%;
+      height: 330px;
+      background: #0f172a;
+      border-radius: 20px;
+      padding: 24px 34px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-left: 8px solid #2563eb;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .headline-inner-container {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .headline-text {
+      width: 100%;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 46px;
+      line-height: 1.28;
+      color: #f8fafc;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      letter-spacing: -0.6px;
+    }
+
+    /* Bottom Sub-bar inside Headline Box */
+    .bottom-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 12px;
+    }
+
+    .status-left {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-left span.dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-right {
+      color: #38bdf8;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+    }
+
+    /* Footer Brand Strip */
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 6px;
+      margin-top: 12px;
+    }
+
+    .footer-left {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <div class="main-wrap">
+    <!-- Top Masthead -->
+    <div class="top-masthead">
+      <div class="masthead-brand">
+        <div class="brand-mark">
+          {{#if logoUrl}}
+            <img src="{{{logoUrl}}}" alt="Logo" style="width:100%;height:100%;object-fit:cover;" />
+          {{else}}
+            <svg viewBox="0 0 24 24" width="22" height="22" stroke="#ffffff" stroke-width="2.2" fill="none">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          {{/if}}
+        </div>
+        <div class="masthead-text-group">
+          <div class="masthead-title">Trending News World</div>
+          <div class="masthead-domain">trendingnews.world</div>
+        </div>
+      </div>
+
+      <div class="meta-group">
+        <div class="category-tag">{{#if category}}{{category}}{{else}}US POLITICS{{/if}}</div>
+        <div class="date-tag">{{dateText}}</div>
+      </div>
+    </div>
+
+    <!-- News Photo Wrapper -->
+    <div class="photo-wrapper">
+      <img src="{{{imageUrl}}}" alt="News Photo" onerror="this.src='{{{fallbackImage}}}';" />
+      <div class="photo-overlay"></div>
+      <div class="location-tag">
+        <span>📍 WASHINGTON & WORLD DISPATCH</span>
+      </div>
+    </div>
+
+    <!-- Headline Box -->
+    <div class="headline-box">
+      <div class="headline-inner-container" id="headline-container">
+        <h1 class="headline-text" id="headline-text">{{headline}}</h1>
+      </div>
+
+      <div class="bottom-status-bar">
+        <div class="status-left">
+          <span class="dot"></span>
+          <span>Verified Editorial Report</span>
+        </div>
+        <div class="status-right">
+          Full Story Link In First Comment →
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Bar -->
+    <div class="footer-bar">
+      <div class="footer-left">
+        Trending News World • International Edition
+      </div>
+      <div class="footer-right">
+        <span>🌐 https://trendingnews.world</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function autoFit() {
+      const container = document.getElementById('headline-container');
+      const text = document.getElementById('headline-text');
+      if (!container || !text) return;
+
+      let fontSize = 48;
+      const minFontSize = 24;
+      text.style.fontSize = fontSize + 'px';
+      text.style.lineHeight = (fontSize * 1.28) + 'px';
+
+      while (
+        (text.scrollHeight > (container.clientHeight - 10) || text.scrollWidth > (container.clientWidth - 10)) &&
+        fontSize > minFontSize
+      ) {
+        fontSize -= 1;
+        text.style.fontSize = fontSize + 'px';
+        text.style.lineHeight = (fontSize * 1.28) + 'px';
+      }
+    }
+    autoFit();
+    window.addEventListener('load', autoFit);
+  </script>
+</body>
+</html>
+

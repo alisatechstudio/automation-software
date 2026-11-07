@@ -5,6 +5,10 @@ export const TEMPLATES = {
   SQUARE_BREAKING: 'template-square-breaking',
   SQUARE_EDITORIAL: 'template-square-editorial',
   LANDSCAPE_STANDARD: 'template-landscape-standard',
+  TRENDING_NEWS_BREAKING: 'template-trendingnews-breaking',
+  TRENDING_NEWS_EDITORIAL: 'template-trendingnews-editorial',
+  TRENDING_NEWS_VIRAL: 'template-trendingnews-viral',
+  TRENDING_NEWS_LANDSCAPE: 'template-trendingnews-landscape',
 } as const;
 
 export interface TemplateDefinition {
@@ -17,6 +21,38 @@ export interface TemplateDefinition {
 }
 
 export const AVAILABLE_TEMPLATES: Record<string, TemplateDefinition> = {
+  'template-trendingnews-breaking': {
+    id: 'template-trendingnews-breaking',
+    name: 'Trending News World - Breaking News (1080x1080)',
+    description: 'High impact USA cable news broadcast style: live badge, framed photo, pristine white headline card, and trendingnews.world branding',
+    width: 1080,
+    height: 1080,
+    filename: 'template-trendingnews-breaking.html',
+  },
+  'template-trendingnews-editorial': {
+    id: 'template-trendingnews-editorial',
+    name: 'Trending News World - US & Politics Editorial (1080x1080)',
+    description: 'Authoritative dark obsidian editorial design for US Politics, White House, Congress, Economy, and Global Affairs',
+    width: 1080,
+    height: 1080,
+    filename: 'template-trendingnews-editorial.html',
+  },
+  'template-trendingnews-viral': {
+    id: 'template-trendingnews-viral',
+    name: 'Trending News World - Viral Spotlight (1080x1080)',
+    description: 'Vibrant modern social card engineered for viral explore algorithms: neon gradients, high-contrast typography, and trending hashtags',
+    width: 1080,
+    height: 1080,
+    filename: 'template-trendingnews-viral.html',
+  },
+  'template-trendingnews-landscape': {
+    id: 'template-trendingnews-landscape',
+    name: 'Trending News World - Landscape Social Share (1200x630)',
+    description: 'Standard 1.91:1 Facebook link/photo share ratio with side-by-side hero photo and auto-fit English headline',
+    width: 1200,
+    height: 630,
+    filename: 'template-trendingnews-landscape.html',
+  },
   'template-canva-bdnews': {
     id: 'template-canva-bdnews',
     name: 'BD News 24/7 Red (Canva Replica)',
@@ -463,11 +499,125 @@ export const VIRAL_HEADLINE_ENTITIES: Array<{
   patterns: (string | RegExp)[];
   tags: string[];
 }> = [
-  // World leaders & geopolitical figures
+  // USA & Global leaders, politicians & institutions
   {
     patterns: [/ট্রাম্প/i, /ডোনাল্ড ট্রাম্প/i, /\btrump\b/i, /\bdonald trump\b/i],
-    tags: ['#Trump', '#DonaldTrump', '#USA'],
+    tags: ['#Trump', '#DonaldTrump', '#USA', '#USPolitics'],
   },
+  {
+    patterns: [/\bvance\b/i, /\bjd vance\b/i, /ভ্যান্স/i],
+    tags: ['#JDVance', '#USPolitics', '#WhiteHouse'],
+  },
+  {
+    patterns: [/বাইডেন/i, /হোয়াইট হাউস/i, /হোয়াইট হাউস/i, /\bbiden\b/i, /\bjoe biden\b/i, /\bwhite house\b/i],
+    tags: ['#JoeBiden', '#WhiteHouse', '#USA', '#USPolitics'],
+  },
+  {
+    patterns: [/\bkamala\b/i, /\bharris\b/i, /\bkamala harris\b/i, /হ্যারিস/i],
+    tags: ['#KamalaHarris', '#Democrats', '#USPolitics'],
+  },
+  {
+    patterns: [/\bobama\b/i, /\bbarack obama\b/i, /ওবামা/i],
+    tags: ['#Obama', '#BarackObama', '#USPolitics'],
+  },
+  {
+    patterns: [/\bcongress\b/i, /\bsenate\b/i, /\bcapitol hill\b/i, /\bhouse of reps\b/i, /কংগ্রেস/i, /সিনেট/i],
+    tags: ['#Congress', '#Senate', '#CapitolHill', '#USPolitics'],
+  },
+  {
+    patterns: [/\bsupreme court\b/i, /\bscotus\b/i, /সুপ্রিম কোর্ট/i],
+    tags: ['#SupremeCourt', '#SCOTUS', '#LegalNews'],
+  },
+  {
+    patterns: [/\bfbi\b/i, /\bdoj\b/i, /\bpentagon\b/i, /\bsecret service\b/i, /পেন্টাগন/i],
+    tags: ['#FBI', '#DOJ', '#Pentagon', '#NationalSecurity'],
+  },
+  {
+    patterns: [/\bdesantis\b/i, /\bnewsom\b/i, /\brfk jr\b/i, /\bkennedy\b/i, /\bramaswamy\b/i],
+    tags: ['#USPolitics', '#Politics', '#USA'],
+  },
+
+  // US Tech Giants, AI & Business Titans
+  {
+    patterns: [/\belon musk\b/i, /\bmusk\b/i, /\btesla\b/i, /\bspacex\b/i, /ইলন মাস্ক/i, /মাস্ক/i],
+    tags: ['#ElonMusk', '#Tesla', '#SpaceX', '#TechNews'],
+  },
+  {
+    patterns: [/\bopenai\b/i, /\bchatgpt\b/i, /\bsam altman\b/i, /\bartificial intelligence\b/i, /\bai\b/i],
+    tags: ['#OpenAI', '#ChatGPT', '#AI', '#ArtificialIntelligence'],
+  },
+  {
+    patterns: [/\bapple\b/i, /\biphone\b/i, /\btim cook\b/i],
+    tags: ['#Apple', '#iPhone', '#TechNews'],
+  },
+  {
+    patterns: [/\bnvidia\b/i, /\bjensen huang\b/i],
+    tags: ['#Nvidia', '#AIChips', '#TechNews'],
+  },
+  {
+    patterns: [/\bgoogle\b/i, /\balphabet\b/i, /\bsundar pichai\b/i],
+    tags: ['#Google', '#TechNews', '#AI'],
+  },
+  {
+    patterns: [/\bmicrosoft\b/i, /\bbill gates\b/i, /\bsatya nadella\b/i],
+    tags: ['#Microsoft', '#TechNews'],
+  },
+  {
+    patterns: [/\bmeta\b/i, /\bmark zuckerberg\b/i, /\bzuckerberg\b/i],
+    tags: ['#Meta', '#MarkZuckerberg', '#TechNews'],
+  },
+  {
+    patterns: [/\bbitcoin\b/i, /\bcrypto\b/i, /\bbtc\b/i, /\bethereum\b/i],
+    tags: ['#Bitcoin', '#Crypto', '#Finance'],
+  },
+
+  // US Economy, Wall Street & Finance
+  {
+    patterns: [/\bfederal reserve\b/i, /\bthe fed\b/i, /\bjerome powell\b/i, /\bwall street\b/i, /\bdow jones\b/i, /\bs&p\b/i, /\bnasdaq\b/i],
+    tags: ['#WallStreet', '#FederalReserve', '#Economy', '#StockMarket'],
+  },
+  {
+    patterns: [/\binflation\b/i, /\binterest rate\b/i, /\btariff\b/i, /\btariffs\b/i, /\btrade war\b/i],
+    tags: ['#Inflation', '#Economy', '#BusinessNews', '#USEconomy'],
+  },
+
+  // US Sports, NFL & NBA
+  {
+    patterns: [/\bnfl\b/i, /\bsuper bowl\b/i, /\bpatrick mahomes\b/i, /\btravis kelce\b/i, /\bquarterback\b/i],
+    tags: ['#NFL', '#SuperBowl', '#Football', '#Sports'],
+  },
+  {
+    patterns: [/\bnba\b/i, /\blebron\b/i, /\blebron james\b/i, /\bsteph curry\b/i, /\bbasketball\b/i],
+    tags: ['#NBA', '#Basketball', '#Sports'],
+  },
+  {
+    patterns: [/\bmlb\b/i, /\bworld series\b/i, /\bbaseball\b/i],
+    tags: ['#MLB', '#Baseball', '#Sports'],
+  },
+  {
+    patterns: [/\bufc\b/i, /\bmma\b/i, /\bdana white\b/i],
+    tags: ['#UFC', '#MMA', '#Fighting'],
+  },
+
+  // US Pop Culture & Entertainment
+  {
+    patterns: [/\btaylor swift\b/i, /\bswifties\b/i, /\beras tour\b/i],
+    tags: ['#TaylorSwift', '#Swifties', '#PopCulture'],
+  },
+  {
+    patterns: [/\bhollywood\b/i, /\boscars\b/i, /\bgrammys\b/i, /\bnetflix\b/i, /\bdisney\b/i, /\bbox office\b/i],
+    tags: ['#Hollywood', '#Entertainment', '#CelebrityNews', '#Movies'],
+  },
+  {
+    patterns: [/\bnasa\b/i, /\bspace\b/i, /\bastronomy\b/i, /\bjames webb\b/i],
+    tags: ['#NASA', '#Space', '#Science'],
+  },
+  {
+    patterns: [/\bhurricane\b/i, /\btornado\b/i, /\bwildfire\b/i, /\bsevere storm\b/i, /\bblizzard\b/i],
+    tags: ['#SevereWeather', '#WeatherAlert', '#Emergency', '#USNews'],
+  },
+
+  // International Geopolitics
   {
     patterns: [/পুতিন/i, /রাশিয়া/i, /রাশিয়া/i, /\bputin\b/i, /\brussia\b/i, /ক্রেমলিন/i],
     tags: ['#Putin', '#Russia', '#WorldPolitics'],
@@ -475,10 +625,6 @@ export const VIRAL_HEADLINE_ENTITIES: Array<{
   {
     patterns: [/ইউক্রেন/i, /জেলেনস্কি/i, /\bukraine\b/i, /\bzelensky\b/i],
     tags: ['#Ukraine', '#UkraineWar', '#WorldNews'],
-  },
-  {
-    patterns: [/বাইডেন/i, /হোয়াইট হাউস/i, /হোয়াইট হাউস/i, /\bbiden\b/i, /\bwhite house\b/i],
-    tags: ['#JoeBiden', '#WhiteHouse', '#USA'],
   },
   {
     patterns: [/ফিলিস্তিন/i, /প্যালেস্টাইন/i, /গাজা/i, /\bpalestine\b/i, /\bgaza\b/i, /হামাস/i],
@@ -613,6 +759,267 @@ export interface GenerateViralHashtagsOptions {
   headline?: string;
   userTags?: string;
   targetCount?: number; // Default: 12 (recommended 10-14 for Meta Reels)
+  isEnglish?: boolean;
+}
+
+/**
+ * Detects whether a string is predominantly in English rather than Bengali
+ */
+export function isEnglishText(text?: string): boolean {
+  if (!text) return false;
+  const bengaliCount = (text.match(/[\u0980-\u09FF]/g) || []).length;
+  const latinCount = (text.match(/[a-zA-Z]/g) || []).length;
+  return latinCount > bengaliCount;
+}
+
+/**
+ * Resolves category for Trending News World (USA & International audience)
+ */
+export function resolveUSACategory(categoryName?: string, headline?: string): string {
+  const cat = (categoryName || '').toLowerCase().trim();
+  const hl = (headline || '').toLowerCase().trim();
+
+  // 1. Direct Category Match (highest priority)
+  if (cat) {
+    if (/politic|white house|congress|senate|election|\bgop\b|democrat/i.test(cat)) return 'politics';
+    if (/tech|technology|\bai\b|silicon|gadget|cyber|crypto/i.test(cat)) return 'technology';
+    if (/econom|business|market|finance|wall street|\bfed\b/i.test(cat)) return 'economy';
+    if (/sport|nfl|nba|mlb|football|soccer|ufc/i.test(cat)) return 'sports';
+    if (/entertain|celebrity|hollywood|movie|cinema|music/i.test(cat)) return 'entertainment';
+    if (/science|space|nasa|health|medical|climate/i.test(cat)) return 'science';
+    if (/crime|justice|law|police|legal/i.test(cat)) return 'crime';
+    if (/lifestyle|living|wellness|travel|food/i.test(cat)) return 'lifestyle';
+    if (/world|internat|foreign|global/i.test(cat)) return 'world';
+  }
+
+  // 2. Headline Keyword Resolution
+  if (/politic|white house|congress|senate|election|\bvote\b|republican|democrat|\bgop\b|biden|trump|vance|harris|scotus|\bcourt\b|\bgov\b/i.test(hl)) {
+    return 'politics';
+  }
+  if (/tech|technology|\bai\b|artificial intelligence|silicon|gadget|apple|google|microsoft|nvidia|openai|crypto|bitcoin|software|cyber/i.test(hl)) {
+    return 'technology';
+  }
+  if (/econom|business|market|stock|wall street|inflation|\bfed\b|federal reserve|finance|\bbank\b|dollar|tariff|trade/i.test(hl)) {
+    return 'economy';
+  }
+  if (/sport|nfl|nba|mlb|football|soccer|basketball|super bowl|athlete|ufc|fifa|chiefs|mahomes/i.test(hl)) {
+    return 'sports';
+  }
+  if (/entertain|celebrity|hollywood|movie|cinema|actor|music|song|album|taylor swift|billboard|oscar|grammy/i.test(hl)) {
+    return 'entertainment';
+  }
+  if (/science|space|nasa|health|medical|disease|virus|climate|environment/i.test(hl)) {
+    return 'science';
+  }
+  if (/crime|police|shooting|fbi|\bcourt\b|arrest|jail|investigation|murder|fire|accident|crash/i.test(hl)) {
+    return 'crime';
+  }
+  if (/ukraine|russia|israel|gaza|middle east|china|iran|nato|\bun\b|europe|asia|geopolit|foreign/i.test(hl)) {
+    return 'world';
+  }
+  if (/lifestyle|wellness|living|food|travel|style/i.test(hl)) {
+    return 'lifestyle';
+  }
+
+  return 'general';
+}
+
+export const USA_CATEGORY_VIRAL_HASHTAGS: Record<string, string[]> = {
+  politics: [
+    '#USPolitics',
+    '#Politics',
+    '#WhiteHouse',
+    '#Congress',
+    '#Senate',
+    '#CapitolHill',
+    '#GOP',
+    '#Democrats',
+    '#Election',
+    '#PoliticalNews',
+    '#SCOTUS',
+  ],
+  world: [
+    '#WorldNews',
+    '#InternationalNews',
+    '#GlobalNews',
+    '#Geopolitics',
+    '#ForeignAffairs',
+    '#GlobalUpdate',
+    '#BreakingWorld',
+    '#Diplomacy',
+  ],
+  economy: [
+    '#BusinessNews',
+    '#Economy',
+    '#WallStreet',
+    '#Finance',
+    '#StockMarket',
+    '#Inflation',
+    '#FederalReserve',
+    '#Investing',
+    '#MarketWatch',
+    '#Crypto',
+  ],
+  technology: [
+    '#TechNews',
+    '#Technology',
+    '#AI',
+    '#ArtificialIntelligence',
+    '#Innovation',
+    '#SiliconValley',
+    '#BigTech',
+    '#TechUpdate',
+    '#Gadgets',
+  ],
+  entertainment: [
+    '#Entertainment',
+    '#Hollywood',
+    '#CelebrityNews',
+    '#PopCulture',
+    '#Showbiz',
+    '#Movies',
+    '#MusicNews',
+    '#Cinema',
+  ],
+  sports: [
+    '#SportsNews',
+    '#Sports',
+    '#NFL',
+    '#NBA',
+    '#MLB',
+    '#SuperBowl',
+    '#Football',
+    '#Basketball',
+    '#Soccer',
+  ],
+  science: [
+    '#Science',
+    '#Space',
+    '#NASA',
+    '#HealthNews',
+    '#MedicalNews',
+    '#ClimateChange',
+    '#Environment',
+  ],
+  crime: [
+    '#BreakingAlert',
+    '#CrimeNews',
+    '#Investigation',
+    '#Justice',
+    '#LawAndOrder',
+    '#Police',
+    '#LegalNews',
+  ],
+  lifestyle: [
+    '#Lifestyle',
+    '#HealthTips',
+    '#Wellness',
+    '#Culture',
+    '#HumanInterest',
+    '#TrendingNow',
+  ],
+  general: [
+    '#TrendingNewsWorld',
+    '#USNews',
+    '#BreakingNews',
+    '#WorldNews',
+    '#NewsAlert',
+    '#DailyNews',
+    '#HeadlineNews',
+  ],
+};
+
+export const CORE_USA_NEWS_TAGS = [
+  '#TrendingNewsWorld',
+  '#USNews',
+  '#BreakingNews',
+  '#WorldNews',
+  '#TrendingNews',
+  '#NewsUpdate',
+  '#USA',
+  '#DailyNews',
+  '#Headlines',
+];
+
+/**
+ * Intelligent viral hashtag generator for Trending News World (USA & International).
+ * Automatically tuned for USA Meta algorithm discovery (Facebook Feed & Reels).
+ */
+export function generateTrendingNewsHashtags(options?: GenerateViralHashtagsOptions): string {
+  const targetCount = options?.targetCount ?? 12;
+  const headline = (options?.headline || '').trim();
+  const usaCategory = resolveUSACategory(options?.category, headline);
+  const userTagsRaw = (options?.userTags || '').trim();
+
+  const selectedTags: string[] = [];
+  const seen = new Set<string>();
+
+  const pushTag = (raw: string) => {
+    if (!raw) return;
+    let tag = raw.trim();
+    if (!tag.startsWith('#')) {
+      tag = '#' + tag;
+    }
+    tag = '#' + tag.substring(1).replace(/[\s\.,;:!?'"(){}\[\]\\\/]/g, '');
+    if (tag.length <= 1) return;
+
+    const lower = tag.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      selectedTags.push(tag);
+    }
+  };
+
+  // 1. Dynamic Trending Entities from Headline (Trump, Elon Musk, Wall Street, etc.)
+  if (headline) {
+    const entityMatches: string[] = [];
+    for (const entity of VIRAL_HEADLINE_ENTITIES) {
+      const matched = entity.patterns.some((p) => {
+        if (typeof p === 'string') {
+          return headline.toLowerCase().includes(p.toLowerCase());
+        }
+        return p.test(headline);
+      });
+      if (matched) {
+        if (entity.tags[0]) entityMatches.push(entity.tags[0]);
+        if (entity.tags[1]) entityMatches.push(entity.tags[1]);
+      }
+    }
+    for (const t of entityMatches.slice(0, 4)) {
+      pushTag(t);
+    }
+  }
+
+  // 2. Category-Specific USA News Tags
+  const categoryTags = USA_CATEGORY_VIRAL_HASHTAGS[usaCategory] || USA_CATEGORY_VIRAL_HASHTAGS['general'];
+  for (const t of categoryTags.slice(0, 4)) {
+    pushTag(t);
+  }
+
+  // 3. User configured tags (from DB settings)
+  if (userTagsRaw) {
+    for (const t of userTagsRaw.split(/\s+/).filter(Boolean)) {
+      pushTag(t);
+    }
+  }
+
+  // 4. Core USA News Distribution Tags
+  for (const t of CORE_USA_NEWS_TAGS.slice(0, 3)) {
+    pushTag(t);
+  }
+
+  // 5. Core Algorithmic Discovery Tags (reels, trending, viral)
+  for (const t of CORE_VIRAL_REEL_TAGS) {
+    pushTag(t);
+  }
+
+  // 6. Remaining category tags if still under limit
+  for (const t of categoryTags) {
+    pushTag(t);
+  }
+
+  const finalLimit = Math.max(10, Math.min(14, targetCount));
+  return selectedTags.slice(0, finalLimit).join(' ');
 }
 
 /**
@@ -622,8 +1029,16 @@ export interface GenerateViralHashtagsOptions {
  * Guaranteed 10-14 high-impact tags to maximize algorithmic distribution without spam penalties.
  */
 export function generateViralReelHashtags(options?: GenerateViralHashtagsOptions): string {
-  const targetCount = options?.targetCount ?? 12;
   const headline = (options?.headline || '').trim();
+  const category = (options?.category || '').trim();
+  const isEnglish = options?.isEnglish || isEnglishText(headline) || isEnglishText(category);
+
+  // If content is in English or explicitly set, route to USA/International hashtag engine
+  if (isEnglish) {
+    return generateTrendingNewsHashtags(options);
+  }
+
+  const targetCount = options?.targetCount ?? 12;
   const categoryId = resolveCategoryTheme(options?.category);
   const userTagsRaw = (options?.userTags || '').trim();
 
@@ -719,6 +1134,7 @@ export function generateViralReelHashtags(options?: GenerateViralHashtagsOptions
 export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptions): string {
   const targetCount = options?.targetCount ?? 8;
   const headline = (options?.headline || '').trim();
+  const isEnglish = options?.isEnglish || isEnglishText(headline) || isEnglishText(options?.category);
   const categoryId = resolveCategoryTheme(options?.category);
   const userTagsRaw = (options?.userTags || '').trim();
 
@@ -753,10 +1169,22 @@ export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptio
     }
   }
 
-  // Category tags
-  const categoryTags = CATEGORY_VIRAL_HASHTAGS[categoryId] || [];
-  for (const t of categoryTags.slice(0, 2)) {
-    pushTag(t);
+  if (isEnglish) {
+    const usaCategory = resolveUSACategory(options?.category, headline);
+    const categoryTags = USA_CATEGORY_VIRAL_HASHTAGS[usaCategory] || USA_CATEGORY_VIRAL_HASHTAGS['general'];
+    for (const t of categoryTags.slice(0, 2)) {
+      pushTag(t);
+    }
+    pushTag('#TrendingNewsWorld');
+    pushTag('#USNews');
+  } else {
+    // Category tags
+    const categoryTags = CATEGORY_VIRAL_HASHTAGS[categoryId] || [];
+    for (const t of categoryTags.slice(0, 2)) {
+      pushTag(t);
+    }
+    pushTag('#BanglaNews');
+    pushTag('#Bangladesh');
   }
 
   // User tags / News hooks
@@ -765,8 +1193,6 @@ export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptio
       pushTag(t);
     }
   }
-  pushTag('#BanglaNews');
-  pushTag('#Bangladesh');
 
   return selectedTags.slice(0, targetCount).join(' ');
 }

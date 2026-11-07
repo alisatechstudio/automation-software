@@ -46,9 +46,20 @@ export class FacebookGraphClient {
   ): string {
     const cleanUrl = (newsUrl || '').trim();
     if (!cleanUrl) return '';
+
+    const isEnglish = cleanUrl.includes('trendingnews');
+
     if (template && template.includes('{url}')) {
+      if (isEnglish && template.includes('বিস্তারিত')) {
+        return `Read the full story here: ${cleanUrl}`;
+      }
       return template.replace(/\{url\}/g, cleanUrl).trim();
     }
+
+    if (isEnglish) {
+      return `Read the full story here: ${cleanUrl}`;
+    }
+
     return template ? `${template.trim()} ${cleanUrl}` : `বিস্তারিত পড়ুন: ${cleanUrl}`;
   }
 

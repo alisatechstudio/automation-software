@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import handlebars from 'handlebars';
 import type { Browser, BrowserContext } from 'playwright';
 import { ImageRenderer, RenderInput, RenderOutput } from './types.js';
-import { AVAILABLE_TEMPLATES, TEMPLATES } from '../../config/constants.js';
+import { AVAILABLE_TEMPLATES, TEMPLATES, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export class PlaywrightImageRenderer implements ImageRenderer {
@@ -116,15 +116,25 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     const templateId = input.templateId || TEMPLATES.CANVA_BDNEWS;
     const { compiled } = this.getCompiledTemplate(templateId);
 
+    const isEnglish = templateId.includes('trendingnews') || isEnglishText(input.headline) || isEnglishText(input.category);
     const dateFormatted =
       input.dateText ||
-      new Intl.DateTimeFormat('bn-BD', {
-        dateStyle: 'full',
-      }).format(new Date());
+      (isEnglish
+        ? new Intl.DateTimeFormat('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }).format(new Date())
+        : new Intl.DateTimeFormat('bn-BD', {
+            dateStyle: 'full',
+          }).format(new Date()));
+
+    const defaultCategory = isEnglish ? 'BREAKING NEWS' : 'বিশেষ খবর';
 
     return compiled({
       headline: input.headline,
-      category: input.category || 'বিশেষ খবর',
+      category: input.category || defaultCategory,
       dateText: dateFormatted,
       imageUrl: input.imageUrl || this.fallbackImageBase64,
       fallbackImage: this.fallbackImageBase64,
@@ -132,6 +142,7 @@ export class PlaywrightImageRenderer implements ImageRenderer {
       fontNotoSansBengali: this.fontNotoBase64,
       fontHindSiliguriBold: this.fontHindBoldBase64,
       brandColor: input.brandColor || '#dc2626',
+      website: input.website || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site'),
     });
   }
 
@@ -142,15 +153,25 @@ export class PlaywrightImageRenderer implements ImageRenderer {
     const renderWidth = input.width || width;
     const renderHeight = input.height || height;
 
+    const isEnglish = templateId.includes('trendingnews') || isEnglishText(input.headline) || isEnglishText(input.category);
     const dateFormatted =
       input.dateText ||
-      new Intl.DateTimeFormat('bn-BD', {
-        dateStyle: 'full',
-      }).format(new Date());
+      (isEnglish
+        ? new Intl.DateTimeFormat('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }).format(new Date())
+        : new Intl.DateTimeFormat('bn-BD', {
+            dateStyle: 'full',
+          }).format(new Date()));
+
+    const defaultCategory = isEnglish ? 'BREAKING NEWS' : 'সাধারণ';
 
     const html = compiled({
       headline: input.headline,
-      category: input.category || 'সাধারণ',
+      category: input.category || defaultCategory,
       dateText: dateFormatted,
       imageUrl: input.imageUrl || this.fallbackImageBase64,
       fallbackImage: this.fallbackImageBase64,
@@ -158,6 +179,7 @@ export class PlaywrightImageRenderer implements ImageRenderer {
       fontNotoSansBengali: this.fontNotoBase64,
       fontHindSiliguriBold: this.fontHindBoldBase64,
       brandColor: input.brandColor || '#dc2626',
+      website: input.website || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site'),
     });
 
     const browser = await this.getBrowser();

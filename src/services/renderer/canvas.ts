@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { ImageRenderer, RenderInput, RenderOutput } from './types.js';
 import { config } from '../../config/env.js';
+import { isEnglishText } from '../../config/constants.js';
 
 export class CanvasCardRenderer implements ImageRenderer {
   private fontsRegistered: boolean = false;
@@ -55,17 +56,31 @@ export class CanvasCardRenderer implements ImageRenderer {
     const ctx = canvas.getContext('2d');
 
     const headline = (input.headline || '').trim();
-    const category = (input.category || 'বিশেষ খবর').trim();
-    const imageUrl = input.imageUrl;
-    const website = input.website || 'https://bdnews.site';
+    const templateId = input.templateId || '';
+    const isEnglish =
+      templateId.includes('trendingnews') ||
+      isEnglishText(headline) ||
+      isEnglishText(input.category) ||
+      Boolean(input.website && input.website.includes('trendingnews'));
 
-    // --- 1. STUDIO BROADCAST RED BACKGROUND ---
+    const category = (input.category || (isEnglish ? 'BREAKING NEWS' : 'বিশেষ খবর')).trim();
+    const imageUrl = input.imageUrl;
+    const website = input.website || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site');
+
+    // --- 1. STUDIO BROADCAST BACKGROUND ---
     // Deep multi-stop radial gradient for television studio depth
     const bgGrad = ctx.createRadialGradient(540, 360, 40, 540, 540, 780);
-    bgGrad.addColorStop(0, '#8c0404');
-    bgGrad.addColorStop(0.35, '#6a0101');
-    bgGrad.addColorStop(0.7, '#3d0000');
-    bgGrad.addColorStop(1, '#1a0000');
+    if (isEnglish) {
+      bgGrad.addColorStop(0, '#0e2343');
+      bgGrad.addColorStop(0.35, '#09152a');
+      bgGrad.addColorStop(0.7, '#050c18');
+      bgGrad.addColorStop(1, '#02050b');
+    } else {
+      bgGrad.addColorStop(0, '#8c0404');
+      bgGrad.addColorStop(0.35, '#6a0101');
+      bgGrad.addColorStop(0.7, '#3d0000');
+      bgGrad.addColorStop(1, '#1a0000');
+    }
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
@@ -99,10 +114,10 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.fillStyle = vigBottom;
     ctx.fillRect(0, 900, width, 180);
 
-    // --- 2. TOP CATEGORY BADGE ("🔴 বিশেষ খবর") ---
+    // --- 2. TOP CATEGORY BADGE ---
     ctx.save();
-    ctx.font = 'bold 28px "Hind Siliguri", sans-serif';
-    const cleanCategory = category || 'বিশেষ খবর';
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 28px "Hind Siliguri", sans-serif';
+    const cleanCategory = isEnglish ? category.toUpperCase() : (category || 'বিশেষ খবর');
     const catTextWidth = ctx.measureText(cleanCategory).width;
 
     // Badge dimensions with broadcast dot indicator
@@ -207,10 +222,10 @@ export class CanvasCardRenderer implements ImageRenderer {
       ctx.fillRect(photoX, photoY, photoW, photoH);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 32px "Hind Siliguri", sans-serif';
+      ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 32px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('BD News 24/7 • শীর্ষ সংবাদ', photoX + photoW / 2, photoY + photoH / 2);
+      ctx.fillText(isEnglish ? 'Trending News World • Special Report' : 'BD News 24/7 • শীর্ষ সংবাদ', photoX + photoW / 2, photoY + photoH / 2);
     }
 
     // Soft bottom dark gradient over photo so white border and elements pop
@@ -230,13 +245,13 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // --- 4. BRAND BAR (Logo + "বিডি নিউজ ২৪/৭") - PERFECTLY CENTERED ---
+    // --- 4. BRAND BAR (Logo + Brand Name) - PERFECTLY CENTERED ---
     const brandCenterY = 545;
     const logoSize = 72;
 
     ctx.save();
-    ctx.font = 'bold 44px "Hind Siliguri", sans-serif';
-    const brandText = 'বিডি নিউজ ২৪/৭';
+    ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 44px "Hind Siliguri", sans-serif';
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     const brandTextWidth = ctx.measureText(brandText).width;
     const brandGap = 18;
     const totalBrandWidth = logoSize + brandGap + brandTextWidth;
@@ -256,6 +271,7 @@ export class CanvasCardRenderer implements ImageRenderer {
     ].filter(Boolean) as string[];
 
     const finalLogoPath = logoCandidates.find((p) => p && (p.startsWith('http') || fs.existsSync(p)));
+    let logoRendered = false;
 
     if (finalLogoPath) {
       try {
@@ -275,9 +291,39 @@ export class CanvasCardRenderer implements ImageRenderer {
         ctx.beginPath();
         ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
         ctx.stroke();
+        logoRendered = true;
       } catch (e: any) {
         console.warn('[CanvasCardRenderer] Could not load brand logo:', e.message);
       }
+    }
+
+    if (!logoRendered && isEnglish) {
+      // Draw Globe Emblem for Trending News World
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize / 2, brandCenterY, logoSize / 2 - 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(logoX + logoSize / 2, brandCenterY, 14, logoSize / 2 - 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(logoX + 8, brandCenterY);
+      ctx.lineTo(logoX + logoSize - 8, brandCenterY);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Channel Name Text (Crystal Clear White with Drop Shadow)
@@ -315,10 +361,10 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // --- BENGALI HEADLINE TEXT FORMATTING & MAXIMUM VISIBILITY ---
+    // --- HEADLINE TEXT FORMATTING & MAXIMUM VISIBILITY ---
     ctx.save();
-    // Deep, high-contrast rich ruby crimson: Maximum contrast against white background
-    ctx.fillStyle = '#800000';
+    // High-contrast color: deep ruby crimson for Bangla, navy/black for English
+    ctx.fillStyle = isEnglish ? '#0b1329' : '#800000';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
@@ -333,9 +379,9 @@ export class CanvasCardRenderer implements ImageRenderer {
     if (cleanHeadline.length > 145) fontSize = 36;
     if (cleanHeadline.length > 180) fontSize = 32;
 
-    ctx.font = `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
 
-    // Word-wrap logic respecting Bengali compound words
+    // Word-wrap logic
     const words = cleanHeadline.split(/\s+/);
     const lines: string[] = [];
     let currentLine = '';
@@ -351,8 +397,8 @@ export class CanvasCardRenderer implements ImageRenderer {
     }
     if (currentLine) lines.push(currentLine);
 
-    // Line height with generous spacing for Bengali matras (ী, ু, র্, etc.)
-    const lineHeight = Math.round(fontSize * 1.38);
+    // Line height tuned for language
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.26 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
 
     // Mathematically exact vertical centering inside the 305px card
@@ -367,9 +413,9 @@ export class CanvasCardRenderer implements ImageRenderer {
     const footerY = 948;
     const footerH = 54;
 
-    // Left: "🌐 Follow us on : bdnews.site"
+    // Left: "🌐 Follow us on : domain"
     ctx.save();
-    const followW = 460;
+    const followW = isEnglish ? 490 : 460;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.beginPath();
     ctx.roundRect(45, footerY, followW, footerH, 27);
@@ -396,19 +442,19 @@ export class CanvasCardRenderer implements ImageRenderer {
     // Clean domain display
     const cleanHost = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
-    ctx.font = '500 18px "Noto Sans Bengali", sans-serif';
+    ctx.font = isEnglish ? '600 17px sans-serif' : '500 18px "Noto Sans Bengali", sans-serif';
     ctx.fillStyle = '#cbd5e1';
     ctx.textAlign = 'left';
     ctx.fillText('Follow us on :', iconCenterX + iconRadius + 10, iconCenterY);
 
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(cleanHost, iconCenterX + iconRadius + 130, iconCenterY);
+    ctx.fillText(cleanHost, iconCenterX + iconRadius + (isEnglish ? 125 : 130), iconCenterY);
     ctx.restore();
 
-    // Right: "💬 বিস্তারিত কমেন্টে" Ribbon Pill
+    // Right: Ribbon Pill
     ctx.save();
-    const ribbonW = 210;
+    const ribbonW = isEnglish ? 275 : 210;
     const ribbonX = width - 45 - ribbonW;
 
     // Elegant White Ribbon with Silver Glow
@@ -426,15 +472,15 @@ export class CanvasCardRenderer implements ImageRenderer {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Chat Icon + Bold Bengali Text
+    // Chat Icon + Text
     ctx.font = '16px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('💬', ribbonX + 20, footerY + footerH / 2 + 1);
+    ctx.fillText('💬', ribbonX + 18, footerY + footerH / 2 + 1);
 
     ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 22px "Hind Siliguri", sans-serif';
-    ctx.fillText('বিস্তারিত কমেন্টে', ribbonX + 50, footerY + footerH / 2 + 1);
+    ctx.font = isEnglish ? 'bold 18px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.fillText(isEnglish ? 'Full Story in Comments' : 'বিস্তারিত কমেন্টে', ribbonX + (isEnglish ? 46 : 50), footerY + footerH / 2 + 1);
     ctx.restore();
 
     // Output 95% Quality JPEG Buffer

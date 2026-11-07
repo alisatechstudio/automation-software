@@ -8,7 +8,7 @@ import { ReelVideoRenderer } from '../renderer/reel.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
-import { REEL_THEME_KEYS, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
+import { REEL_THEME_KEYS, generateViralReelHashtags, generateViralShortsHashtags, generateTrendingNewsHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 /**
@@ -183,16 +183,40 @@ export class QueueWorker {
         console.log(`[QueueWorker] 🔄 Rolling Rotation selected next theme: "${targetReelTheme}"`);
       }
 
+      const selectedTemplateId = templateId || source?.templateId || 'template-canva-bdnews';
+      const isEnglish =
+        selectedTemplateId.includes('trendingnews') ||
+        isEnglishText(article.title) ||
+        isEnglishText(article.category) ||
+        Boolean(article.link && article.link.includes('trendingnews'));
+
+      const defaultCategory = isEnglish ? 'BREAKING NEWS' : 'বিশেষ খবর';
+      const effectiveCategory = article.category || defaultCategory;
+      const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+
+      const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+      const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+
+      const dynamicHashtags = isEnglish
+        ? generateTrendingNewsHashtags({
+            category: effectiveCategory,
+            headline: article.title,
+            userTags: configuredHashtags,
+          })
+        : configuredHashtags;
+
       const caption = this.fbClient.formatCaption(
         article.title,
         article.description || '',
-        config.DEFAULT_HASHTAGS,
+        dynamicHashtags,
         config.DEFAULT_CAPTION_FORMAT
       );
 
+      const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+      const commentTemplate = commentFormatSetting?.value || (isEnglish ? 'Read the full story here: {url}' : config.DEFAULT_COMMENT_FORMAT);
       const commentText = this.fbClient.formatComment(
         article.link,
-        config.DEFAULT_COMMENT_FORMAT
+        commentTemplate
       );
 
       let reelBuffer: Buffer | null = null;
@@ -205,7 +229,7 @@ export class QueueWorker {
         try {
           reelBuffer = await this.reelRenderer.renderReel({
             headline: article.title,
-            category: article.category || 'বিশেষ খবর',
+            category: effectiveCategory,
             imageUrl: article.imageUrl || undefined,
             theme: targetReelTheme,
             durationSeconds: reelDuration,
@@ -220,13 +244,17 @@ export class QueueWorker {
 
       if (isPosterDisabled && reelBuffer) {
         // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
-        const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
-        const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-        const reelCaption = generateViralReelHashtags({
-          category: article.category,
-          headline: article.title,
-          userTags: configuredHashtags,
-        });
+        const reelCaption = isEnglish
+          ? generateTrendingNewsHashtags({
+              category: effectiveCategory,
+              headline: article.title,
+              userTags: configuredHashtags,
+            })
+          : generateViralReelHashtags({
+              category: article.category,
+              headline: article.title,
+              userTags: configuredHashtags,
+            });
 
         // Pre-render Story poster card if enabled (takes ~100ms)
         const storySetting = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
@@ -236,10 +264,11 @@ export class QueueWorker {
         if (shouldPostStory) {
           try {
             posterRenderResult = await this.canvasRenderer.render({
-              templateId: 'template-canva-bdnews',
+              templateId: selectedTemplateId,
               headline: article.title,
-              category: article.category || 'বিশেষ খবর',
+              category: effectiveCategory,
               imageUrl: article.imageUrl || undefined,
+              website: effectiveWebsite,
             });
           } catch (e: any) {
             console.warn('[QueueWorker] Story render note:', e.message);
@@ -304,16 +333,17 @@ export class QueueWorker {
               let fallbackCard = posterRenderResult;
               if (!fallbackCard?.imageBuffer) {
                 fallbackCard = await this.canvasRenderer.render({
-                  templateId: 'template-canva-bdnews',
+                  templateId: selectedTemplateId,
                   headline: article.title,
-                  category: article.category || 'বিশেষ খবর',
+                  category: effectiveCategory,
                   imageUrl: article.imageUrl || undefined,
+                  website: effectiveWebsite,
                 });
               }
               const feedCaption = this.fbClient.formatCaption(
                 article.title,
                 article.description || '',
-                config.DEFAULT_HASHTAGS,
+                dynamicHashtags,
                 config.DEFAULT_CAPTION_FORMAT
               );
               const photoRes = await this.fbClient.publishPhoto(
@@ -516,23 +546,25 @@ export class QueueWorker {
         let renderedPath: string | undefined;
 
         try {
-          console.log(`[QueueWorker] Rendering 1080x1080 JPG news card for article "${article.title}"...`);
-          if (templateId === 'template-canva-bdnews' || !templateId || source?.templateId === 'template-canva-bdnews' || process.env.VERCEL) {
+          console.log(`[QueueWorker] Rendering 1080x1080 JPG news card for article "${article.title}" (${selectedTemplateId})...`);
+          if (selectedTemplateId === 'template-canva-bdnews' || !selectedTemplateId || process.env.VERCEL) {
             const renderResult = await this.canvasRenderer.render({
-              templateId: 'template-canva-bdnews',
+              templateId: selectedTemplateId,
               headline: article.title,
-              category: article.category || 'বিশেষ খবর',
+              category: effectiveCategory,
               imageUrl: article.imageUrl || undefined,
+              website: effectiveWebsite,
             });
             renderedBuffer = renderResult.imageBuffer;
             renderedPath = renderResult.outputPath;
           } else {
             const renderResult = await this.renderer.render({
-              templateId: templateId || source?.templateId || 'template-canva-bdnews',
+              templateId: selectedTemplateId,
               headline: article.title,
-              category: article.category || 'বিশেষ খবর',
-              dateText: new Intl.DateTimeFormat('bn-BD', { dateStyle: 'full' }).format(new Date(article.pubDate)),
+              category: effectiveCategory,
+              dateText: new Intl.DateTimeFormat(isEnglish ? 'en-US' : 'bn-BD', isEnglish ? { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' } : { dateStyle: 'full' }).format(new Date(article.pubDate)),
               imageUrl: article.imageUrl || undefined,
+              website: effectiveWebsite,
             });
             renderedBuffer = renderResult.imageBuffer;
             renderedPath = renderResult.outputPath;
@@ -541,10 +573,11 @@ export class QueueWorker {
           console.warn(`[QueueWorker] Primary render failed: ${renderError.message}. Using Canvas Card fallback...`);
           try {
             const fallbackResult = await this.canvasRenderer.render({
-              templateId: 'template-canva-bdnews',
+              templateId: selectedTemplateId,
               headline: article.title,
-              category: article.category || 'বিশেষ খবর',
+              category: effectiveCategory,
               imageUrl: article.imageUrl || undefined,
+              website: effectiveWebsite,
             });
             renderedBuffer = fallbackResult.imageBuffer;
             renderedPath = fallbackResult.outputPath;
