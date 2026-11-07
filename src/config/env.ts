@@ -70,7 +70,7 @@ export const config: AppConfig = {
   DRY_RUN: process.env.DRY_RUN === 'true' || process.env.DRY_RUN === '1',
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  DEFAULT_HASHTAGS: process.env.DEFAULT_HASHTAGS || '#BreakingNews #Bangladesh #NewsUpdate',
+  DEFAULT_HASHTAGS: process.env.DEFAULT_HASHTAGS || '#BreakingNews #BanglaNews #ViralNews #Bangladesh #NewsUpdate',
   DEFAULT_CAPTION_FORMAT:
     process.env.DEFAULT_CAPTION_FORMAT || '{headline}\n\n{summary}\n\n{hashtags}',
   DEFAULT_COMMENT_FORMAT:

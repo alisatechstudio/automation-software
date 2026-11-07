@@ -288,4 +288,488 @@ export function resolveCategoryTheme(categoryName?: string): string {
   return 'cat-bangladesh';
 }
 
+/**
+ * High-performing category-specific viral hashtags for all 13 categories on bdnews.site.
+ * Optimized for Facebook Reels & Instagram Explore algorithms.
+ */
+export const CATEGORY_VIRAL_HASHTAGS: Record<string, string[]> = {
+  'cat-bangladesh': [
+    '#Bangladesh',
+    '#BanglaNews',
+    '#Dhaka',
+    '#NationalNews',
+    '#বাংলাদেশ',
+    '#সারাদেশ',
+    '#খবর',
+    '#জাতীয়সংবাদ',
+    '#BDNews',
+  ],
+  'cat-politics': [
+    '#Politics',
+    '#BangladeshPolitics',
+    '#PoliticalNews',
+    '#রাজনীতি',
+    '#জাতীয়সংবাদ',
+    '#রাজনৈতিকখবর',
+    '#PoliticalReels',
+    '#নির্বাচন',
+  ],
+  'cat-economy': [
+    '#Economy',
+    '#BusinessNews',
+    '#MarketUpdate',
+    '#Finance',
+    '#অর্থনীতি',
+    '#বাণিজ্য',
+    '#টাকা',
+    '#শেয়ারবাজার',
+    '#BusinessReels',
+  ],
+  'cat-international': [
+    '#InternationalNews',
+    '#WorldNews',
+    '#GlobalNews',
+    '#BreakingAlert',
+    '#আন্তর্জাতিক',
+    '#বিশ্বসংবাদ',
+    '#WorldUpdate',
+    '#GlobalReels',
+  ],
+  'cat-sports': [
+    '#SportsNews',
+    '#Cricket',
+    '#Football',
+    '#SportsReels',
+    '#Tigers',
+    '#খেলাধুলা',
+    '#ক্রিকেট',
+    '#ফুটবল',
+    '#BCB',
+  ],
+  'cat-technology': [
+    '#TechNews',
+    '#Technology',
+    '#Innovation',
+    '#AI',
+    '#TechReels',
+    '#Gadgets',
+    '#তথ্যপ্রযুক্তি',
+    '#প্রযুক্তি',
+  ],
+  'cat-entertainment': [
+    '#Entertainment',
+    '#Dhallywood',
+    '#Cinema',
+    '#Showbiz',
+    '#Natok',
+    '#MovieNews',
+    '#বিনোদন',
+    '#নাটক',
+  ],
+  'cat-opinion': [
+    '#Opinion',
+    '#Editorial',
+    '#Analysis',
+    '#Column',
+    '#মতামত',
+    '#সম্পাদকীয়',
+    '#কলাম',
+    '#বিশ্লেষণ',
+  ],
+  'cat-religion': [
+    '#Islamic',
+    '#Islam',
+    '#IslamicReels',
+    '#Faith',
+    '#Religion',
+    '#ধর্ম',
+    '#ইসলাম',
+    '#দ্বীন',
+    '#IslamicReminder',
+  ],
+  'cat-education': [
+    '#Education',
+    '#Campus',
+    '#Admission',
+    '#University',
+    '#HSC',
+    '#শিক্ষা',
+    '#ভর্তিপরীক্ষা',
+    '#ক্যাম্পাস',
+    '#StudentLife',
+  ],
+  'cat-job': [
+    '#Jobs',
+    '#Career',
+    '#GovtJob',
+    '#Chakri',
+    '#BCS',
+    '#JobNews',
+    '#নিয়োগ',
+    '#চাকরি',
+    '#ক্যারিয়ার',
+  ],
+  'cat-lifestyle': [
+    '#Lifestyle',
+    '#HealthTips',
+    '#Wellness',
+    '#Living',
+    '#স্বাস্থ্য',
+    '#জীবনযাপন',
+    '#টিপস',
+    '#HealthyLiving',
+  ],
+  'cat-todays-match': [
+    '#MatchDay',
+    '#LiveMatch',
+    '#BreakingAlert',
+    '#SportsLive',
+    '#UrgentNews',
+    '#আজকেরখেলা',
+    '#জরুরিসংবাদ',
+    '#ব্রেকিংনিউজ',
+  ],
+};
+
+/**
+ * Core Meta Reels viral discovery tags that feed into Facebook & Instagram Reels algorithm
+ */
+export const CORE_VIRAL_REEL_TAGS = [
+  '#reels',
+  '#fbreels',
+  '#viralreels',
+  '#reelsfb',
+  '#trending',
+  '#viral',
+  '#foryou',
+];
+
+/**
+ * High-authority breaking news distribution hooks
+ */
+export const NEWS_VIRAL_HOOK_TAGS = [
+  '#BreakingNews',
+  '#BanglaNews',
+  '#ViralNews',
+  '#Bangladesh',
+  '#NewsUpdate',
+  '#খবর',
+];
+
+/**
+ * Dynamic entity extractor for viral trending topics
+ */
+export const VIRAL_HEADLINE_ENTITIES: Array<{
+  patterns: (string | RegExp)[];
+  tags: string[];
+}> = [
+  // World leaders & geopolitical figures
+  {
+    patterns: [/ট্রাম্প/i, /ডোনাল্ড ট্রাম্প/i, /\btrump\b/i, /\bdonald trump\b/i],
+    tags: ['#Trump', '#DonaldTrump', '#USA'],
+  },
+  {
+    patterns: [/পুতিন/i, /রাশিয়া/i, /রাশিয়া/i, /\bputin\b/i, /\brussia\b/i, /ক্রেমলিন/i],
+    tags: ['#Putin', '#Russia', '#WorldPolitics'],
+  },
+  {
+    patterns: [/ইউক্রেন/i, /জেলেনস্কি/i, /\bukraine\b/i, /\bzelensky\b/i],
+    tags: ['#Ukraine', '#UkraineWar', '#WorldNews'],
+  },
+  {
+    patterns: [/বাইডেন/i, /হোয়াইট হাউস/i, /হোয়াইট হাউস/i, /\bbiden\b/i, /\bwhite house\b/i],
+    tags: ['#JoeBiden', '#WhiteHouse', '#USA'],
+  },
+  {
+    patterns: [/ফিলিস্তিন/i, /প্যালেস্টাইন/i, /গাজা/i, /\bpalestine\b/i, /\bgaza\b/i, /হামাস/i],
+    tags: ['#Palestine', '#FreePalestine', '#Gaza'],
+  },
+  {
+    patterns: [/ইসরায়েল/i, /ইসরাইল/i, /ইজরায়েল/i, /নেতানিয়াহু/i, /\bisrael\b/i, /\bnetanyahu\b/i],
+    tags: ['#Israel', '#MiddleEast'],
+  },
+  {
+    patterns: [/ইরান/i, /তেহরান/i, /\biran\b/i, /\btehran\b/i],
+    tags: ['#Iran', '#MiddleEast'],
+  },
+  {
+    patterns: [/ভারত/i, /মোদি/i, /মোদীর/i, /দিল্লি/i, /\bindia\b/i, /\bmodi\b/i],
+    tags: ['#India', '#Modi'],
+  },
+  {
+    patterns: [/পাকিস্তান/i, /ইসলামাবাদ/i, /লাহোর/i, /\bpakistan\b/i],
+    tags: ['#Pakistan'],
+  },
+  {
+    patterns: [/চীন/i, /বেইজিং/i, /জিনপিং/i, /\bchina\b/i, /\bbeijing\b/i],
+    tags: ['#China', '#Asia'],
+  },
+
+  // Bangladesh Key Figures & Governance
+  {
+    patterns: [/ইউনূস/i, /ড\. ইউনূস/i, /উপদেষ্টা/i, /অন্তর্বর্তী/i, /\byunus\b/i],
+    tags: ['#DrYunus', '#InterimGovt', '#Bangladesh'],
+  },
+  {
+    patterns: [/বিএনপি/i, /তারেক রহমান/i, /খালেদা জিয়া/i, /\bbnp\b/i],
+    tags: ['#BNP', '#BangladeshPolitics', '#TariqueRahman'],
+  },
+  {
+    patterns: [/আওয়ামী/i, /আওয়ামী/i, /শেখ হাসিনা/i, /\bawami\b/i, /\bhasina\b/i],
+    tags: ['#AwamiLeague', '#BangladeshPolitics'],
+  },
+  {
+    patterns: [/জামায়াত/i, /শিবির/i, /\bjamaat\b/i],
+    tags: ['#BangladeshPolitics'],
+  },
+  {
+    patterns: [/নির্বাচন/i, /ভোট/i, /ইসি/i, /ব্যালট/i, /\belection\b/i, /\bvote\b/i],
+    tags: ['#Election', '#BangladeshElection', '#Vote'],
+  },
+
+  // Sports Stars & Competitions
+  {
+    patterns: [/মেসি/i, /\bmessi\b/i, /লিওনেল মেসি/i],
+    tags: ['#Messi', '#LionelMessi', '#Football'],
+  },
+  {
+    patterns: [/রোনালদো/i, /\bronaldo\b/i, /সিআরসেভেন/i, /\bcr7\b/i],
+    tags: ['#Ronaldo', '#CristianoRonaldo', '#Football'],
+  },
+  {
+    patterns: [/নেইমার/i, /\bneymar\b/i, /এমবাপ্পে/i, /\bmbappe\b/i],
+    tags: ['#Football', '#Soccer'],
+  },
+  {
+    patterns: [/সাকিব/i, /সাকিব আল হাসান/i, /\bshakib\b/i],
+    tags: ['#ShakibAlHasan', '#Cricket', '#Tigers'],
+  },
+  {
+    patterns: [/তামিম/i, /মুশফিক/i, /মাহমুদুল্লাহ/i, /শান্ত/i, /মিরাজ/i, /তাসকিন/i, /মুস্তাফিজ/i],
+    tags: ['#BangladeshCricket', '#Tigers', '#Cricket'],
+  },
+  {
+    patterns: [/বিসিবি/i, /\bbcb\b/i, /টাইগার/i, /বিপিএল/i, /\bbpl\b/i],
+    tags: ['#BCB', '#BangladeshCricket', '#BPL'],
+  },
+  {
+    patterns: [/বিশ্বকাপ/i, /\bworld cup\b/i, /চ্যাম্পিয়ন্স ট্রফি/i, /\bchampions trophy\b/i],
+    tags: ['#WorldCup', '#CricketWorldCup'],
+  },
+
+  // Education & Admissions
+  {
+    patterns: [/মেডিকেল/i, /মেডিক্যাল/i, /এমবিবিএস/i, /ভর্তি পরীক্ষা/i, /\bmedical admission\b/i, /\bmbbs\b/i],
+    tags: ['#MedicalAdmission', '#MBBS', '#MedicalExam'],
+  },
+  {
+    patterns: [/বিসিএস/i, /পিএসসি/i, /\bbcs\b/i, /\bbpsc\b/i],
+    tags: ['#BCS', '#BPSC', '#GovtJob'],
+  },
+  {
+    patterns: [/এইচএসসি/i, /এসএসসি/i, /দাখিল/i, /\bhsc\b/i, /\bssc\b/i],
+    tags: ['#HSC', '#SSC', '#BoardExam'],
+  },
+  {
+    patterns: [/বুয়েট/i, /বুয়েট/i, /ঢাবি/i, /ঢাকা বিশ্ববিদ্যালয়/i, /\bbuet\b/i],
+    tags: ['#BUET', '#DhakaUniversity', '#Admission'],
+  },
+
+  // Economy, Finance & Infrastructure
+  {
+    patterns: [/স্বর্ণ/i, /সোনা/i, /সোনার দাম/i, /\bgold price\b/i, /\bgold\b/i],
+    tags: ['#GoldPrice', '#স্বর্ণেরদাম', '#Economy'],
+  },
+  {
+    patterns: [/ডলার/i, /রিজার্ভ/i, /বাংলাদেশ ব্যাংক/i, /\bdollar\b/i, /\bbank\b/i],
+    tags: ['#DollarRate', '#BangladeshBank', '#EconomyUpdate'],
+  },
+  {
+    patterns: [/মেট্রোরেল/i, /মেট্রো রেল/i, /\bmetro rail\b/i, /\bmetrorail\b/i],
+    tags: ['#MetroRail', '#DhakaMetroRail', '#Dhaka'],
+  },
+  {
+    patterns: [/পদ্মা সেতু/i, /কর্ণফুলী টানেল/i, /টানেল/i],
+    tags: ['#Bangladesh', '#Development'],
+  },
+
+  // Natural events, weather & emergencies
+  {
+    patterns: [/ঘূর্ণিঝড়/i, /ঘূর্ণিঝড়/i, /বন্যা/i, /বৃষ্টি/i, /শৈত্যপ্রবাহ/i, /তাপপ্রবাহ/i, /\bweather\b/i, /\bcyclone\b/i],
+    tags: ['#WeatherUpdate', '#BangladeshWeather', '#আবহাওয়া'],
+  },
+  {
+    patterns: [/ভূমিকম্প/i, /\bearthquake\b/i],
+    tags: ['#Earthquake', '#Emergency'],
+  },
+  {
+    patterns: [/আগুন/i, /অগ্নিকাণ্ড/i, /সড়ক দুর্ঘটনা/i, /নিহত/i, /আহত/i, /\baccident\b/i, /\bfire\b/i],
+    tags: ['#Emergency', '#Alert', '#AccidentNews'],
+  },
+];
+
+export interface GenerateViralHashtagsOptions {
+  category?: string;
+  headline?: string;
+  userTags?: string;
+  targetCount?: number; // Default: 12 (recommended 10-14 for Meta Reels)
+}
+
+/**
+ * Intelligent viral hashtag generator for Facebook Reels.
+ * Synthesizes dynamic headline entities, category precision tags, universal Reels discovery tags,
+ * and high-authority news hooks with strict case-insensitive deduplication and formatting.
+ * Guaranteed 10-14 high-impact tags to maximize algorithmic distribution without spam penalties.
+ */
+export function generateViralReelHashtags(options?: GenerateViralHashtagsOptions): string {
+  const targetCount = options?.targetCount ?? 12;
+  const headline = (options?.headline || '').trim();
+  const categoryId = resolveCategoryTheme(options?.category);
+  const userTagsRaw = (options?.userTags || '').trim();
+
+  const selectedTags: string[] = [];
+  const seen = new Set<string>();
+
+  const pushTag = (raw: string) => {
+    if (!raw) return;
+    let tag = raw.trim();
+    if (!tag.startsWith('#')) {
+      tag = '#' + tag;
+    }
+    // Remove unwanted punctuation/spaces from tag body
+    tag = '#' + tag.substring(1).replace(/[\s\.,;:!?'"(){}\[\]\\\/]/g, '');
+    if (tag.length <= 1) return;
+
+    const lower = tag.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      selectedTags.push(tag);
+    }
+  };
+
+  // 1. Dynamic Trending Entities from Headline (highest relevance & search surge)
+  if (headline) {
+    const entityMatches: string[] = [];
+    for (const entity of VIRAL_HEADLINE_ENTITIES) {
+      const matched = entity.patterns.some((p) => {
+        if (typeof p === 'string') {
+          return headline.toLowerCase().includes(p.toLowerCase());
+        }
+        return p.test(headline);
+      });
+      if (matched) {
+        if (entity.tags[0]) entityMatches.push(entity.tags[0]);
+        if (entity.tags[1]) entityMatches.push(entity.tags[1]);
+      }
+    }
+    for (const t of entityMatches.slice(0, 4)) {
+      pushTag(t);
+    }
+  }
+
+  // 2. Category-Specific Viral Tags (ensures Meta's topic graph classifies correctly)
+  let categoryTags = [...(CATEGORY_VIRAL_HASHTAGS[categoryId] || CATEGORY_VIRAL_HASHTAGS['cat-bangladesh'] || [])];
+  
+  // Sports category sub-tuning: Football vs Cricket
+  if (categoryId === 'cat-sports') {
+    const isFootball = /ফুটবল|মেসি|রোনালদো|নেইমার|বার্সেলোনা|রিয়াল মাদ্রিদ|চ্যাম্পিয়ন্স লিগ|football|fifa/i.test(headline);
+    const isCricket = /ক্রিকেট|সাকিব|তামিম|মুশফিক|টাইগার|বিসিবি|বিপিএল|cricket|bpl|bcb/i.test(headline);
+    if (isFootball) {
+      categoryTags = ['#Football', '#FootballReels', '#SportsNews', '#খেলাধুলা', '#ফুটবল', '#SportsReels'];
+    } else if (isCricket) {
+      categoryTags = ['#Cricket', '#CricketReels', '#BangladeshCricket', '#Tigers', '#BCB', '#খেলাধুলা', '#ক্রিকেট'];
+    }
+  }
+
+  for (const t of categoryTags.slice(0, 3)) {
+    pushTag(t);
+  }
+
+  // 3. User configured tags (from DB settings)
+  if (userTagsRaw) {
+    const tokens = userTagsRaw.split(/\s+/).filter(Boolean);
+    for (const t of tokens) {
+      pushTag(t);
+    }
+  }
+
+  // 4. High-Authority News Discovery Hooks
+  for (const t of NEWS_VIRAL_HOOK_TAGS.slice(0, 3)) {
+    pushTag(t);
+  }
+
+  // 5. Core Algorithmic Reels Discovery Tags (guarantees feed indexing)
+  for (const t of CORE_VIRAL_REEL_TAGS) {
+    pushTag(t);
+  }
+
+  // 6. Remaining Category Tags (if still under target count)
+  for (const t of categoryTags) {
+    pushTag(t);
+  }
+
+  // Trim to target count (optimal Meta sweet spot: 10-14 tags)
+  const finalLimit = Math.max(10, Math.min(14, targetCount));
+  return selectedTags.slice(0, finalLimit).join(' ');
+}
+
+/**
+ * Intelligent viral hashtag generator for YouTube Shorts
+ */
+export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptions): string {
+  const targetCount = options?.targetCount ?? 8;
+  const headline = (options?.headline || '').trim();
+  const categoryId = resolveCategoryTheme(options?.category);
+  const userTagsRaw = (options?.userTags || '').trim();
+
+  const selectedTags: string[] = [];
+  const seen = new Set<string>();
+
+  const pushTag = (raw: string) => {
+    if (!raw) return;
+    let tag = raw.trim();
+    if (!tag.startsWith('#')) tag = '#' + tag;
+    tag = '#' + tag.substring(1).replace(/[\s\.,;:!?'"(){}\[\]\\\/]/g, '');
+    if (tag.length <= 1) return;
+    const lower = tag.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      selectedTags.push(tag);
+    }
+  };
+
+  // Core YouTube Shorts tags
+  pushTag('#Shorts');
+  pushTag('#YouTubeShorts');
+  pushTag('#Viral');
+  pushTag('#Trending');
+
+  // Headline entities
+  if (headline) {
+    for (const entity of VIRAL_HEADLINE_ENTITIES) {
+      if (entity.patterns.some((p) => (typeof p === 'string' ? headline.toLowerCase().includes(p.toLowerCase()) : p.test(headline)))) {
+        if (entity.tags[0]) pushTag(entity.tags[0]);
+      }
+    }
+  }
+
+  // Category tags
+  const categoryTags = CATEGORY_VIRAL_HASHTAGS[categoryId] || [];
+  for (const t of categoryTags.slice(0, 2)) {
+    pushTag(t);
+  }
+
+  // User tags / News hooks
+  if (userTagsRaw) {
+    for (const t of userTagsRaw.split(/\s+/).filter(Boolean)) {
+      pushTag(t);
+    }
+  }
+  pushTag('#BanglaNews');
+  pushTag('#Bangladesh');
+
+  return selectedTags.slice(0, targetCount).join(' ');
+}
+
+
 

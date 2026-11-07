@@ -8,7 +8,7 @@ import { ReelVideoRenderer } from '../renderer/reel.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
 import { TelegramAlertService } from '../alert/telegram.js';
-import { REEL_THEME_KEYS } from '../../config/constants.js';
+import { REEL_THEME_KEYS, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 /**
@@ -219,11 +219,14 @@ export class QueueWorker {
       }
 
       if (isPosterDisabled && reelBuffer) {
-        // Caption: Clean & deduplicated hashtags
+        // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
         const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
         const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-        const allTags = `${configuredHashtags} #Reels #FBReels`.split(/\s+/).filter(Boolean);
-        const reelCaption = Array.from(new Set(allTags)).join(' ');
+        const reelCaption = generateViralReelHashtags({
+          category: article.category,
+          headline: article.title,
+          userTags: configuredHashtags,
+        });
 
         // Pre-render Story poster card if enabled (takes ~100ms)
         const storySetting = await db.collection<Setting>('settings').findOne({ _id: 'POST_POSTER_TO_STORIES' });
@@ -625,12 +628,20 @@ export class QueueWorker {
             }
 
             if (reelBuffer) {
+              const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+              const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+              const viralReelCaption = generateViralReelHashtags({
+                category: article.category,
+                headline: article.title,
+                userTags: configuredHashtags,
+              });
+
               const { videoId: reelVideoId, postId: reelPostId } = await this.fbClient.publishReel(
                 page._id,
                 page.accessToken,
                 reelBuffer,
-                caption,
-                article.title,
+                viralReelCaption,
+                undefined,
                 config.DRY_RUN
               );
 
@@ -959,11 +970,14 @@ export class QueueWorker {
       fps: 24,
     });
 
-    // Caption: ONLY hashtags (no headline, no summary, clean deduplicated)
+    // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const allTags = `${configuredHashtags} #Reels #FBReels`.split(/\s+/).filter(Boolean);
-    const caption = Array.from(new Set(allTags)).join(' ');
+    const caption = generateViralReelHashtags({
+      category: article.category,
+      headline: article.title,
+      userTags: configuredHashtags,
+    });
 
     try {
       const { videoId, postId } = await this.fbClient.publishReel(
@@ -1103,6 +1117,11 @@ export class QueueWorker {
 
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+    const shortsHashtags = generateViralShortsHashtags({
+      category: article.category,
+      headline: article.title,
+      userTags: configuredHashtags,
+    });
 
     const ytStartTime = Date.now();
     try {
@@ -1110,7 +1129,7 @@ export class QueueWorker {
         {
           videoBuffer: reelBuffer,
           title: article.title,
-          description: `${configuredHashtags} #Shorts #YouTubeShorts\n\nবিস্তারিত পড়ুন: ${article.link}`,
+          description: `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
         },
         config.DRY_RUN
       );

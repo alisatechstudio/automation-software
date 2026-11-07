@@ -980,6 +980,19 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </select>
           </div>
 
+          <!-- Viral Reels Hashtags (Algorithm Optimized) -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase font-mono flex items-center justify-between">
+              <span>Viral Reels Hashtags (ভাইরাল হ্যাশট্যাগ)</span>
+              <span class="text-[10px] font-mono text-amber-400 flex items-center gap-1">
+                <span>🔥 10-14 Meta Viral Tags</span>
+                <button type="button" onclick="refreshViralHashtags()" class="text-rose-400 hover:text-rose-300 underline font-sans ml-1 text-xs">অটো রিফ্রেশ</button>
+              </span>
+            </label>
+            <textarea id="reel-hashtags-input" rows="2" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 text-xs font-mono text-amber-300/90 leading-relaxed focus:outline-none focus:border-rose-500 transition" placeholder="#reels #fbreels #viralreels ...">#MedicalAdmission #MBBS #MedicalExam #Education #Campus #Admission #BreakingNews #BanglaNews #Bangladesh #reels #fbreels #viralreels</textarea>
+            <p class="text-[10px] text-slate-500 mt-1">মেটা অ্যালগরিদম ও ট্রেন্ডিং টপিক অনুযায়ী স্বয়ংক্রিয়ভাবে সর্বোত্তম ১০-১৪টি ভাইরাল হ্যাশট্যাগ তৈরি হয়েছে।</p>
+          </div>
+
           <!-- Actions -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <button onclick="renderReelPreview()" id="btn-preview-reel" class="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 hover:border-rose-500/50 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md">
@@ -2395,6 +2408,31 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         if (placeholder) placeholder.classList.add('hidden');
         if (video) video.classList.add('hidden');
       };
+      refreshViralHashtags();
+    }
+
+    let viralHashtagTimer = null;
+    async function refreshViralHashtags() {
+      if (viralHashtagTimer) clearTimeout(viralHashtagTimer);
+      viralHashtagTimer = setTimeout(async () => {
+        const headline = document.getElementById('reel-headline-input')?.value.trim() || '';
+        const category = document.getElementById('reel-category-input')?.value.trim() || 'বিশেষ খবর';
+        if (!headline) return;
+
+        try {
+          const res = await safeFetchJson('/api/reels/generate-hashtags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ headline, category })
+          });
+          if (res.ok && res.data && res.data.hashtags) {
+            const el = document.getElementById('reel-hashtags-input');
+            if (el) el.value = res.data.hashtags;
+          }
+        } catch (e) {
+          console.error('Failed to generate viral hashtags:', e);
+        }
+      }, 300);
     }
 
     async function loadReelSettings() {
@@ -2626,6 +2664,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const pageId = document.getElementById('reel-page-select').value;
       const theme = document.getElementById('reel-theme-select').value || 'auto-category';
       const dur = parseInt(document.getElementById('reel-duration-select')?.value || '18', 10) || 18;
+      const hashtags = document.getElementById('reel-hashtags-input')?.value.trim() || '';
 
       if (!headline) {
         showToast('Please enter a Bengali headline', true);
@@ -2655,7 +2694,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             articleId,
             pageId,
             theme,
-            duration: dur
+            duration: dur,
+            hashtags
           })
         });
 

@@ -11,7 +11,7 @@ import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
-import { AVAILABLE_TEMPLATES, REEL_TEMPLATES } from '../../config/constants.js';
+import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export const apiRouter = Router();
@@ -634,9 +634,26 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
   }
 });
 
+apiRouter.post('/reels/generate-hashtags', async (req: Request, res: Response) => {
+  try {
+    const { headline, category, userTags } = req.body;
+    const db = getDatabase();
+    const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
+    const configuredHashtags = userTags || hashtagSetting?.value || config.DEFAULT_HASHTAGS;
+    const hashtags = generateViralReelHashtags({
+      headline: headline || '',
+      category: category || '',
+      userTags: configuredHashtags,
+    });
+    res.json({ success: true, hashtags });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
   try {
-    const { articleId, headline, category, imageUrl, pageId, theme, duration } = req.body;
+    const { articleId, headline, category, imageUrl, pageId, theme, duration, hashtags } = req.body;
     const db = getDatabase();
 
     let targetHeadline = headline;
@@ -698,12 +715,17 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
 
     const fbClient = new FacebookGraphClient();
     
-    // Caption: ONLY hashtags (no headline, no summary)
+    // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
+    const customHashtags = (hashtags || '').trim();
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
     const configuredHashtags = hashtagSetting?.value || config.DEFAULT_HASHTAGS;
-    const caption = (configuredHashtags + ' #Reels #FBReels #ViralNews #Bangladesh').trim();
+    const caption = generateViralReelHashtags({
+      category: targetCategory,
+      headline: targetHeadline,
+      userTags: customHashtags || configuredHashtags,
+    });
 
-    console.log(`[Reels API] Publishing ${durationSeconds}s Reel to Facebook Page ${page.name} (${page._id})...`);
+    console.log(`[Reels API] Publishing ${durationSeconds}s Reel with viral hashtags: "${caption}"...`);
     const { videoId, postId } = await fbClient.publishReel(
       page._id,
       page.accessToken,
