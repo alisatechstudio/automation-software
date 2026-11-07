@@ -1,7 +1,7 @@
 // --- PARTICLE BACKGROUND ---
     (function initBackgroundCanvas() {
       const canvas = document.getElementById('bg-canvas');
-      if (!canvas) return;
+      if (!canvas || typeof canvas.getContext !== 'function') return;
       const ctx = canvas.getContext('2d');
       let w = canvas.width = window.innerWidth;
       let h = canvas.height = window.innerHeight;
@@ -660,7 +660,7 @@
             '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
             '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | Theme: ' + themeLabel + ' | Template: ' + s.template_id + '</div>' +
           '</div>' +
-          '<button onclick="deleteSource(\\\'' + s.id + '\\\')" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+          '<button data-id="' + s.id + '" onclick="deleteSource(this.dataset.id)" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
         '</div>';
       }).join('');
 
@@ -754,8 +754,8 @@
               '<div class="text-[10px] text-slate-500 font-mono">' + (p.token_expires_at ? 'Expires ' + new Date(p.token_expires_at).toLocaleDateString() : 'Permanent Token') + '</div>' +
             '</div>' +
             '<div class="flex gap-1.5">' +
-              '<button onclick="diagnosePageToken(\\\'' + p.id + '\\\')" class="text-[11px] text-amber-400 hover:text-amber-300 px-2.5 py-1 bg-amber-950/40 rounded border border-amber-800/50 transition font-mono">Diagnose</button>' +
-              '<button onclick="deletePage(\\\'' + p.id + '\\\')" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+              '<button data-id="' + p.id + '" onclick="diagnosePageToken(this.dataset.id)" class="text-[11px] text-amber-400 hover:text-amber-300 px-2.5 py-1 bg-amber-950/40 rounded border border-amber-800/50 transition font-mono">Diagnose</button>' +
+              '<button data-id="' + p.id + '" onclick="deletePage(this.dataset.id)" class="text-[11px] text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
             '</div>' +
           '</div>' +
           '<div class="pt-2 border-t border-slate-900 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">' +
@@ -928,10 +928,10 @@
             '</div>' +
           '</div>' +
           '<div class="flex items-center justify-between gap-1.5 pt-2 border-t border-slate-800">' +
-            '<button onclick="testShareGroup(\\\'' + g._id + '\\\')" class="px-2.5 py-1 rounded bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold transition active:scale-95">🚀 Test</button>' +
+            '<button data-id="' + g._id + '" onclick="testShareGroup(this.dataset.id)" class="px-2.5 py-1 rounded bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 text-[11px] font-semibold transition active:scale-95">🚀 Test</button>' +
             '<div class="flex items-center gap-1">' +
-              '<button onclick="toggleGroupAutoShare(\\\'' + g._id + '\\\', ' + g.autoShare + ')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] transition">' + (g.autoShare ? 'Pause' : 'Enable') + '</button>' +
-              '<button onclick="deleteGroup(\\\'' + g._id + '\\\')" class="px-2 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-[11px] transition">🗑️</button>' +
+              '<button data-id="' + g._id + '" data-autoshare="' + (g.autoShare ? 'true' : 'false') + '" onclick="toggleGroupAutoShare(this.dataset.id, this.dataset.autoshare)" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] transition">' + (g.autoShare ? 'Pause' : 'Enable') + '</button>' +
+              '<button data-id="' + g._id + '" onclick="deleteGroup(this.dataset.id)" class="px-2 py-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-400 text-[11px] transition">🗑️</button>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -1096,13 +1096,14 @@
     }
 
     async function toggleGroupAutoShare(id, currentStatus) {
+      const isEnabled = typeof currentStatus === 'string' ? currentStatus === 'true' : Boolean(currentStatus);
       const res = await safeFetchJson('/api/groups/' + id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auto_share: !currentStatus })
+        body: JSON.stringify({ auto_share: !isEnabled })
       });
       if (res.ok) {
-        showToast('Auto-share ' + (!currentStatus ? 'enabled' : 'paused'));
+        showToast('Auto-share ' + (!isEnabled ? 'enabled' : 'paused'));
         loadGroups();
       } else {
         showToast(res.error || 'Failed to update group', true);
@@ -1825,14 +1826,14 @@
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +
             '<div class="min-w-0 flex-1">' +
               '<div class="flex items-center gap-1.5">' +
-                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" onclick="selectGDriveChannel(\\\'' + c._id + '\\\')">' + (c.name || 'Channel') + '</h4>' +
+                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)">' + (c.name || 'Channel') + '</h4>' +
                 '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
               '<div class="text-[10px] text-slate-400 truncate flex items-center"><span>Page: ' + (c.pageName || c.pageId || 'None') + '</span>' + catBadge + '</div>' +
             '</div>' +
             '<div class="flex items-center gap-1">' +
-              '<button onclick="editGDriveChannel(\\\'' + c._id + '\\\')" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
-              '<button onclick="deleteGDriveChannel(\\\'' + c._id + '\\\')" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
+              '<button data-id="' + c._id + '" onclick="editGDriveChannel(this.dataset.id)" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
+              '<button data-id="' + c._id + '" onclick="deleteGDriveChannel(this.dataset.id)" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
             '</div>' +
           '</div>' +
           '<div class="text-[10px] font-mono text-slate-400 py-1 border-y border-slate-900 flex justify-between">' +
@@ -1841,8 +1842,8 @@
             '<span class="text-purple-400">✓ ' + postedCount + ' Posted</span>' +
           '</div>' +
           '<div class="flex items-center gap-1.5 pt-1.5">' +
-            '<button onclick="selectGDriveChannel(\\\'' + c._id + '\\\')" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
-            '<button onclick="publishNextForGDriveChannel(\\\'' + c._id + '\\\')" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
+            '<button data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
+            '<button data-id="' + c._id + '" onclick="publishNextForGDriveChannel(this.dataset.id)" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
           '</div>' +
           '<div class="mt-2 pt-2 border-t border-slate-900 flex flex-col gap-1">' +
             '<div class="flex items-center justify-between text-[9px] text-slate-400">' +

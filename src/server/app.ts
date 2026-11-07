@@ -23,9 +23,15 @@ export function createServer(): Express {
 
   // Strip Vercel rewrite prefix & restore original requested route if rewritten
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const originalUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string;
-    if (originalUri && (req.url === '/api/index' || req.url === '/' || req.url.startsWith('/api/index?'))) {
-      req.url = originalUri;
+    const forwardedUri = req.headers['x-forwarded-uri'] as string;
+    const matchedPath = req.headers['x-matched-path'] as string;
+
+    if (forwardedUri && forwardedUri !== '/api/index') {
+      req.url = forwardedUri;
+    } else if (matchedPath && matchedPath !== '/api/index') {
+      req.url = matchedPath;
+    } else if (req.originalUrl && !req.originalUrl.startsWith('/api/index')) {
+      req.url = req.originalUrl;
     } else if (req.url.startsWith('/api/index')) {
       req.url = req.url.replace(/^\/api\/index/, '') || '/';
     }
