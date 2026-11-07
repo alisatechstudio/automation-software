@@ -18,46 +18,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
-            bengali: ['"Hind Siliguri"', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            brand: {
-              400: '#f87171',
-              500: '#ef4444',
-              600: '#dc2626',
-              700: '#b91c1c',
-              900: '#7f1d1d',
-              950: '#450a0a',
-            },
-            cyber: {
-              cyan: '#06b6d4',
-              blue: '#3b82f6',
-              purple: '#a855f7',
-              emerald: '#10b981',
-              amber: '#f59e0b',
-            }
-          },
-          boxShadow: {
-            'glow-red': '0 0 25px -5px rgba(239, 68, 68, 0.35)',
-            'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.35)',
-            'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.35)',
-            'glow-purple': '0 0 25px -5px rgba(168, 85, 247, 0.35)',
-            '3d-card': '0 12px 30px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Compiled Tailwind CSS & Design System -->
+  <link rel="stylesheet" href="/assets/css/tailwind.min.css">
 
   <style>
     body {
