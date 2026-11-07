@@ -203,6 +203,8 @@ export interface GDriveReelConfig {
   isActive: boolean; // Automated scheduling ON/OFF
   scheduleIntervalHours: number; // e.g. 1, 2, 3, 4, 6, 12, 24
   cronExpression?: string; // e.g. "0 */2 * * *"
+  category?: string; // Niche/category e.g. 'auto', 'sports', 'comedy', 'technology', 'lifestyle', 'islamic', 'food', 'gaming', 'travel', 'news'
+  customHashtags?: string; // Extra custom hashtags e.g. '#MyBrand #Exclusive'
   captionStrategy: 'viral_hashtags' | 'custom';
   customCaption?: string;
   firstCommentText?: string;

@@ -771,5 +771,150 @@ export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptio
   return selectedTags.slice(0, targetCount).join(' ');
 }
 
+export interface GenerateGDriveHashtagsOptions {
+  videoTitle?: string;
+  channelName?: string;
+  category?: string;
+  userTags?: string;
+  targetCount?: number;
+}
+
+/**
+ * Intelligent viral hashtag generator specifically engineered for Google Drive video Reels.
+ * - Extracts hashtags from video filenames
+ * - Accurately detects niche/topic from channel name or video title (Sports, Comedy, Tech, Motivation, Gaming, Food, Travel, Islamic, etc.)
+ * - NEVER defaults to unrelated Bangladesh breaking news tags unless the video is actually news
+ * - Guarantees 10-14 high-impact Meta Reels discovery tags (#reels, #fbreels, #viralreels, etc.)
+ */
+export function generateGDriveReelHashtags(options?: GenerateGDriveHashtagsOptions): string {
+  const targetCount = options?.targetCount ?? 12;
+  const title = (options?.videoTitle || '').trim();
+  const channel = (options?.channelName || '').trim();
+  const combined = `${title} ${channel}`.toLowerCase();
+  const userTagsRaw = (options?.userTags || '').trim();
+
+  const selectedTags: string[] = [];
+  const seen = new Set<string>();
+
+  const pushTag = (raw: string) => {
+    if (!raw) return;
+    let tag = raw.trim();
+    if (!tag.startsWith('#')) {
+      tag = '#' + tag;
+    }
+    // Clean tag body
+    tag = '#' + tag.substring(1).replace(/[\s\.,;:!?'"(){}\[\]\\\/]/g, '');
+    if (tag.length <= 1) return;
+
+    const lower = tag.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      selectedTags.push(tag);
+    }
+  };
+
+  // 1. User specified tags or tags extracted from filename (highest priority)
+  if (userTagsRaw) {
+    const tokens = userTagsRaw.split(/\s+/).filter(Boolean);
+    for (const t of tokens) {
+      pushTag(t);
+    }
+  }
+
+  // 2. Specific Celebrity / Athlete / Entity detection
+  for (const entity of VIRAL_HEADLINE_ENTITIES) {
+    const matched = entity.patterns.some((p) => {
+      if (typeof p === 'string') {
+        return combined.includes(p.toLowerCase());
+      }
+      return p.test(combined);
+    });
+    if (matched) {
+      for (const t of entity.tags.slice(0, 2)) {
+        pushTag(t);
+      }
+    }
+  }
+
+  // 3. Resolve Niche / Category
+  let category = (options?.category || '').toLowerCase().trim();
+  if (!category || category === 'auto' || category === 'general') {
+    // Auto-detect niche from title & channel name
+    if (/football|messi|ronaldo|fifa|goal|barca|real madrid|neymar|mbappe|ফুটবল|গোল/i.test(combined)) {
+      category = 'football';
+    } else if (/cricket|shakib|tamim|bpl|ipl|t20|world cup|batsman|bowler|wicket|ক্রিকেট|বিপিএল/i.test(combined)) {
+      category = 'cricket';
+    } else if (/sport|fitness|gym|workout|athlete|match|খেলা|দৌড়/i.test(combined)) {
+      category = 'sports';
+    } else if (/funny|comedy|meme|prank|laugh|joke|lol|fun|humor|হাসি|মজা/i.test(combined)) {
+      category = 'comedy';
+    } else if (/tech|technology|ai|artificial intelligence|gadget|software|coding|phone|laptop|robot|প্রযুক্তি/i.test(combined)) {
+      category = 'technology';
+    } else if (/motivation|inspire|mindset|success|wealth|life lessons|advice|অনুপ্রেরণা|সফলতা/i.test(combined)) {
+      category = 'motivation';
+    } else if (/islam|islamic|waz|quran|nasheed|hadith|namaz|dua|azhari|ওয়াজ|ইসলাম|কোরআন/i.test(combined)) {
+      category = 'islamic';
+    } else if (/food|recipe|cooking|kitchen|chef|delicious|street food|cake|biryani|রান্না|রেসিপি/i.test(combined)) {
+      category = 'food';
+    } else if (/game|gaming|gamer|gameplay|pubg|freefire|minecraft|gta|esports|গেম/i.test(combined)) {
+      category = 'gaming';
+    } else if (/travel|tour|nature|adventure|beach|mountain|explore|trip|ভ্রমণ|ট্যুর/i.test(combined)) {
+      category = 'travel';
+    } else if (/entertainment|movie|cinema|actor|actress|natok|drama|dance|song|গান|নাটক|সিনেমা/i.test(combined)) {
+      category = 'entertainment';
+    } else if (/news|breaking|bnp|awami|yunus|election|update|সংবাদ|খবর|ব্রেকিং/i.test(combined)) {
+      category = 'news';
+    } else {
+      category = 'viral';
+    }
+  }
+
+  // 4. Topic-specific hashtags based on detected/selected category
+  const topicTags: Record<string, string[]> = {
+    football: ['#Football', '#FootballReels', '#Soccer', '#Goals', '#CR7', '#Messi', '#SportsReels', '#FootballSkills'],
+    cricket: ['#Cricket', '#CricketReels', '#CricketLover', '#Tigers', '#BPL', '#IPL', '#SportsReels', '#CricketFans'],
+    sports: ['#Sports', '#SportsReels', '#Fitness', '#Workout', '#Athlete', '#FitLife', '#SportsVideo'],
+    comedy: ['#Funny', '#Comedy', '#ComedyReels', '#Memes', '#FunnyVideos', '#Humor', '#Laugh', '#Jokes', '#মজারভিডিও'],
+    technology: ['#Tech', '#Technology', '#TechReels', '#Gadgets', '#AI', '#Innovation', '#TechNews', '#SmartTech'],
+    motivation: ['#Motivation', '#Inspiration', '#Mindset', '#Success', '#DailyMotivation', '#Lifestyle', '#Quotes', '#FitnessMotivation'],
+    islamic: ['#Islamic', '#IslamicReels', '#Islam', '#Deen', '#Quran', '#IslamicReminder', '#Muslim', '#ওয়াজ', '#Sunnah'],
+    food: ['#Food', '#Foodie', '#Cooking', '#Recipe', '#FoodReels', '#Delicious', '#StreetFood', '#FoodLover', '#রান্না'],
+    gaming: ['#Gaming', '#Gamer', '#Gameplay', '#GamingReels', '#FreeFire', '#PUBG', '#GamingCommunity', '#VideoGames'],
+    travel: ['#Travel', '#TravelReels', '#Nature', '#Adventure', '#Wanderlust', '#Explore', '#TravelGram', '#BeautifulPlaces'],
+    entertainment: ['#Entertainment', '#EntertainmentReels', '#Cinema', '#Drama', '#ViralClips', '#Showbiz', '#নাটক', '#MovieClips'],
+    news: ['#News', '#BreakingNews', '#BanglaNews', '#CurrentAffairs', '#NewsUpdate', '#Bangladesh', '#খবর'],
+    viral: ['#Viral', '#Trending', '#Explore', '#ViralVideo', '#ViralReels', '#ForYouPage', '#ExplorePage'],
+  };
+
+  const matchedTopicTags = topicTags[category] || topicTags['viral'];
+  for (const t of matchedTopicTags.slice(0, 4)) {
+    pushTag(t);
+  }
+
+  // 5. Core Algorithmic Facebook & Meta Reels Discovery Tags
+  const coreReelTags = [
+    '#reels',
+    '#fbreels',
+    '#viralreels',
+    '#reelsfb',
+    '#reelsvideo',
+    '#trending',
+    '#viral',
+    '#foryou',
+    '#fyp',
+  ];
+  for (const t of coreReelTags) {
+    pushTag(t);
+  }
+
+  // 6. Fill with remaining topic tags if needed
+  for (const t of matchedTopicTags) {
+    pushTag(t);
+  }
+
+  const finalLimit = Math.max(10, Math.min(14, targetCount));
+  return selectedTags.slice(0, finalLimit).join(' ');
+}
+
 
 

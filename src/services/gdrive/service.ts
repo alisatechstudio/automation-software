@@ -4,7 +4,7 @@ import { getDatabase } from '../../db/index.js';
 import { GDriveReelConfig, FacebookPage, ReelLog } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
-import { generateViralReelHashtags } from '../../config/constants.js';
+import { generateGDriveReelHashtags, generateViralReelHashtags } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export interface GDriveVideoItem {
@@ -69,6 +69,15 @@ export class GDriveReelService {
   }
 
   /**
+   * Extracts embedded hashtags from filename or title text
+   */
+  public extractHashtags(text: string): string[] {
+    if (!text) return [];
+    const matches = text.match(/#([a-zA-Z0-9_\u0980-\u09FF]+)/g);
+    return matches ? matches.map((m) => m.trim()) : [];
+  }
+
+  /**
    * Helper to clean video filenames into attractive human-readable titles
    */
   public cleanVideoTitle(filename: string): string {
@@ -78,6 +87,8 @@ export class GDriveReelService {
     if (extIdx !== -1) {
       title = title.substring(0, extIdx);
     }
+    // Remove hashtags from clean title (they are preserved for hashtags block)
+    title = title.replace(/#[a-zA-Z0-9_\u0980-\u09FF]+/g, '').trim();
     // Strip leading track numbers or dates (e.g. "01_", "2026-11-05_")
     title = title.replace(/^[\d\-_.]+\s*[-_.]*\s*/, '');
     // Replace separators with spaces
@@ -134,6 +145,8 @@ export class GDriveReelService {
       isActive: false,
       scheduleIntervalHours: 2, // Every 2 hours
       cronExpression: '0 */2 * * *',
+      category: 'auto',
+      customHashtags: '',
       captionStrategy: 'viral_hashtags',
       customCaption: '',
       firstCommentText: '',
@@ -218,6 +231,8 @@ export class GDriveReelService {
       isActive: data.isActive !== undefined ? data.isActive : (existing?.isActive ?? false),
       scheduleIntervalHours: interval,
       cronExpression: cronExpr,
+      category: data.category !== undefined ? data.category : (existing?.category || 'auto'),
+      customHashtags: data.customHashtags !== undefined ? data.customHashtags : (existing?.customHashtags || ''),
       captionStrategy: data.captionStrategy || existing?.captionStrategy || 'viral_hashtags',
       customCaption: data.customCaption !== undefined ? data.customCaption : (existing?.customCaption || ''),
       firstCommentText: data.firstCommentText !== undefined ? data.firstCommentText : (existing?.firstCommentText || ''),
@@ -588,23 +603,26 @@ export class GDriveReelService {
 
       console.log(`[GDriveReelService] ✓ Download complete (${videoBuffer.length} bytes). Publishing to page "${page.name}" (${page._id})...`);
 
-      // 2. Generate Caption & Viral Hashtags
+      // 2. Generate Caption & Accurate Viral Hashtags
+      const fileTags = this.extractHashtags(video.name);
+      const customUserTags = [conf.customHashtags, ...fileTags].filter(Boolean).join(' ');
+      const hashtags = generateGDriveReelHashtags({
+        videoTitle: video.cleanTitle,
+        channelName: conf.name,
+        category: conf.category,
+        userTags: customUserTags,
+      });
+
       let caption = '';
       if (conf.captionStrategy === 'custom' && conf.customCaption?.trim()) {
         caption = conf.customCaption
-          .replace('{title}', video.cleanTitle)
-          .replace('{filename}', video.name);
-        const viralTags = generateViralReelHashtags({
-          headline: video.cleanTitle,
-          category: 'বিশেষ খবর',
-        });
-        caption = caption.replace('{hashtags}', viralTags).trim();
+          .replace(/{title}/gi, video.cleanTitle)
+          .replace(/{filename}/gi, video.name)
+          .replace(/{hashtags}/gi, hashtags)
+          .trim();
       } else {
-        // Algorithm optimized viral hashtags
-        caption = generateViralReelHashtags({
-          headline: video.cleanTitle,
-          category: 'বিশেষ খবর',
-        });
+        // High-engagement Reel caption: Hook Title + line breaks + tailored viral hashtags
+        caption = `${video.cleanTitle}\n\n${hashtags}`.trim();
       }
 
       // 3. Publish to Meta Graph API

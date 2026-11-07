@@ -1135,6 +1135,30 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 </div>
               </div>
 
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Video Category / Niche</label>
+                  <select id="gdrive-form-category-select" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition">
+                    <option value="auto" selected>🌟 Auto-Detect (Title & Channel)</option>
+                    <option value="sports">⚽ Sports (Football, Cricket, Highlights)</option>
+                    <option value="comedy">🎭 Comedy & Memes (Funny, Humor)</option>
+                    <option value="technology">💻 Tech & AI (Gadgets, Tutorials)</option>
+                    <option value="lifestyle">🌿 Motivation & Fitness (Lifestyle)</option>
+                    <option value="islamic">🕌 Islamic & Spiritual (Waz, Quran)</option>
+                    <option value="food">🍳 Food & Cooking (Recipes)</option>
+                    <option value="gaming">🎮 Gaming (Clips, Gameplay)</option>
+                    <option value="travel">✈️ Travel & Adventure</option>
+                    <option value="entertainment">🎬 Entertainment (Movie, Natok)</option>
+                    <option value="news">📰 News & Current Affairs</option>
+                    <option value="viral">🔥 General Viral Reels</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Custom Hashtags (Optional)</label>
+                  <input type="text" id="gdrive-form-custom-hashtags" placeholder="#MyBrand #TopReels" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+                </div>
+              </div>
+
               <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
                 <span class="text-xs font-semibold text-white">Enable 24/7 Cloud Automation</span>
                 <label class="flex items-center gap-1.5 cursor-pointer text-xs">
@@ -3317,6 +3341,22 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
           ? '<span class="text-rose-400 font-medium">🗑️ Auto-Delete</span>'
           : '<span class="text-slate-500">Keep Files</span>';
 
+        const catMap = {
+          sports: '⚽ Sports',
+          comedy: '🎭 Comedy',
+          technology: '💻 Tech',
+          lifestyle: '🌿 Lifestyle',
+          islamic: '🕌 Islamic',
+          food: '🍳 Food',
+          gaming: '🎮 Gaming',
+          travel: '✈️ Travel',
+          entertainment: '🎬 Entertainment',
+          news: '📰 News',
+          viral: '🔥 Viral',
+          auto: '🌟 Auto'
+        };
+        const catBadge = '<span class="text-slate-400 ml-1.5 px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
+
         return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +
             '<div class="min-w-0 flex-1">' +
@@ -3324,7 +3364,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
                 '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" onclick="selectGDriveChannel(\\\'' + c._id + '\\\')">' + (c.name || 'Channel') + '</h4>' +
                 '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
-              '<div class="text-[10px] text-slate-400 truncate">Page: ' + (c.pageName || c.pageId || 'None') + '</div>' +
+              '<div class="text-[10px] text-slate-400 truncate flex items-center"><span>Page: ' + (c.pageName || c.pageId || 'None') + '</span>' + catBadge + '</div>' +
             '</div>' +
             '<div class="flex items-center gap-1">' +
               '<button onclick="editGDriveChannel(\\\'' + c._id + '\\\')" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
@@ -3512,6 +3552,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-custom-caption').value = '';
       document.getElementById('gdrive-form-interval-select').value = '2';
       document.getElementById('gdrive-form-order-select').value = 'oldest_first';
+      document.getElementById('gdrive-form-category-select').value = 'auto';
+      document.getElementById('gdrive-form-custom-hashtags').value = '';
       document.getElementById('gdrive-form-active-toggle').checked = true;
       document.getElementById('gdrive-form-delete-toggle').checked = true;
       document.getElementById('gdrive-form-mode-viral').checked = true;
@@ -3534,6 +3576,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       document.getElementById('gdrive-form-page-select').value = channel.pageId || '';
       document.getElementById('gdrive-form-interval-select').value = String(channel.scheduleIntervalHours || 2);
       document.getElementById('gdrive-form-order-select').value = channel.orderStrategy || 'oldest_first';
+      document.getElementById('gdrive-form-category-select').value = channel.category || 'auto';
+      document.getElementById('gdrive-form-custom-hashtags').value = channel.customHashtags || '';
       document.getElementById('gdrive-form-first-comment').value = channel.firstCommentText || '';
       document.getElementById('gdrive-form-custom-caption').value = channel.customCaption || '';
       document.getElementById('gdrive-form-active-toggle').checked = Boolean(channel.isActive);
@@ -3573,6 +3617,8 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         pageId: document.getElementById('gdrive-form-page-select')?.value,
         scheduleIntervalHours: parseInt(document.getElementById('gdrive-form-interval-select')?.value || '2', 10) || 2,
         orderStrategy: document.getElementById('gdrive-form-order-select')?.value || 'oldest_first',
+        category: document.getElementById('gdrive-form-category-select')?.value || 'auto',
+        customHashtags: document.getElementById('gdrive-form-custom-hashtags')?.value.trim() || '',
         isActive: document.getElementById('gdrive-form-active-toggle')?.checked || false,
         deleteAfterPosting: document.getElementById('gdrive-form-delete-toggle')?.checked ?? true,
         deleteAction: 'trash',
