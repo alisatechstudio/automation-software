@@ -888,48 +888,168 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
 });
 
 // -------------------------------------------------------------
-// GOOGLE DRIVE REELS AUTOMATION API (CLOUD 24/7)
+// GOOGLE DRIVE REELS MULTI-CHANNEL AUTOMATION API (CLOUD 24/7)
 // -------------------------------------------------------------
 
-// 1. Get status & drive scan
-apiRouter.get('/gdrive-reels/status', async (req: Request, res: Response) => {
+// 1. Get all configured channels and global settings
+apiRouter.get('/gdrive-reels/channels', async (req: Request, res: Response) => {
   try {
-    const config = await gdriveReelService.getConfig();
-    const scan = await gdriveReelService.scanFolder();
+    const channels = await gdriveReelService.getAllChannels();
+    const globalApiKey = await gdriveReelService.getGlobalApiKey();
     res.json({
       success: true,
-      config,
-      scan,
+      channels,
+      globalApiKey,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. Scan a specific drive folder link or ID
-apiRouter.post('/gdrive-reels/scan', async (req: Request, res: Response) => {
+// 2. Save Global Google Drive API Key
+apiRouter.post('/gdrive-reels/global-api-key', async (req: Request, res: Response) => {
   try {
-    const { folderUrlOrId, apiKey } = req.body;
-    const scan = await gdriveReelService.scanFolder(folderUrlOrId, apiKey);
+    const { apiKey } = req.body;
+    const saved = await gdriveReelService.setGlobalApiKey(apiKey || '');
+    res.json({ success: true, apiKey: saved });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Get single channel details and live scan
+apiRouter.get('/gdrive-reels/channels/:id', async (req: Request, res: Response) => {
+  try {
+    const channel = await gdriveReelService.getChannel(req.params.id);
+    if (!channel) {
+      res.status(404).json({ error: 'Channel not found' });
+      return;
+    }
+    const scan = await gdriveReelService.scanChannel(channel._id);
+    res.json({ success: true, channel, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Create or update a channel
+apiRouter.post('/gdrive-reels/channels', async (req: Request, res: Response) => {
+  try {
+    const channelData = req.body;
+    const savedChannel = await gdriveReelService.saveChannel(channelData);
+    const scan = await gdriveReelService.scanChannel(savedChannel._id);
+    res.json({ success: true, channel: savedChannel, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Delete a channel
+apiRouter.delete('/gdrive-reels/channels/:id', async (req: Request, res: Response) => {
+  try {
+    const ok = await gdriveReelService.deleteChannel(req.params.id);
+    res.json({ success: ok });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Scan a specific channel
+apiRouter.post('/gdrive-reels/channels/:id/scan', async (req: Request, res: Response) => {
+  try {
+    const scan = await gdriveReelService.scanChannel(req.params.id);
     res.json({ success: true, scan });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 3. Save configuration
+// 7. Publish next video for a specific channel
+apiRouter.post('/gdrive-reels/channels/:id/publish-next', async (req: Request, res: Response) => {
+  try {
+    const result = await gdriveReelService.publishNextForChannel(req.params.id);
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Publish specific file for a specific channel
+apiRouter.post('/gdrive-reels/channels/:id/publish-file', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.body;
+    if (!fileId) {
+      res.status(400).json({ error: 'fileId is required' });
+      return;
+    }
+    const result = await gdriveReelService.publishSpecificFileForChannel(req.params.id, fileId);
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Reset history for a specific channel
+apiRouter.post('/gdrive-reels/channels/:id/reset-history', async (req: Request, res: Response) => {
+  try {
+    await gdriveReelService.resetHistoryForChannel(req.params.id);
+    const scan = await gdriveReelService.scanChannel(req.params.id);
+    res.json({ success: true, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 10. Publish all due channels immediately
+apiRouter.post('/gdrive-reels/publish-all-due', async (req: Request, res: Response) => {
+  try {
+    const summary = await gdriveReelService.publishAllDueChannels();
+    res.json({ success: true, summary });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Legacy / Single Channel Compatibility Endpoints ---
+apiRouter.get('/gdrive-reels/status', async (req: Request, res: Response) => {
+  try {
+    const config = await gdriveReelService.getConfig();
+    const scan = await gdriveReelService.scanChannel(config._id);
+    res.json({ success: true, config, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/gdrive-reels/scan', async (req: Request, res: Response) => {
+  try {
+    const { folderUrlOrId, apiKey } = req.body;
+    const scan = await gdriveReelService.scanFolderDirect(folderUrlOrId, apiKey);
+    res.json({ success: true, scan });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 apiRouter.post('/gdrive-reels/config', async (req: Request, res: Response) => {
   try {
     const updates = req.body;
     const updatedConfig = await gdriveReelService.saveConfig(updates);
-    const scan = await gdriveReelService.scanFolder(updatedConfig.folderUrlOrId, updatedConfig.apiKey);
+    const scan = await gdriveReelService.scanChannel(updatedConfig._id);
     res.json({ success: true, config: updatedConfig, scan });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Publish next video from Google Drive
 apiRouter.post('/gdrive-reels/publish-next', async (req: Request, res: Response) => {
   try {
     const result = await gdriveReelService.publishNext();
@@ -943,7 +1063,6 @@ apiRouter.post('/gdrive-reels/publish-next', async (req: Request, res: Response)
   }
 });
 
-// 5. Publish specific file from Google Drive
 apiRouter.post('/gdrive-reels/publish-file', async (req: Request, res: Response) => {
   try {
     const { fileId } = req.body;
@@ -962,12 +1081,11 @@ apiRouter.post('/gdrive-reels/publish-file', async (req: Request, res: Response)
   }
 });
 
-// 6. Reset posted history
 apiRouter.post('/gdrive-reels/reset-history', async (req: Request, res: Response) => {
   try {
     await gdriveReelService.resetPostedHistory();
     const config = await gdriveReelService.getConfig();
-    const scan = await gdriveReelService.scanFolder();
+    const scan = await gdriveReelService.scanChannel(config._id);
     res.json({ success: true, config, scan });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -981,7 +1099,7 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
   const timestamp = new Date().toISOString();
   console.log(`[Cron Trigger] Method: ${req.method} at ${timestamp}`);
 
-  const results: any = { timestamp, rss: null, gdriveReel: null };
+  const results: any = { timestamp, rss: null, gdriveReels: null };
 
   // 1. Trigger RSS Poll
   try {
@@ -991,14 +1109,10 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
     results.rssError = e.message;
   }
 
-  // 2. Trigger Google Drive Reel automation (if active)
+  // 2. Trigger Google Drive Reel automation for all due channels
   try {
-    const conf = await gdriveReelService.getConfig();
-    if (conf.isActive) {
-      results.gdriveReel = await gdriveReelService.publishNext();
-    } else {
-      results.gdriveReel = { status: 'skipped', reason: 'Google Drive Reel automation is not active' };
-    }
+    const gdriveResult = await gdriveReelService.publishAllDueChannels();
+    results.gdriveReels = gdriveResult;
   } catch (e: any) {
     results.gdriveError = e.message;
   }

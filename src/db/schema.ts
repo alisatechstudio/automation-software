@@ -193,14 +193,15 @@ export interface GroupShareLog {
 }
 
 export interface GDriveReelConfig {
-  _id: string; // Identifier e.g. 'default_gdrive_reels'
+  _id: string; // Identifier e.g. 'default_gdrive_reels' or UUID
+  name?: string; // Friendly label, e.g. "Channel 1 - Daily Reels"
   folderUrlOrId: string; // Full Drive folder URL or ID
   folderId: string; // Clean extracted Google Drive Folder ID
-  apiKey?: string; // Google Drive API Key
+  apiKey?: string; // Google Drive API Key (or fallback to global)
   pageId: string; // Target Facebook Page ID
   pageName?: string;
   isActive: boolean; // Automated scheduling ON/OFF
-  scheduleIntervalHours: number; // e.g. 2, 3, 4, 6
+  scheduleIntervalHours: number; // e.g. 1, 2, 3, 4, 6, 12, 24
   cronExpression?: string; // e.g. "0 */2 * * *"
   captionStrategy: 'viral_hashtags' | 'custom';
   customCaption?: string;

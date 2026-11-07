@@ -18,6 +18,8 @@ export interface GDriveVideoItem {
 }
 
 export interface GDriveScanResult {
+  channelId?: string;
+  channelName?: string;
   folderId: string;
   folderUrl: string;
   totalVideos: number;
@@ -27,13 +29,13 @@ export interface GDriveScanResult {
   error?: string;
 }
 
-const DEFAULT_GDRIVE_CONFIG_ID = 'default_gdrive_reels';
+export const DEFAULT_GDRIVE_CONFIG_ID = 'default_gdrive_reels';
 const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm', '.mkv'];
 
 export class GDriveReelService {
   private fbClient: FacebookGraphClient;
   private cronTask: ScheduledTask | null = null;
-  private isPublishing = false;
+  private publishingChannels = new Set<string>();
 
   constructor() {
     this.fbClient = new FacebookGraphClient();
@@ -85,88 +87,201 @@ export class GDriveReelService {
   }
 
   /**
-   * Retrieves or initializes Google Drive reels configuration
+   * Retrieves or initializes the shared global Google Drive API key
    */
-  public async getConfig(): Promise<GDriveReelConfig> {
+  public async getGlobalApiKey(): Promise<string> {
     const db = getDatabase();
-    let conf = await db.collection<GDriveReelConfig>('gdrive_reel_configs').findOne({ _id: DEFAULT_GDRIVE_CONFIG_ID });
-    if (!conf) {
-      const defaultPage = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
-      conf = {
-        _id: DEFAULT_GDRIVE_CONFIG_ID,
-        folderUrlOrId: '',
-        folderId: '',
-        apiKey: process.env.GOOGLE_DRIVE_API_KEY || '',
-        pageId: defaultPage?._id || '',
-        pageName: defaultPage?.name || '',
-        isActive: false,
-        scheduleIntervalHours: 2, // Every 2 hours
-        cronExpression: '0 */2 * * *',
-        captionStrategy: 'viral_hashtags',
-        customCaption: '',
-        firstCommentText: '',
-        orderStrategy: 'oldest_first',
-        postedVideoIds: [],
-        postedVideoNames: [],
-        lastPostedAt: null,
-        lastPostedFile: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await db.collection<GDriveReelConfig>('gdrive_reel_configs').insertOne(conf);
+    const setting = await db.collection('settings').findOne({ _id: 'gdrive_settings' as any });
+    if (setting && setting.apiKey) {
+      return (setting.apiKey as string).trim();
     }
+    return (process.env.GOOGLE_DRIVE_API_KEY || '').trim();
+  }
+
+  /**
+   * Saves or updates the shared global Google Drive API key
+   */
+  public async setGlobalApiKey(key: string): Promise<string> {
+    const db = getDatabase();
+    const cleanKey = (key || '').trim();
+    await db.collection('settings').updateOne(
+      { _id: 'gdrive_settings' as any },
+      { $set: { apiKey: cleanKey, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    return cleanKey;
+  }
+
+  /**
+   * Seeds an initial default channel if no channels exist
+   */
+  private async seedDefaultChannel(): Promise<GDriveReelConfig> {
+    const db = getDatabase();
+    const defaultPage = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
+    const globalKey = await this.getGlobalApiKey();
+
+    const conf: GDriveReelConfig = {
+      _id: DEFAULT_GDRIVE_CONFIG_ID,
+      name: defaultPage ? `${defaultPage.name} Channel` : 'Primary Reels Channel',
+      folderUrlOrId: '',
+      folderId: '',
+      apiKey: globalKey,
+      pageId: defaultPage?._id || '',
+      pageName: defaultPage?.name || '',
+      isActive: false,
+      scheduleIntervalHours: 2, // Every 2 hours
+      cronExpression: '0 */2 * * *',
+      captionStrategy: 'viral_hashtags',
+      customCaption: '',
+      firstCommentText: '',
+      orderStrategy: 'oldest_first',
+      postedVideoIds: [],
+      postedVideoNames: [],
+      lastPostedAt: null,
+      lastPostedFile: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.collection<GDriveReelConfig>('gdrive_reel_configs').insertOne(conf);
     return conf;
   }
 
   /**
-   * Saves or updates configuration
+   * Retrieves all Google Drive reel channels/folder mappings
    */
-  public async saveConfig(updates: Partial<GDriveReelConfig>): Promise<GDriveReelConfig> {
+  public async getAllChannels(): Promise<GDriveReelConfig[]> {
     const db = getDatabase();
-    const current = await this.getConfig();
+    let channels = await db.collection<GDriveReelConfig>('gdrive_reel_configs').find({}).toArray();
+    if (!channels || channels.length === 0) {
+      const seeded = await this.seedDefaultChannel();
+      channels = [seeded];
+    }
+    return channels;
+  }
 
-    const folderUrlOrId = updates.folderUrlOrId !== undefined ? updates.folderUrlOrId : current.folderUrlOrId;
+  /**
+   * Retrieves a specific channel by ID
+   */
+  public async getChannel(id: string): Promise<GDriveReelConfig | null> {
+    const db = getDatabase();
+    const channel = await db.collection<GDriveReelConfig>('gdrive_reel_configs').findOne({ _id: id });
+    if (!channel && id === DEFAULT_GDRIVE_CONFIG_ID) {
+      return await this.seedDefaultChannel();
+    }
+    return channel;
+  }
+
+  /**
+   * Creates or updates a Google Drive reel channel/mapping
+   */
+  public async saveChannel(data: Partial<GDriveReelConfig>): Promise<GDriveReelConfig> {
+    const db = getDatabase();
+    const channelId = data._id || `gdrive_ch_${crypto.randomUUID().slice(0, 8)}`;
+
+    const existing = await db.collection<GDriveReelConfig>('gdrive_reel_configs').findOne({ _id: channelId });
+
+    const folderUrlOrId = data.folderUrlOrId !== undefined ? data.folderUrlOrId : (existing?.folderUrlOrId || '');
     const folderId = this.extractFolderId(folderUrlOrId);
 
-    const interval = updates.scheduleIntervalHours ?? current.scheduleIntervalHours ?? 2;
-    let cronExpr = updates.cronExpression || current.cronExpression;
-    if (updates.scheduleIntervalHours !== undefined || !cronExpr) {
+    const interval = data.scheduleIntervalHours ?? existing?.scheduleIntervalHours ?? 2;
+    let cronExpr = data.cronExpression || existing?.cronExpression;
+    if (data.scheduleIntervalHours !== undefined || !cronExpr) {
       cronExpr = interval === 1 ? '0 * * * *' : `0 */${interval} * * *`;
     }
 
-    let pageName = updates.pageName || current.pageName;
-    if (updates.pageId && updates.pageId !== current.pageId) {
-      const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: updates.pageId });
+    let pageName = data.pageName || existing?.pageName || '';
+    const pageId = data.pageId !== undefined ? data.pageId : (existing?.pageId || '');
+    if (pageId && pageId !== 'all') {
+      const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: pageId });
       if (page) pageName = page.name;
     }
 
-    const payload: Partial<GDriveReelConfig> = {
-      ...updates,
+    let name = data.name || existing?.name;
+    if (!name) {
+      name = pageName ? `${pageName} Reels` : 'Drive Channel';
+    }
+
+    const doc: GDriveReelConfig = {
+      _id: channelId,
+      name,
       folderUrlOrId,
       folderId,
-      cronExpression: cronExpr,
+      apiKey: data.apiKey !== undefined ? data.apiKey : (existing?.apiKey || ''),
+      pageId,
       pageName,
+      isActive: data.isActive !== undefined ? data.isActive : (existing?.isActive ?? false),
+      scheduleIntervalHours: interval,
+      cronExpression: cronExpr,
+      captionStrategy: data.captionStrategy || existing?.captionStrategy || 'viral_hashtags',
+      customCaption: data.customCaption !== undefined ? data.customCaption : (existing?.customCaption || ''),
+      firstCommentText: data.firstCommentText !== undefined ? data.firstCommentText : (existing?.firstCommentText || ''),
+      orderStrategy: data.orderStrategy || existing?.orderStrategy || 'oldest_first',
+      postedVideoIds: existing?.postedVideoIds || [],
+      postedVideoNames: existing?.postedVideoNames || [],
+      lastPostedAt: existing?.lastPostedAt || null,
+      lastPostedFile: existing?.lastPostedFile || null,
+      createdAt: existing?.createdAt || new Date(),
       updatedAt: new Date(),
     };
 
     await db.collection<GDriveReelConfig>('gdrive_reel_configs').updateOne(
-      { _id: DEFAULT_GDRIVE_CONFIG_ID },
-      { $set: payload }
+      { _id: channelId },
+      { $set: doc },
+      { upsert: true }
     );
 
-    const updated = await this.getConfig();
-    await this.restartScheduler();
-    return updated;
+    return doc;
   }
 
   /**
-   * Scans a Google Drive folder and lists all video files and their status
+   * Deletes a channel mapping by ID
    */
-  public async scanFolder(customUrlOrId?: string, customApiKey?: string): Promise<GDriveScanResult> {
-    const conf = await this.getConfig();
-    const rawInput = (customUrlOrId || conf.folderUrlOrId || conf.folderId || '').trim();
+  public async deleteChannel(id: string): Promise<boolean> {
+    const db = getDatabase();
+    const res = await db.collection<GDriveReelConfig>('gdrive_reel_configs').deleteOne({ _id: id });
+    return (res.deletedCount || 0) > 0;
+  }
+
+  /**
+   * Scans a specific channel's Google Drive folder
+   */
+  public async scanChannel(id: string): Promise<GDriveScanResult> {
+    const channel = await this.getChannel(id);
+    if (!channel) {
+      return {
+        channelId: id,
+        folderId: '',
+        folderUrl: '',
+        totalVideos: 0,
+        postedCount: 0,
+        pendingCount: 0,
+        videos: [],
+        error: `Channel ID "${id}" not found.`,
+      };
+    }
+
+    const globalKey = await this.getGlobalApiKey();
+    const apiKey = (channel.apiKey || globalKey || '').trim();
+
+    const scan = await this.scanFolderDirect(channel.folderUrlOrId || channel.folderId, apiKey, channel);
+    scan.channelId = channel._id;
+    scan.channelName = channel.name;
+    return scan;
+  }
+
+  /**
+   * Direct scanner for any folder URL/ID with optional API key and channel context
+   */
+  public async scanFolderDirect(
+    folderUrlOrId: string,
+    apiKeyInput?: string,
+    channelCtx?: GDriveReelConfig
+  ): Promise<GDriveScanResult> {
+    const rawInput = (folderUrlOrId || '').trim();
     const folderId = this.extractFolderId(rawInput);
-    const apiKey = (customApiKey || conf.apiKey || process.env.GOOGLE_DRIVE_API_KEY || '').trim();
+    const globalKey = await this.getGlobalApiKey();
+    const apiKey = (apiKeyInput || globalKey || '').trim();
 
     if (!folderId) {
       return {
@@ -176,7 +291,7 @@ export class GDriveReelService {
         postedCount: 0,
         pendingCount: 0,
         videos: [],
-        error: 'Please paste your Google Drive folder link or folder ID.',
+        error: 'Please paste a valid Google Drive folder link or folder ID.',
       };
     }
 
@@ -188,13 +303,11 @@ export class GDriveReelService {
         postedCount: 0,
         pendingCount: 0,
         videos: [],
-        error: 'Google Drive API Key is required. Please provide an API Key in the settings below.',
+        error: 'Google Drive API Key is required. Please set your API Key above.',
       };
     }
 
     try {
-      // Query Google Drive v3 API
-      // q: 'FOLDER_ID' in parents and trashed = false
       const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
       const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime)');
       const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000&key=${apiKey}`;
@@ -217,13 +330,13 @@ export class GDriveReelService {
       const data = (await res.json()) as any;
       const rawFiles: any[] = data.files || [];
 
-      const postedIdSet = new Set(conf.postedVideoIds || []);
-      const postedNameSet = new Set((conf.postedVideoNames || []).map((n) => n.toLowerCase()));
+      const postedIdSet = new Set(channelCtx?.postedVideoIds || []);
+      const postedNameSet = new Set((channelCtx?.postedVideoNames || []).map((n) => n.toLowerCase()));
 
       const videoList: GDriveVideoItem[] = [];
       for (const f of rawFiles) {
         const isVideoMime = (f.mimeType || '').startsWith('video/');
-        const ext = f.name ? (f.name.substring(f.name.lastIndexOf('.')).toLowerCase()) : '';
+        const ext = f.name ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase() : '';
         const isVideoExt = VIDEO_EXTENSIONS.includes(ext);
 
         if (isVideoMime || isVideoExt) {
@@ -243,8 +356,8 @@ export class GDriveReelService {
         }
       }
 
-      // Sort according to orderStrategy
-      const strategy = conf.orderStrategy || 'oldest_first';
+      // Sort
+      const strategy = channelCtx?.orderStrategy || 'oldest_first';
       if (strategy === 'oldest_first') {
         videoList.sort((a, b) => a.modifiedTime.getTime() - b.modifiedTime.getTime());
       } else if (strategy === 'newest_first') {
@@ -280,102 +393,150 @@ export class GDriveReelService {
   }
 
   /**
-   * Publishes the next pending video from the Google Drive folder
+   * Publishes the next pending video for a specific channel
    */
-  public async publishNext(): Promise<{
+  public async publishNextForChannel(channelId: string): Promise<{
     success: boolean;
+    channelId: string;
+    channelName?: string;
+    pageName?: string;
     filename?: string;
     cleanTitle?: string;
     videoId?: string;
     postId?: string;
     error?: string;
   }> {
-    if (this.isPublishing) {
-      return { success: false, error: 'A video upload is already in progress. Please wait.' };
+    if (this.publishingChannels.has(channelId)) {
+      return {
+        success: false,
+        channelId,
+        error: `Upload already in progress for channel "${channelId}". Please wait.`,
+      };
     }
 
-    this.isPublishing = true;
+    this.publishingChannels.add(channelId);
     try {
-      const conf = await this.getConfig();
-      if (!conf.folderId && !conf.folderUrlOrId) {
-        return { success: false, error: 'Google Drive folder link is not configured.' };
+      const channel = await this.getChannel(channelId);
+      if (!channel) {
+        return { success: false, channelId, error: `Channel ID "${channelId}" not found.` };
+      }
+
+      if (!channel.folderId && !channel.folderUrlOrId) {
+        return { success: false, channelId, error: 'Google Drive folder is not configured for this channel.' };
       }
 
       const db = getDatabase();
-
-      // Resolve Facebook Page
       let page: FacebookPage | null = null;
-      if (conf.pageId && conf.pageId !== 'all') {
-        page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: conf.pageId });
+      if (channel.pageId && channel.pageId !== 'all') {
+        page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: channel.pageId });
       }
       if (!page) {
         page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
       }
       if (!page) {
-        return { success: false, error: 'No active Facebook Page found for publishing.' };
+        return {
+          success: false,
+          channelId,
+          error: `No active Facebook Page assigned to channel "${channel.name}".`,
+        };
       }
 
-      const scan = await this.scanFolder();
+      const scan = await this.scanChannel(channelId);
       if (scan.error) {
-        return { success: false, error: scan.error };
+        return { success: false, channelId, error: scan.error };
       }
 
       const pendingVideos = scan.videos.filter((v) => !v.isPosted);
       if (pendingVideos.length === 0) {
-        console.log(`[GDriveReelService] All ${scan.totalVideos} videos in Google Drive folder have already been posted.`);
         return {
           success: false,
-          error: `All ${scan.totalVideos} videos in your Google Drive folder have already been published! Click "Reset History" if you wish to cycle through them again.`,
+          channelId,
+          channelName: channel.name,
+          pageName: page.name,
+          error: `All ${scan.totalVideos} videos in "${channel.name}" have already been published! Click Reset History to cycle again.`,
         };
       }
 
       const targetVideo = pendingVideos[0];
-      return await this.executePublishVideo(targetVideo, page, conf);
+      const res = await this.executePublishVideo(targetVideo, page, channel);
+      return {
+        ...res,
+        channelId,
+        channelName: channel.name,
+        pageName: page.name,
+      };
     } finally {
-      this.isPublishing = false;
+      this.publishingChannels.delete(channelId);
     }
   }
 
   /**
-   * Publishes a specific selected file from Google Drive
+   * Publishes a specific selected file from Google Drive for a channel
    */
-  public async publishSpecificFile(fileId: string): Promise<{
+  public async publishSpecificFileForChannel(
+    channelId: string,
+    fileId: string
+  ): Promise<{
     success: boolean;
+    channelId: string;
+    channelName?: string;
+    pageName?: string;
     filename?: string;
     cleanTitle?: string;
     videoId?: string;
     postId?: string;
     error?: string;
   }> {
-    if (this.isPublishing) {
-      return { success: false, error: 'A video upload is already in progress. Please wait.' };
+    if (this.publishingChannels.has(channelId)) {
+      return {
+        success: false,
+        channelId,
+        error: `Upload already in progress for channel "${channelId}". Please wait.`,
+      };
     }
 
-    this.isPublishing = true;
+    this.publishingChannels.add(channelId);
     try {
-      const conf = await this.getConfig();
-      const db = getDatabase();
+      const channel = await this.getChannel(channelId);
+      if (!channel) {
+        return { success: false, channelId, error: `Channel ID "${channelId}" not found.` };
+      }
 
+      const db = getDatabase();
       let page: FacebookPage | null = null;
-      if (conf.pageId && conf.pageId !== 'all') {
-        page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: conf.pageId });
+      if (channel.pageId && channel.pageId !== 'all') {
+        page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: channel.pageId });
       }
       if (!page) {
         page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
       }
       if (!page) {
-        return { success: false, error: 'No active Facebook Page found for publishing.' };
+        return {
+          success: false,
+          channelId,
+          error: `No active Facebook Page assigned to channel "${channel.name}".`,
+        };
       }
 
-      const scan = await this.scanFolder();
+      const scan = await this.scanChannel(channelId);
       const targetVideo = scan.videos.find((v) => v.id === fileId);
       if (!targetVideo) {
-        return { success: false, error: `Video ID "${fileId}" not found in Google Drive folder scan.` };
+        return {
+          success: false,
+          channelId,
+          error: `Video ID "${fileId}" not found in folder for "${channel.name}".`,
+        };
       }
 
-      return await this.executePublishVideo(targetVideo, page, conf);
+      const res = await this.executePublishVideo(targetVideo, page, channel);
+      return {
+        ...res,
+        channelId,
+        channelName: channel.name,
+        pageName: page.name,
+      };
     } finally {
-      this.isPublishing = false;
+      this.publishingChannels.delete(channelId);
     }
   }
 
@@ -395,9 +556,10 @@ export class GDriveReelService {
     error?: string;
   }> {
     const db = getDatabase();
-    const apiKey = (conf.apiKey || process.env.GOOGLE_DRIVE_API_KEY || '').trim();
+    const globalKey = await this.getGlobalApiKey();
+    const apiKey = (conf.apiKey || globalKey || '').trim();
 
-    console.log(`[GDriveReelService] ☁️ Downloading "${video.name}" (${video.sizeMb} MB) from Google Drive into memory...`);
+    console.log(`[GDriveReelService] ☁️ Downloading "${video.name}" (${video.sizeMb} MB) for channel "${conf.name}" to page "${page.name}"...`);
 
     try {
       // 1. Download file media from Google Drive v3 API
@@ -411,7 +573,7 @@ export class GDriveReelService {
       const arrayBuffer = await downloadRes.arrayBuffer();
       const videoBuffer = Buffer.from(arrayBuffer);
 
-      console.log(`[GDriveReelService] ✓ Download complete (${videoBuffer.length} bytes). Publishing to page ${page.name} (${page._id})...`);
+      console.log(`[GDriveReelService] ✓ Download complete (${videoBuffer.length} bytes). Publishing to page "${page.name}" (${page._id})...`);
 
       // 2. Generate Caption & Viral Hashtags
       let caption = '';
@@ -425,7 +587,7 @@ export class GDriveReelService {
         });
         caption = caption.replace('{hashtags}', viralTags).trim();
       } else {
-        // Algorithm optimized viral hashtags based on keywords in title
+        // Algorithm optimized viral hashtags
         caption = generateViralReelHashtags({
           headline: video.cleanTitle,
           category: 'বিশেষ খবর',
@@ -459,10 +621,10 @@ export class GDriveReelService {
         }
       }
 
-      // 5. Update posted state in MongoDB
+      // 5. Update posted state in MongoDB for this specific channel
       const now = new Date();
       await db.collection<GDriveReelConfig>('gdrive_reel_configs').updateOne(
-        { _id: DEFAULT_GDRIVE_CONFIG_ID },
+        { _id: conf._id },
         {
           $addToSet: {
             postedVideoIds: video.id,
@@ -479,11 +641,11 @@ export class GDriveReelService {
       // 6. Record to reel_logs
       await db.collection<ReelLog>('reel_logs').insertOne({
         _id: crypto.randomUUID(),
-        articleId: `gdrive_${video.id}`,
+        articleId: `gdrive_${conf._id}_${video.id}`,
         articleTitle: video.cleanTitle,
         pageId: page._id,
         pageName: page.name,
-        theme: 'gdrive-video',
+        theme: `gdrive-${conf._id}`,
         fbVideoId: videoId,
         fbPostId: postId,
         status: config.DRY_RUN ? 'dry_run' : 'published',
@@ -492,7 +654,7 @@ export class GDriveReelService {
         createdAt: now,
       });
 
-      console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}"! Video ID: ${videoId}, Post ID: ${postId}`);
+      console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}" to "${page.name}"! Video ID: ${videoId}`);
 
       return {
         success: true,
@@ -513,71 +675,169 @@ export class GDriveReelService {
   }
 
   /**
-   * Resets the list of posted videos so user can re-cycle or start fresh
+   * Resets posted history for a specific channel
    */
-  public async resetPostedHistory(): Promise<void> {
+  public async resetHistoryForChannel(channelId: string): Promise<void> {
     const db = getDatabase();
     await db.collection<GDriveReelConfig>('gdrive_reel_configs').updateOne(
-      { _id: DEFAULT_GDRIVE_CONFIG_ID },
+      { _id: channelId },
       { $set: { postedVideoIds: [], postedVideoNames: [], updatedAt: new Date() } }
     );
-    console.log('[GDriveReelService] Posted video history reset.');
+    console.log(`[GDriveReelService] Posted video history reset for channel ${channelId}.`);
   }
 
   /**
-   * Starts the background cron scheduler (used on long-running node servers or Vercel cron endpoints)
+   * Evaluates all active channels and publishes the next video for any that are due
+   */
+  public async publishAllDueChannels(): Promise<{
+    totalChannels: number;
+    activeChannels: number;
+    processed: Array<{
+      channelId: string;
+      channelName: string;
+      pageName: string;
+      status: 'published' | 'skipped' | 'failed';
+      result?: any;
+      reason?: string;
+    }>;
+  }> {
+    const channels = await this.getAllChannels();
+    const active = channels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
+
+    const processed: any[] = [];
+    for (const channel of active) {
+      const intervalMs = (channel.scheduleIntervalHours || 2) * 60 * 60 * 1000;
+      const lastPost = channel.lastPostedAt ? new Date(channel.lastPostedAt).getTime() : 0;
+      const isDue = Date.now() - lastPost >= intervalMs - 60000; // 1 min grace
+
+      if (!isDue) {
+        const nextDueInMin = Math.round((intervalMs - (Date.now() - lastPost)) / 60000);
+        processed.push({
+          channelId: channel._id,
+          channelName: channel.name,
+          pageName: channel.pageName || 'Unknown Page',
+          status: 'skipped',
+          reason: `Not due yet. Next post scheduled in ~${nextDueInMin} minutes.`,
+        });
+        continue;
+      }
+
+      try {
+        console.log(`[GDriveReelService] Executing scheduled post for channel "${channel.name}"...`);
+        const result = await this.publishNextForChannel(channel._id);
+        if (result.success) {
+          processed.push({
+            channelId: channel._id,
+            channelName: channel.name,
+            pageName: channel.pageName || 'Unknown Page',
+            status: 'published',
+            result,
+          });
+        } else {
+          processed.push({
+            channelId: channel._id,
+            channelName: channel.name,
+            pageName: channel.pageName || 'Unknown Page',
+            status: 'failed',
+            reason: result.error,
+          });
+        }
+      } catch (e: any) {
+        processed.push({
+          channelId: channel._id,
+          channelName: channel.name,
+          pageName: channel.pageName || 'Unknown Page',
+          status: 'failed',
+          reason: e.message,
+        });
+      }
+    }
+
+    return {
+      totalChannels: channels.length,
+      activeChannels: active.length,
+      processed,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // BACKWARD-COMPATIBLE WRAPPERS (for existing single-channel callers)
+  // -------------------------------------------------------------
+  public async getConfig(): Promise<GDriveReelConfig> {
+    const channels = await this.getAllChannels();
+    return channels[0];
+  }
+
+  public async saveConfig(updates: Partial<GDriveReelConfig>): Promise<GDriveReelConfig> {
+    const targetId = updates._id || DEFAULT_GDRIVE_CONFIG_ID;
+    return await this.saveChannel({ ...updates, _id: targetId });
+  }
+
+  public async scanFolder(customUrlOrId?: string, customApiKey?: string): Promise<GDriveScanResult> {
+    if (customUrlOrId) {
+      return await this.scanFolderDirect(customUrlOrId, customApiKey);
+    }
+    const conf = await this.getConfig();
+    return await this.scanChannel(conf._id);
+  }
+
+  public async publishNext(): Promise<{
+    success: boolean;
+    filename?: string;
+    cleanTitle?: string;
+    videoId?: string;
+    postId?: string;
+    error?: string;
+  }> {
+    const conf = await this.getConfig();
+    return await this.publishNextForChannel(conf._id);
+  }
+
+  public async publishSpecificFile(fileId: string): Promise<{
+    success: boolean;
+    filename?: string;
+    cleanTitle?: string;
+    videoId?: string;
+    postId?: string;
+    error?: string;
+  }> {
+    const conf = await this.getConfig();
+    return await this.publishSpecificFileForChannel(conf._id, fileId);
+  }
+
+  public async resetPostedHistory(): Promise<void> {
+    const conf = await this.getConfig();
+    await this.resetHistoryForChannel(conf._id);
+  }
+
+  /**
+   * Starts background scheduler
    */
   public async startScheduler(): Promise<void> {
-    const conf = await this.getConfig();
-    if (!conf.isActive) {
-      console.log('[GDriveReelService] Google Drive automation is disabled (isActive=false). Scheduler on standby.');
-      return;
-    }
-
-    const cronExpr = conf.cronExpression || '0 */2 * * *';
-    if (!cron.validate(cronExpr)) {
-      console.warn(`[GDriveReelService] Invalid cron expression "${cronExpr}". Scheduler aborted.`);
-      return;
-    }
-
     if (this.cronTask) {
       this.cronTask.stop();
       this.cronTask = null;
     }
 
-    console.log(`[GDriveReelService] ⏰ Starting automated Google Drive reel scheduler with cron "${cronExpr}"...`);
-    this.cronTask = cron.schedule(cronExpr, async () => {
-      console.log(`[GDriveReelService - Cron] Scheduled Google Drive reel upload triggered at ${new Date().toISOString()}`);
+    // Runs every 10 minutes to check if any active channel is due
+    this.cronTask = cron.schedule('*/10 * * * *', async () => {
       try {
-        const result = await this.publishNext();
-        if (result.success) {
-          console.log(`✓ [GDriveReelService - Cron] Scheduled Reel posted: "${result.filename}" (${result.videoId})`);
-        } else {
-          console.log(`[GDriveReelService - Cron] Note: ${result.error}`);
-        }
+        await this.publishAllDueChannels();
       } catch (err: any) {
-        console.error(`[GDriveReelService - Cron] Error:`, err.message);
+        console.error('[GDriveReelService - Scheduler Error]:', err.message);
       }
     });
   }
 
-  /**
-   * Restarts the cron scheduler
-   */
   public async restartScheduler(): Promise<void> {
     this.stopScheduler();
     await this.startScheduler();
   }
 
-  /**
-   * Stops the background cron scheduler cleanly
-   */
   public stopScheduler(): void {
     if (this.cronTask) {
       this.cronTask.stop();
       this.cronTask = null;
-      console.log('[GDriveReelService] Scheduler stopped.');
     }
   }
 }
-
