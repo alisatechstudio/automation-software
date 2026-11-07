@@ -3172,14 +3172,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         return;
       }
 
-      tbody.innerHTML = videos.map(v => {
+      tbody.innerHTML = videos.map((v, idx) => {
         const statusBadge = v.isPosted
           ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800">✓ Posted</span>'
           : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">🟢 Ready</span>';
 
         const publishBtn = v.isPosted
-          ? '<button onclick="publishSpecificLocalReel(\'' + escapeJsString(v.name) + '\')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
-          : '<button onclick="publishSpecificLocalReel(\'' + escapeJsString(v.name) + '\')" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
+          ? '<button data-idx="' + idx + '" onclick="onLocalReelActionClick(this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition" title="Re-post this video">Re-Post</button>'
+          : '<button data-idx="' + idx + '" onclick="onLocalReelActionClick(this)" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 text-[10px] font-black transition active:scale-95 shadow">Post Now</button>';
 
         return '<tr class="hover:bg-slate-900/60 transition">' +
           '<td class="py-2.5 px-3 max-w-[240px] truncate">' +
@@ -3193,8 +3193,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }).join('');
     }
 
-    function escapeJsString(str) {
-      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    function onLocalReelActionClick(btn) {
+      const idx = parseInt(btn.getAttribute('data-idx') || '-1', 10);
+      if (isNaN(idx) || idx < 0 || !cachedLocalVideos[idx]) return;
+      const file = cachedLocalVideos[idx];
+      publishSpecificLocalReel(file.name);
     }
 
     async function triggerScanLocalReelsFolder() {
