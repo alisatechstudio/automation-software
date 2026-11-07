@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import { getDatabase, isDbConnected, initDatabase } from '../../db/index.js';
-import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, GDriveReelConfig } from '../../db/schema.js';
+import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, YouTubeChannel, GDriveReelConfig } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
 import { PlaywrightImageRenderer } from '../../services/renderer/playwright.js';
@@ -1472,16 +1472,6 @@ async function executeYoutubeCron(req: Request, res: Response) {
   try {
     const db = getDatabase();
     await ytClient.initCredentials();
-    if (!ytClient.isConfigured()) {
-      res.json({
-        success: false,
-        job: 'youtube_shorts',
-        configured: false,
-        message: 'YouTube client credentials not configured or authenticated in Settings.',
-      });
-      return;
-    }
-
     const autoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
     if (autoSetting?.value === 'false') {
       res.json({
@@ -1493,61 +1483,121 @@ async function executeYoutubeCron(req: Request, res: Response) {
       return;
     }
 
-    const uploadedLogs = await db
-      .collection<YouTubeUploadLog>('youtube_upload_logs')
-      .find({ status: { $in: ['success', 'dry_run'] } })
-      .toArray();
-    const uploadedArticleIds = uploadedLogs.map((l: YouTubeUploadLog) => l.articleId).filter(Boolean);
+    let targetChannels = await worker.getActiveYouTubeChannels();
+    const queryChannelId = (req.query.channelId as string) || (req.query.channel as string);
+    const queryPageId = (req.query.pageId as string) || (req.query.page as string);
 
-    // Guard: Connected YouTube channel is BD News 24/7. Restrict cron candidate articles to BD News.
-    const candidateArticles = await db
-      .collection<NewsArticle>('news_articles')
-      .find({
-        _id: { $nin: uploadedArticleIds as string[] },
-        link: { $not: /trendingnews/i },
-      })
-      .sort({ pubDate: -1, createdAt: -1 })
-      .limit(40)
-      .toArray();
-
-    let targetArticle = candidateArticles.find(
-      (a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))
-    );
-
-    if (!targetArticle) {
-      const allBdCandidates = await db
-        .collection<NewsArticle>('news_articles')
-        .find({ link: { $not: /trendingnews/i } })
-        .sort({ pubDate: -1, createdAt: -1 })
-        .limit(40)
-        .toArray();
-      targetArticle = allBdCandidates.find(
-        (a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))
-      );
+    if (queryChannelId) {
+      targetChannels = targetChannels.filter((c) => c._id === queryChannelId);
+    } else if (queryPageId) {
+      targetChannels = targetChannels.filter((c) => c.targetPageId === queryPageId || c.targetPageId === 'all');
     }
 
-    if (!targetArticle) {
+    if (targetChannels.length === 0) {
       res.json({
-        success: true,
+        success: false,
         job: 'youtube_shorts',
-        processed: false,
-        durationMs: Date.now() - startTime,
-        message: 'No articles available to upload to YouTube.',
+        message: 'No active YouTube channels found or configured.',
       });
       return;
     }
 
-    console.log(`[YouTube Cron] Uploading short for article "${targetArticle.title}"...`);
-    const result = await worker.uploadShortForArticle(targetArticle._id);
+    const channelResults: any[] = [];
+
+    for (const channel of targetChannels) {
+      const isChEnglish = channel.language === 'en' || channel.targetPageId === '1526917347161119';
+
+      // Find uploaded article IDs for this channel
+      const uploadedLogs = await db
+        .collection<YouTubeUploadLog>('youtube_upload_logs')
+        .find({ channelId: channel._id, status: { $in: ['success', 'dry_run'] } })
+        .toArray();
+      const uploadedArticleIds = uploadedLogs.map((l) => l.articleId).filter(Boolean);
+
+      let targetArticle: NewsArticle | null = null;
+
+      if (isChEnglish) {
+        // Find newest unposted English / Trending News article
+        const candidates = await db
+          .collection<NewsArticle>('news_articles')
+          .find({ _id: { $nin: uploadedArticleIds as string[] } })
+          .sort({ pubDate: -1, createdAt: -1 })
+          .limit(40)
+          .toArray();
+        targetArticle = candidates.find((a: NewsArticle) => isEnglishText(a.title) || (a.link && a.link.includes('trendingnews'))) || null;
+
+        // Fallback to any English article
+        if (!targetArticle) {
+          const allCandidates = await db
+            .collection<NewsArticle>('news_articles')
+            .find({})
+            .sort({ pubDate: -1, createdAt: -1 })
+            .limit(40)
+            .toArray();
+          targetArticle = allCandidates.find((a: NewsArticle) => isEnglishText(a.title) || (a.link && a.link.includes('trendingnews'))) || null;
+        }
+      } else {
+        // Find newest unposted Bengali / BD News article
+        const candidates = await db
+          .collection<NewsArticle>('news_articles')
+          .find({
+            _id: { $nin: uploadedArticleIds as string[] },
+            link: { $not: /trendingnews/i },
+          })
+          .sort({ pubDate: -1, createdAt: -1 })
+          .limit(40)
+          .toArray();
+        targetArticle = candidates.find((a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))) || null;
+
+        // Fallback to any BD News article
+        if (!targetArticle) {
+          const allCandidates = await db
+            .collection<NewsArticle>('news_articles')
+            .find({ link: { $not: /trendingnews/i } })
+            .sort({ pubDate: -1, createdAt: -1 })
+            .limit(40)
+            .toArray();
+          targetArticle = allCandidates.find((a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))) || null;
+        }
+      }
+
+      if (targetArticle) {
+        try {
+          console.log(`[YouTube Cron] Uploading short for "${targetArticle.title}" to channel "${channel.title}"...`);
+          const uploadRes = await worker.uploadShortForArticle(targetArticle._id, channel._id);
+          channelResults.push({
+            channelId: channel._id,
+            channelTitle: channel.title,
+            articleTitle: targetArticle.title,
+            success: uploadRes.success,
+            videoId: uploadRes.videoId,
+            videoUrl: uploadRes.videoUrl,
+          });
+        } catch (uErr: any) {
+          channelResults.push({
+            channelId: channel._id,
+            channelTitle: channel.title,
+            articleTitle: targetArticle.title,
+            success: false,
+            error: uErr.message,
+          });
+        }
+      } else {
+        channelResults.push({
+          channelId: channel._id,
+          channelTitle: channel.title,
+          skipped: true,
+          message: 'No matching articles available for this channel.',
+        });
+      }
+    }
 
     res.json({
-      success: result.success,
+      success: true,
       job: 'youtube_shorts',
-      processed: true,
-      articleTitle: targetArticle.title,
-      articleId: targetArticle._id,
+      processedChannels: channelResults.length,
       durationMs: Date.now() - startTime,
-      result,
+      channels: channelResults,
     });
   } catch (err: any) {
     console.error('[YouTube Cron] Error:', err);
@@ -3006,8 +3056,189 @@ apiRouter.get('/cron-jobs/:id/history', async (req: Request, res: Response) => {
 });
 
 // ==============================================================================
-// 3.9. YouTube Shorts Integration
+// 3.9. Multi-Channel YouTube Shorts Integration
 // ==============================================================================
+
+// 1. Get All Channels
+apiRouter.get('/youtube/channels', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const channels = await worker.getActiveYouTubeChannels();
+    const allChannels = await db
+      .collection<YouTubeChannel>('youtube_channels')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json({
+      success: true,
+      channels: allChannels.length > 0 ? allChannels : channels,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. Add New Channel Manually
+apiRouter.post('/youtube/channels', async (req: Request, res: Response) => {
+  try {
+    const { title, refreshToken, targetPageId, targetPageName, language, autoUpload, clientId, clientSecret } = req.body;
+    if (!refreshToken || !String(refreshToken).trim()) {
+      return res.status(400).json({ success: false, error: 'OAuth Refresh Token is required' });
+    }
+
+    const db = getDatabase();
+    const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+    const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+    const effClientId = (clientId && String(clientId).trim()) || sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
+    const effClientSecret = (clientSecret && String(clientSecret).trim()) || sSec?.value || process.env.YOUTUBE_CLIENT_SECRET || '';
+
+    // Verify channel with YouTube API
+    const testClient = new YouTubeClient(effClientId, effClientSecret, String(refreshToken).trim());
+    const testRes = await testClient.testConnection();
+    if (!testRes.success || !testRes.profile) {
+      return res.status(400).json({
+        success: false,
+        error: `Could not authenticate YouTube channel: ${testRes.error || 'Invalid credentials'}`,
+      });
+    }
+
+    const profile = testRes.profile;
+    let finalPageName = targetPageName;
+    if (!finalPageName && targetPageId && targetPageId !== 'all') {
+      const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: targetPageId });
+      if (page) finalPageName = page.name;
+    }
+
+    const channelId = profile.id && profile.id !== 'upload-active' ? profile.id : `yt_${crypto.randomUUID().slice(0, 8)}`;
+    const newChannel: YouTubeChannel = {
+      _id: channelId,
+      title: title || profile.title || 'YouTube Channel',
+      customUrl: profile.customUrl,
+      description: profile.description,
+      thumbnailUrl: profile.thumbnailUrl,
+      subscriberCount: profile.subscriberCount,
+      videoCount: profile.videoCount,
+      clientId: clientId ? String(clientId).trim() : undefined,
+      clientSecret: clientSecret ? String(clientSecret).trim() : undefined,
+      refreshToken: String(refreshToken).trim(),
+      targetPageId: targetPageId || 'all',
+      targetPageName: finalPageName || 'All Pages',
+      language: language || (targetPageId === '1526917347161119' ? 'en' : 'bn'),
+      autoUpload: autoUpload !== false,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.collection<YouTubeChannel>('youtube_channels').updateOne(
+      { _id: newChannel._id },
+      { $set: newChannel },
+      { upsert: true }
+    );
+
+    res.json({
+      success: true,
+      channel: newChannel,
+      message: `YouTube Channel "${newChannel.title}" successfully connected!`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Update Channel Settings
+apiRouter.patch('/youtube/channels/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { targetPageId, targetPageName, language, autoUpload, isActive, title } = req.body;
+    const db = getDatabase();
+
+    const updateFields: any = { updatedAt: new Date() };
+    if (targetPageId !== undefined) updateFields.targetPageId = targetPageId;
+    if (targetPageName !== undefined) updateFields.targetPageName = targetPageName;
+    if (language !== undefined) updateFields.language = language;
+    if (autoUpload !== undefined) updateFields.autoUpload = Boolean(autoUpload);
+    if (isActive !== undefined) updateFields.isActive = Boolean(isActive);
+    if (title !== undefined) updateFields.title = String(title).trim();
+
+    await db.collection<YouTubeChannel>('youtube_channels').updateOne(
+      { _id: id },
+      { $set: updateFields }
+    );
+
+    res.json({ success: true, message: 'YouTube channel updated successfully' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Delete Channel
+apiRouter.delete('/youtube/channels/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    await db.collection<YouTubeChannel>('youtube_channels').deleteOne({ _id: id });
+    res.json({ success: true, message: 'YouTube channel removed' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. Sync Channel Profile from YouTube API
+apiRouter.post('/youtube/channels/:id/sync', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const ch = await db.collection<YouTubeChannel>('youtube_channels').findOne({ _id: id });
+    if (!ch) {
+      return res.status(404).json({ success: false, error: 'Channel not found' });
+    }
+
+    const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+    const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+    const client = YouTubeClient.forChannel(ch, sId?.value, sSec?.value);
+    const profile = await client.getChannelProfile();
+
+    const updateDoc: any = {
+      updatedAt: new Date(),
+    };
+    if (profile.title && profile.title !== 'YouTube Channel (Upload Active)') updateDoc.title = profile.title;
+    if (profile.customUrl) updateDoc.customUrl = profile.customUrl;
+    if (profile.description) updateDoc.description = profile.description;
+    if (profile.thumbnailUrl) updateDoc.thumbnailUrl = profile.thumbnailUrl;
+    if (profile.subscriberCount) updateDoc.subscriberCount = profile.subscriberCount;
+    if (profile.videoCount) updateDoc.videoCount = profile.videoCount;
+
+    await db.collection<YouTubeChannel>('youtube_channels').updateOne({ _id: id }, { $set: updateDoc });
+
+    res.json({ success: true, profile, message: 'Channel statistics synced' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. Test Channel Connection
+apiRouter.post('/youtube/channels/:id/test', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const ch = await db.collection<YouTubeChannel>('youtube_channels').findOne({ _id: id });
+    if (!ch) {
+      return res.status(404).json({ success: false, error: 'Channel not found' });
+    }
+
+    const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+    const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+    const client = YouTubeClient.forChannel(ch, sId?.value, sSec?.value);
+    const result = await client.testConnection();
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 apiRouter.get('/youtube/status', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
@@ -3016,6 +3247,8 @@ apiRouter.get('/youtube/status', async (req: Request, res: Response) => {
     const clientSecretSetting = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
     const refreshTokenSetting = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_REFRESH_TOKEN' });
     const autoPostSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
+
+    const channels = await worker.getActiveYouTubeChannels();
 
     let channel = null;
     let error = null;
@@ -3030,12 +3263,14 @@ apiRouter.get('/youtube/status', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      isConfigured,
+      isConfigured: isConfigured || channels.length > 0,
       autoPost: autoPostSetting ? autoPostSetting.value !== 'false' : true,
       clientId: clientIdSetting?.value || process.env.YOUTUBE_CLIENT_ID || '',
       hasClientSecret: Boolean(clientSecretSetting?.value || process.env.YOUTUBE_CLIENT_SECRET),
       hasRefreshToken: Boolean(refreshTokenSetting?.value || process.env.YOUTUBE_REFRESH_TOKEN),
       channel,
+      channels,
+      channelCount: channels.length,
       error,
     });
   } catch (err: any) {
@@ -3103,25 +3338,45 @@ apiRouter.post('/youtube/setup', async (req: Request, res: Response) => {
 
 apiRouter.post('/youtube/upload', async (req: Request, res: Response) => {
   try {
-    const { articleId } = req.body;
+    const { articleId, channelId } = req.body;
     const db = getDatabase();
 
     let targetArticleId = articleId;
     if (!targetArticleId) {
-      const candidates = await db
-        .collection<NewsArticle>('news_articles')
-        .find({ link: { $not: /trendingnews/i } })
-        .sort({ pubDate: -1 })
-        .limit(30)
-        .toArray();
-      const latestBdArt = candidates.find((a: NewsArticle) => !isEnglishText(a.title));
-      if (!latestBdArt) {
-        return res.status(404).json({ error: 'No BD News article found to upload' });
+      // Pick appropriate article based on channel
+      if (channelId) {
+        const ch = await db.collection<YouTubeChannel>('youtube_channels').findOne({ _id: channelId });
+        const isChEnglish = ch?.language === 'en' || ch?.targetPageId === '1526917347161119';
+        const candidates = await db
+          .collection<NewsArticle>('news_articles')
+          .find({})
+          .sort({ pubDate: -1 })
+          .limit(30)
+          .toArray();
+        const matched = candidates.find((a: NewsArticle) =>
+          isChEnglish
+            ? isEnglishText(a.title) || (a.link && a.link.includes('trendingnews'))
+            : !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))
+        );
+        if (matched) targetArticleId = matched._id;
       }
-      targetArticleId = latestBdArt._id;
+
+      if (!targetArticleId) {
+        const candidates = await db
+          .collection<NewsArticle>('news_articles')
+          .find({ link: { $not: /trendingnews/i } })
+          .sort({ pubDate: -1 })
+          .limit(30)
+          .toArray();
+        const latestBdArt = candidates.find((a: NewsArticle) => !isEnglishText(a.title));
+        if (!latestBdArt) {
+          return res.status(404).json({ error: 'No article found to upload' });
+        }
+        targetArticleId = latestBdArt._id;
+      }
     }
 
-    const result = await worker.uploadShortForArticle(targetArticleId);
+    const result = await worker.uploadShortForArticle(targetArticleId, channelId);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -3132,9 +3387,13 @@ apiRouter.get('/youtube/logs', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const limit = parseInt(req.query.limit as string, 10) || 50;
+    const channelId = req.query.channelId as string;
+    const filter: any = {};
+    if (channelId) filter.channelId = channelId;
+
     const logs = await db
       .collection<YouTubeUploadLog>('youtube_upload_logs')
-      .find({})
+      .find(filter)
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();
@@ -3153,9 +3412,21 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
   const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
   const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
   const originParam = (req.query.origin as string) || (req.path.includes('gdrive') ? 'gdrive' : 'youtube');
+  const targetPageId = (req.query.targetPageId as string) || '';
+  const targetPageName = (req.query.targetPageName as string) || '';
+  const language = (req.query.language as string) || '';
+
   const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive');
 
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${originParam}`;
+  const statePayload = {
+    origin: originParam,
+    targetPageId,
+    targetPageName,
+    language,
+  };
+  const stateEncoded = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${stateEncoded}`;
 
   res.json({
     authUrl,
@@ -3164,8 +3435,17 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
 });
 
 apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
-  const stateParam = (req.query.state as string) || 'youtube';
-  const targetTab = stateParam === 'gdrive' ? 'gdrive-reels' : 'youtube';
+  const stateRaw = (req.query.state as string) || 'youtube';
+  let statePayload: any = { origin: 'youtube' };
+
+  try {
+    const decoded = Buffer.from(stateRaw, 'base64url').toString('utf8');
+    statePayload = JSON.parse(decoded);
+  } catch {
+    statePayload = { origin: stateRaw };
+  }
+
+  const targetTab = statePayload.origin === 'gdrive' ? 'gdrive-reels' : 'youtube';
 
   try {
     const errorParam = req.query.error as string;
@@ -3184,7 +3464,55 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
 
     await ytClient.initCredentials();
-    await ytClient.exchangeCodeForTokens(code, redirectUri);
+    const tokenResult = await ytClient.exchangeCodeForTokens(code, redirectUri);
+
+    if (statePayload.origin === 'youtube') {
+      const db = getDatabase();
+      const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+      const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+
+      // Create client with new token to inspect channel
+      const chClient = new YouTubeClient(
+        sId?.value || process.env.YOUTUBE_CLIENT_ID,
+        sSec?.value || process.env.YOUTUBE_CLIENT_SECRET,
+        tokenResult.refreshToken
+      );
+      const profile = await chClient.getChannelProfile();
+
+      let pageName = statePayload.targetPageName;
+      if (!pageName && statePayload.targetPageId && statePayload.targetPageId !== 'all') {
+        const page = await db.collection<FacebookPage>('facebook_pages').findOne({ _id: statePayload.targetPageId });
+        if (page) pageName = page.name;
+      }
+
+      const channelDoc: YouTubeChannel = {
+        _id: profile.id && profile.id !== 'upload-active' ? profile.id : `yt_${crypto.randomUUID().slice(0, 8)}`,
+        title: profile.title || 'YouTube Channel',
+        customUrl: profile.customUrl,
+        description: profile.description,
+        thumbnailUrl: profile.thumbnailUrl,
+        subscriberCount: profile.subscriberCount,
+        videoCount: profile.videoCount,
+        refreshToken: tokenResult.refreshToken,
+        targetPageId: statePayload.targetPageId || 'all',
+        targetPageName: pageName || 'All Pages',
+        language: statePayload.language || (statePayload.targetPageId === '1526917347161119' ? 'en' : 'bn'),
+        autoUpload: true,
+        isActive: true,
+        updatedAt: new Date(),
+      };
+
+      await db.collection<YouTubeChannel>('youtube_channels').updateOne(
+        { _id: channelDoc._id },
+        {
+          $set: channelDoc,
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true }
+      );
+
+      return res.redirect(`/?tab=youtube&auth=success&channel_added=true&title=${encodeURIComponent(channelDoc.title)}`);
+    }
 
     res.redirect(`/?tab=${targetTab}&auth=success`);
   } catch (err: any) {

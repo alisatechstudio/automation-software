@@ -1254,14 +1254,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
         <div>
           <div class="flex items-center gap-2 mb-1">
             <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-600/20 text-red-400 border border-red-600/40 uppercase tracking-wider">Multi-Platform Pipeline</span>
-            <span id="yt-connection-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking...</span>
+            <span id="yt-channel-count-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">Checking Channels...</span>
           </div>
           <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
             <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-            YouTube Shorts Automation
+            YouTube Shorts Multi-Channel Automation
           </h2>
           <p class="text-xs text-slate-300 mt-0.5">
-            প্রতিটি সংবাদের ১৫-২০ সেকেন্ডের রিল ভিডিও স্বয়ংক্রিয়ভাবে YouTube Shorts হিসেবে আপলোড হয়।
+            প্রতিটি ফেসবুক পেজের রিল ভিডিও স্বয়ংক্রিয়ভাবে তার সংশ্লিষ্ট YouTube চ্যানেলে Shorts হিসেবে আপলোড হয়।
           </p>
         </div>
 
@@ -1271,123 +1271,71 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <span class="font-bold">/api/cron/youtube</span>
             <button onclick="copyCronUrl('/api/cron/youtube', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
           </div>
-          <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center gap-1.5 transition active:scale-95 border border-red-400/30 self-start sm:self-auto">
+          <button onclick="openConnectChannelModal()" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center gap-1.5 transition active:scale-95 border border-red-400/30">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Connect Channel</span>
+          </button>
+          <button onclick="triggerYouTubeUploadNow()" id="yt-upload-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             <span>Upload Latest Short</span>
           </button>
         </div>
       </div>
 
-      <!-- Channel & OAuth Setup Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        
-        <!-- Channel Profile Card -->
-        <div class="glass-panel p-4 sm:p-5 rounded-xl flex flex-col justify-between space-y-3">
+      <!-- Connected YouTube Channels Section -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Connected YouTube Channels</h3>
+            <span id="yt-channel-count-display" class="px-2 py-0.2 rounded-full text-[10px] bg-red-950/80 text-red-300 border border-red-800/40 font-mono">0</span>
+          </div>
+          <button onclick="loadYouTube()" class="text-[11px] text-slate-400 hover:text-slate-200 transition flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div id="yt-channels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="glass-panel p-6 rounded-xl text-center text-slate-500 font-mono text-xs col-span-full">
+            Loading connected channels...
+          </div>
+        </div>
+      </div>
+
+      <!-- Global OAuth Credentials & Settings -->
+      <div class="glass-panel p-4 sm:p-5 rounded-xl space-y-3 border border-slate-800">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
           <div>
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Connected Channel</h3>
-              <span id="yt-active-pill" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
-            </div>
-
-            <div id="yt-channel-info" class="space-y-3">
-              <div class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
-                <img id="yt-avatar" src="/assets/images/favicon.png" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/50 object-cover" />
-                <div class="overflow-hidden">
-                  <div id="yt-channel-title" class="font-bold text-white text-xs truncate">Not Connected</div>
-                  <div id="yt-channel-handle" class="text-[11px] text-slate-400 truncate font-mono">@bdnews24</div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 text-center">
-                <div class="p-2.5 rounded-lg bg-slate-950/40 border border-slate-800">
-                  <div id="yt-sub-count" class="text-base font-bold text-white font-mono">-</div>
-                  <div class="text-[10px] text-slate-400">Subscribers</div>
-                </div>
-                <div class="p-2.5 rounded-lg bg-slate-950/40 border border-slate-800">
-                  <div id="yt-video-count" class="text-base font-bold text-white font-mono">-</div>
-                  <div class="text-[10px] text-slate-400">Total Videos</div>
-                </div>
-              </div>
-
-              <div class="text-[11px] text-slate-400 bg-red-950/20 p-2.5 rounded-lg border border-red-900/30 space-y-0.5">
-                <div class="text-red-300 font-semibold flex items-center gap-1 text-[11px]">
-                  <span>✓</span> Vertical 9:16 / 1:1 Shorts Ready
-                </div>
-                <div class="text-red-300 font-semibold flex items-center gap-1 text-[11px]">
-                  <span>✓</span> First Comment News Link
-                </div>
-                <div class="text-emerald-300 font-semibold flex items-center gap-1 text-[11px] pt-1 border-t border-red-900/40">
-                  <span>🛡️</span> BD News Channel Dedicated (Trending News Isolated)
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
-            <span class="text-slate-400 text-xs">Auto-Upload on Publish:</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="yt-auto-toggle" class="sr-only peer" checked onchange="saveYouTubeSettings()" />
-              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-red-600"></div>
-            </label>
-          </div>
-        </div>
-
-        <!-- OAuth Credentials Setup -->
-        <div class="lg:col-span-2 glass-panel p-4 sm:p-5 rounded-xl space-y-3">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
             <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
-              <span>🔑</span> Google OAuth 2.0 Credentials
+              <span>🔑</span> Global Google OAuth 2.0 Credentials (Shared App Config)
             </h3>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">YouTube API v3</span>
+            <p class="text-[11px] text-slate-400">Google Cloud Console থেকে পাওয়া Client ID & Secret সব চ্যানেলের সাথে শেয়ার করা যায়।</p>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">YouTube Data API v3</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client ID</label>
+            <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="xxxxx.apps.googleusercontent.com" />
           </div>
 
-          <div class="space-y-3 text-xs">
-            <div>
-              <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client ID</label>
-              <input type="text" id="yt-client-id" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="xxxxx.apps.googleusercontent.com" />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Client Secret</label>
-                <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Client Secret" />
-              </div>
-              <div>
-                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Refresh Token</label>
-                <input type="password" id="yt-refresh-token" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Refresh Token" />
-              </div>
-            </div>
-
-            <!-- Concise OAuth Instructions -->
-            <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-300 space-y-1">
-              <div class="font-bold text-amber-300 flex items-center gap-1 text-[11px]">
-                <span>⚡</span> Setup Guide:
-              </div>
-              <ol class="list-decimal list-inside space-y-0.5 text-slate-400 pl-1 text-[11px]">
-                <li>Add redirect URI in Google Cloud: <code class="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">https://developers.google.com/oauthplayground</code></li>
-                <li>In <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-red-400 underline font-semibold">OAuth Playground ↗</a>, configure Client ID/Secret, authorize <code class="text-emerald-300">youtube.upload</code> scope.</li>
-                <li>Exchange for tokens and paste the Refresh Token here.</li>
-              </ol>
-            </div>
-
-            <div class="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300">
-              <span class="truncate"><span class="text-slate-400">Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">/api/youtube/auth/callback</span></span>
-              <button onclick="copyRedirectUri()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200 text-[10px] active:scale-95 transition">Copy</button>
-            </div>
-
-            <div class="pt-1 flex flex-wrap items-center justify-between gap-2">
-              <button onclick="startGoogleOAuth()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-glow-red transition active:scale-95 border border-red-400/30">
-                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                <span>Google Sign-In</span>
-              </button>
-
-              <button onclick="saveYouTubeSettings()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition active:scale-95">
-                Save & Authenticate
-              </button>
-            </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Client Secret</label>
+            <input type="password" id="yt-client-secret" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" placeholder="Client Secret" />
           </div>
         </div>
 
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 text-xs">
+          <div class="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300 w-full sm:w-auto flex-1">
+            <span class="truncate"><span class="text-slate-400">Authorized Redirect URI:</span> <span class="text-cyan-400" id="yt-redirect-uri-display">/api/youtube/auth/callback</span></span>
+            <button onclick="copyRedirectUri()" class="ml-2 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-200 text-[10px] active:scale-95 transition">Copy</button>
+          </div>
+
+          <button onclick="saveYouTubeSettings()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 hover:border-red-500/50 transition active:scale-95 shrink-0">
+            Save App Credentials
+          </button>
+        </div>
       </div>
 
       <!-- YouTube Logs Table -->
@@ -1407,6 +1355,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             <thead>
               <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase tracking-wider">
                 <th class="py-2 pr-3 font-semibold">Title</th>
+                <th class="py-2 pr-3 font-semibold">Channel</th>
                 <th class="py-2 pr-3 font-semibold">Video ID</th>
                 <th class="py-2 pr-3 font-semibold">Duration</th>
                 <th class="py-2 pr-3 font-semibold">Time</th>
@@ -1415,13 +1364,170 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             </thead>
             <tbody id="yt-table-body" class="divide-y divide-slate-800/60 text-slate-300">
               <tr>
-                <td colspan="5" class="py-6 text-center text-slate-500">Loading YouTube logs...</td>
+                <td colspan="6" class="py-6 text-center text-slate-500">Loading YouTube logs...</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div id="yt-pagination"></div>
       </div>
+
+    </div>
+
+    <!-- Modal: Connect YouTube Channel -->
+    <div id="modal-connect-yt-channel" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+      <div class="glass-panel w-full max-w-lg rounded-2xl p-5 border border-slate-700/80 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Connect YouTube Channel</h3>
+              <p class="text-[11px] text-slate-400">Link YouTube Shorts automation to a specific Facebook Page</p>
+            </div>
+          </div>
+          <button onclick="closeConnectChannelModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Target Facebook Page</label>
+            <select id="yt-connect-page-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="1405135646008133">BD News 24/7 (1405135646008133)</option>
+              <option value="1526917347161119">Trending News World (1526917347161119)</option>
+              <option value="61578330559981">Alisa Tech Studio (61578330559981)</option>
+              <option value="61579560411893">হক কথা (61579560411893)</option>
+              <option value="all">All Pages (Global Channel)</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1">নির্বাচিত ফেসবুক পেজের রিল ভিডিও শুধু এই YouTube চ্যানেলে Shorts হিসেবে আপলোড হবে।</p>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Content Language</label>
+            <select id="yt-connect-language-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="bn">Bengali (বাংলা)</option>
+              <option value="en">English (US / Global)</option>
+              <option value="all">All Languages</option>
+            </select>
+          </div>
+
+          <div class="border-t border-slate-800 pt-3">
+            <div class="flex items-center gap-2 mb-3">
+              <button type="button" onclick="switchConnectTab('oauth')" id="btn-connect-tab-oauth" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-600/20 text-red-300 border border-red-500/40 transition">
+                Method 1: Google Sign-In
+              </button>
+              <button type="button" onclick="switchConnectTab('manual')" id="btn-connect-tab-manual" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition">
+                Method 2: Manual Refresh Token
+              </button>
+            </div>
+
+            <!-- Tab 1: Google Sign-In -->
+            <div id="connect-pane-oauth" class="space-y-3">
+              <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                <div class="font-bold text-amber-300 flex items-center gap-1">
+                  <span>⚡</span> One-Click Authorization:
+                </div>
+                <p class="text-slate-400">
+                  গুগল সাইন-ইন দিয়ে সরাসরি আপনার ইউটিউব চ্যানেল নির্বাচন করুন। সিস্টেম স্বয়ংক্রিয়ভাবে চ্যানেল প্রোফাইল, লোগো ও রিফ্রেশ টোকেন সেভ করবে।
+                </p>
+              </div>
+
+              <button type="button" onclick="startGoogleOAuthForChannel()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red flex items-center justify-center gap-2 transition active:scale-95 border border-red-400/30">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>Sign in with Google</span>
+              </button>
+            </div>
+
+            <!-- Tab 2: Manual Refresh Token -->
+            <div id="connect-pane-manual" class="space-y-3 hidden">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Channel Title / Display Name</label>
+                <input type="text" id="yt-manual-title" placeholder="e.g. Trending News World" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none transition" />
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1 text-[11px]">OAuth Refresh Token (Required)</label>
+                <input type="password" id="yt-manual-token" placeholder="1//0..." class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none transition" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block font-semibold text-slate-400 mb-1 text-[10px]">Client ID Override (Optional)</label>
+                  <input type="text" id="yt-manual-client-id" placeholder="Use Global" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1 text-white font-mono text-[11px] focus:outline-none transition" />
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-400 mb-1 text-[10px]">Client Secret (Optional)</label>
+                  <input type="password" id="yt-manual-client-secret" placeholder="Use Global" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-2.5 py-1 text-white font-mono text-[11px] focus:outline-none transition" />
+                </div>
+              </div>
+
+              <button type="button" onclick="submitManualChannel()" id="btn-save-manual-channel" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-glow-emerald flex items-center justify-center gap-2 transition active:scale-95">
+                <span>Verify & Connect Channel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Edit YouTube Channel Mapping -->
+    <div id="modal-edit-yt-channel" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+      <div class="glass-panel w-full max-w-md rounded-2xl p-5 border border-slate-700/80 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>⚙️</span> Edit Channel Settings
+          </h3>
+          <button onclick="closeEditYouTubeChannelModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <input type="hidden" id="yt-edit-channel-id" />
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Channel Title</label>
+            <input type="text" id="yt-edit-title" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none transition" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Mapped Facebook Page</label>
+            <select id="yt-edit-page-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="1405135646008133">BD News 24/7 (1405135646008133)</option>
+              <option value="1526917347161119">Trending News World (1526917347161119)</option>
+              <option value="61578330559981">Alisa Tech Studio (61578330559981)</option>
+              <option value="61579560411893">হক কথা (61579560411893)</option>
+              <option value="all">All Pages (Global Channel)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1 text-[11px]">Language Preference</label>
+            <select id="yt-edit-language-select" class="w-full bg-slate-950/80 border border-slate-800 focus:border-red-500 rounded-lg px-3 py-2 text-white text-xs focus:outline-none transition">
+              <option value="bn">Bengali (বাংলা)</option>
+              <option value="en">English</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between border-t border-slate-800">
+            <span class="text-slate-300 text-xs font-semibold">Auto-Upload Shorts on Publish:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="yt-edit-auto-toggle" class="sr-only peer" checked />
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-red-600"></div>
+            </label>
+          </div>
+
+          <div class="pt-2 flex justify-end gap-2">
+            <button type="button" onclick="closeEditYouTubeChannelModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">Cancel</button>
+            <button type="button" onclick="saveEditYouTubeChannel()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white font-bold text-xs">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     </div>
 
@@ -4696,9 +4802,11 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       }
     }
 
-    // --- YOUTUBE SHORTS (PAGINATED) ---
+    // --- YOUTUBE SHORTS MULTI-CHANNEL AUTOMATION ---
     let ytLogsData = [];
     let ytLogsPage = 1;
+    let ytChannelsData = [];
+    let ytAvailablePages = [];
     const YT_LOGS_PAGE_SIZE = 10;
 
     function changeYouTubeLogsPage(page) {
@@ -4716,7 +4824,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
       const pageLogs = ytLogsData.slice(start, start + YT_LOGS_PAGE_SIZE);
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500 font-mono text-xs">No YouTube Shorts uploads yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500 font-mono text-xs">No YouTube Shorts uploads yet.</td></tr>';
         renderPagination('yt-pagination', 1, 0, 0, 'changeYouTubeLogsPage', YT_LOGS_PAGE_SIZE);
         return;
       }
@@ -4736,6 +4844,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
         return '<tr class="hover:bg-slate-900/40 text-xs transition">' +
           '<td class="py-2 pr-3 font-bengali text-slate-200 max-w-[200px] truncate" title="' + (log.articleTitle || '') + '">' + (log.articleTitle || 'Untitled') + '</td>' +
+          '<td class="py-2 pr-3 text-red-300 font-semibold truncate max-w-[120px]">' + (log.channelTitle || 'YouTube Channel') + '</td>' +
           '<td class="py-2 pr-3">' + videoLink + '</td>' +
           '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px]">' + (log.durationMs ? (log.durationMs / 1000).toFixed(1) + 's' : '-') + '</td>' +
           '<td class="py-2 pr-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">' + (log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-') + '</td>' +
@@ -4748,88 +4857,382 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function loadYouTube() {
       try {
-        const res = await safeFetchJson('/api/youtube/status');
-        const badge = document.getElementById('yt-connection-badge');
-        const pill = document.getElementById('yt-active-pill');
-        const titleEl = document.getElementById('yt-channel-title');
-        const handleEl = document.getElementById('yt-channel-handle');
-        const subEl = document.getElementById('yt-sub-count');
-        const vidEl = document.getElementById('yt-video-count');
-        const avatarEl = document.getElementById('yt-avatar');
-        const autoToggle = document.getElementById('yt-auto-toggle');
+        const [channelsRes, statusRes, pagesRes] = await Promise.all([
+          safeFetchJson('/api/youtube/channels'),
+          safeFetchJson('/api/youtube/status'),
+          safeFetchJson('/api/pages')
+        ]);
+
+        if (pagesRes.ok && Array.isArray(pagesRes.data)) {
+          ytAvailablePages = pagesRes.data;
+          populateChannelPageDropdowns(ytAvailablePages);
+        }
+
+        const badge = document.getElementById('yt-channel-count-badge');
+        const countDisplay = document.getElementById('yt-channel-count-display');
         const clientIdInput = document.getElementById('yt-client-id');
         const clientSecInput = document.getElementById('yt-client-secret');
-        const refreshInput = document.getElementById('yt-refresh-token');
 
-        if (res.ok && res.data) {
-          const d = res.data;
+        if (statusRes.ok && statusRes.data) {
+          const d = statusRes.data;
           if (clientIdInput && d.clientId) clientIdInput.value = d.clientId;
-          if (autoToggle) autoToggle.checked = d.autoPost !== false;
-
           if (d.hasClientSecret && clientSecInput && !clientSecInput.value) {
             clientSecInput.placeholder = '•••••••• (Saved)';
           }
-          if (d.hasRefreshToken && refreshInput && !refreshInput.value) {
-            refreshInput.placeholder = '•••••••• (Saved)';
-          }
-
-          if (d.isConfigured && d.channel) {
-            badge.innerText = 'Connected: ' + d.channel.title;
-            badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40';
-            pill.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-glow-emerald';
-
-            if (titleEl) titleEl.innerText = d.channel.title;
-            if (handleEl) handleEl.innerText = d.channel.customUrl || ('@' + d.channel.id);
-            if (subEl) subEl.innerText = Number(d.channel.subscriberCount || 0).toLocaleString();
-            if (vidEl) vidEl.innerText = Number(d.channel.videoCount || 0).toLocaleString();
-            if (avatarEl && d.channel.thumbnailUrl) avatarEl.src = d.channel.thumbnailUrl;
-          } else {
-            badge.innerText = 'Not Connected';
-            badge.className = 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40';
-            pill.className = 'w-2 h-2 rounded-full bg-amber-400';
-          }
         }
+
+        ytChannelsData = (channelsRes.ok && Array.isArray(channelsRes.data?.channels)) ? channelsRes.data.channels : [];
+
+        if (badge) {
+          const activeCount = ytChannelsData.filter(c => c.isActive).length;
+          badge.innerText = activeCount > 0 ? (activeCount + ' Active Channels') : 'No Channels Active';
+          badge.className = activeCount > 0
+            ? 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-600/40'
+            : 'px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/40';
+        }
+        if (countDisplay) {
+          countDisplay.innerText = ytChannelsData.length;
+        }
+
+        renderYouTubeChannelsGrid(ytChannelsData);
         loadYouTubeLogs();
-      } catch (e) {}
+      } catch (e) {
+        console.warn('loadYouTube error:', e);
+      }
+    }
+
+    function populateChannelPageDropdowns(pages) {
+      const connectSelect = document.getElementById('yt-connect-page-select');
+      const editSelect = document.getElementById('yt-edit-page-select');
+      if (!pages || !Array.isArray(pages)) return;
+
+      const optionsHtml = pages.map(p => 
+        '<option value="' + p._id + '">' + p.name + ' (' + p._id + ')</option>'
+      ).join('') + '<option value="all">All Pages (Global Channel)</option>';
+
+      if (connectSelect) connectSelect.innerHTML = optionsHtml;
+      if (editSelect) editSelect.innerHTML = optionsHtml;
+    }
+
+    function renderYouTubeChannelsGrid(channels) {
+      const container = document.getElementById('yt-channels-grid');
+      if (!container) return;
+
+      if (!channels || channels.length === 0) {
+        container.innerHTML = '<div class="glass-panel p-8 rounded-xl text-center space-y-3 col-span-full border border-dashed border-slate-800">' +
+          '<div class="w-12 h-12 rounded-full bg-red-600/10 text-red-400 flex items-center justify-center mx-auto text-xl border border-red-500/20">📺</div>' +
+          '<div class="font-bold text-white text-sm">No YouTube Channels Connected Yet</div>' +
+          '<p class="text-xs text-slate-400 max-w-md mx-auto">Connect your BD News, Trending News World, or other YouTube channels to automatically publish 15s video reels as Shorts.</p>' +
+          '<button onclick="openConnectChannelModal()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95 inline-flex items-center gap-1.5">' +
+            '<span>+ Connect Your First Channel</span>' +
+          '</button>' +
+        '</div>';
+        return;
+      }
+
+      container.innerHTML = channels.map(ch => {
+        const pageName = ch.targetPageName || (ch.targetPageId === 'all' ? 'All Pages' : (ch.targetPageId || 'Unmapped'));
+        const isEnglish = ch.language === 'en';
+        const langBadge = isEnglish
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-800/50">English</span>'
+          : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/50">বাংলা</span>';
+
+        const avatarSrc = ch.thumbnailUrl || '/assets/images/favicon.png';
+        const handle = ch.customUrl || ('@' + ch._id.slice(0, 10));
+        const subCount = Number(ch.subscriberCount || 0).toLocaleString();
+        const vidCount = Number(ch.videoCount || 0).toLocaleString();
+
+        return '<div class="glass-panel p-4 rounded-xl flex flex-col justify-between space-y-3 border border-slate-800 hover:border-red-900/40 transition relative group">' +
+          '<div>' +
+            '<div class="flex items-center justify-between pb-2 border-b border-slate-800/80 mb-2.5">' +
+              '<div class="flex items-center gap-1.5">' +
+                '<span class="w-2 h-2 rounded-full ' + (ch.isActive ? 'bg-emerald-400 shadow-glow-emerald' : 'bg-slate-600') + '"></span>' +
+                '<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">' + (ch.isActive ? 'Active Channel' : 'Inactive') + '</span>' +
+              '</div>' +
+              '<div class="flex items-center gap-1">' +
+                langBadge +
+                '<button onclick="openEditYouTubeChannel(\'' + ch._id + '\')" title="Edit Settings" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition text-[11px]">' +
+                  '⚙️' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="flex items-center gap-3 p-2 rounded-lg bg-slate-950/60 border border-slate-800/60 mb-2.5">' +
+              '<img src="' + avatarSrc + '" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/40 object-cover shrink-0" onerror="this.src=\'/assets/images/favicon.png\'" />' +
+              '<div class="overflow-hidden min-w-0 flex-1">' +
+                '<div class="font-bold text-white text-xs truncate" title="' + ch.title + '">' + ch.title + '</div>' +
+                '<div class="text-[11px] text-slate-400 truncate font-mono">' + handle + '</div>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="p-2 rounded-lg bg-red-950/20 border border-red-900/30 text-[11px] space-y-1 mb-2.5">' +
+              '<div class="flex items-center justify-between">' +
+                '<span class="text-slate-400 text-[10px]">Linked Facebook Page:</span>' +
+                '<span class="text-red-300 font-bold truncate max-w-[150px]">' + pageName + '</span>' +
+              '</div>' +
+              '<div class="flex items-center justify-between">' +
+                '<span class="text-slate-400 text-[10px]">Channel ID:</span>' +
+                '<span class="text-slate-400 font-mono text-[9px] truncate max-w-[150px]">' + ch._id + '</span>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="grid grid-cols-2 gap-2 text-center text-xs mb-1">' +
+              '<div class="p-2 rounded-lg bg-slate-950/40 border border-slate-800/60">' +
+                '<div class="font-bold text-white font-mono text-sm">' + subCount + '</div>' +
+                '<div class="text-[10px] text-slate-400">Subscribers</div>' +
+              '</div>' +
+              '<div class="p-2 rounded-lg bg-slate-950/40 border border-slate-800/60">' +
+                '<div class="font-bold text-white font-mono text-sm">' + vidCount + '</div>' +
+                '<div class="text-[10px] text-slate-400">Total Videos</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="pt-2 border-t border-slate-800 space-y-2">' +
+            '<div class="flex items-center justify-between text-xs">' +
+              '<span class="text-slate-400 text-[11px]">Auto-Upload:</span>' +
+              '<label class="relative inline-flex items-center cursor-pointer">' +
+                '<input type="checkbox" ' + (ch.autoUpload ? 'checked' : '') + ' onchange="toggleChannelAutoUpload(\'' + ch._id + '\', this.checked)" class="sr-only peer" />' +
+                '<div class="w-7 h-3.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-600"></div>' +
+              '</label>' +
+            '</div>' +
+
+            '<div class="grid grid-cols-3 gap-1.5 pt-1">' +
+              '<button onclick="syncYouTubeChannel(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-center gap-1">' +
+                '<span>🔄 Sync</span>' +
+              '</button>' +
+              '<button onclick="triggerYouTubeUploadNow(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition flex items-center justify-center gap-1">' +
+                '<span>⚡ Upload</span>' +
+              '</button>' +
+              '<button onclick="deleteYouTubeChannel(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-red-950 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-800 transition flex items-center justify-center gap-1">' +
+                '<span>🗑️ Remove</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function openConnectChannelModal() {
+      const modal = document.getElementById('modal-connect-yt-channel');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeConnectChannelModal() {
+      const modal = document.getElementById('modal-connect-yt-channel');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function switchConnectTab(tab) {
+      const btnOauth = document.getElementById('btn-connect-tab-oauth');
+      const btnManual = document.getElementById('btn-connect-tab-manual');
+      const paneOauth = document.getElementById('connect-pane-oauth');
+      const paneManual = document.getElementById('connect-pane-manual');
+
+      if (tab === 'oauth') {
+        if (btnOauth) btnOauth.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-600/20 text-red-300 border border-red-500/40 transition';
+        if (btnManual) btnManual.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition';
+        if (paneOauth) paneOauth.classList.remove('hidden');
+        if (paneManual) paneManual.classList.add('hidden');
+      } else {
+        if (btnManual) btnManual.className = 'flex-1 py-1.5 text-xs font-bold rounded-lg bg-red-600/20 text-red-300 border border-red-500/40 transition';
+        if (btnOauth) btnOauth.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition';
+        if (paneManual) paneManual.classList.remove('hidden');
+        if (paneOauth) paneOauth.classList.add('hidden');
+      }
+    }
+
+    async function startGoogleOAuthForChannel() {
+      const pageSelect = document.getElementById('yt-connect-page-select');
+      const langSelect = document.getElementById('yt-connect-language-select');
+      const targetPageId = pageSelect?.value || 'all';
+      const targetPageName = pageSelect?.options[pageSelect.selectedIndex]?.text || '';
+      const language = langSelect?.value || 'bn';
+
+      showToast('Starting Google Sign-In for channel...');
+      const query = new URLSearchParams({
+        origin: 'youtube',
+        targetPageId,
+        targetPageName,
+        language
+      });
+
+      const res = await safeFetchJson('/api/youtube/auth/url?' + query.toString());
+      if (res.ok && res.data?.authUrl) {
+        window.location.href = res.data.authUrl;
+      } else {
+        showToast('Failed to start Google OAuth: ' + (res.error || 'Check Client ID'), true);
+      }
+    }
+
+    async function submitManualChannel() {
+      const title = document.getElementById('yt-manual-title')?.value.trim();
+      const token = document.getElementById('yt-manual-token')?.value.trim();
+      const pageSelect = document.getElementById('yt-connect-page-select');
+      const langSelect = document.getElementById('yt-connect-language-select');
+      const clientId = document.getElementById('yt-manual-client-id')?.value.trim();
+      const clientSecret = document.getElementById('yt-manual-client-secret')?.value.trim();
+      const btn = document.getElementById('btn-save-manual-channel');
+
+      if (!token) {
+        showToast('Please paste the OAuth Refresh Token', true);
+        return;
+      }
+
+      const payload = {
+        title,
+        refreshToken: token,
+        targetPageId: pageSelect?.value || 'all',
+        targetPageName: pageSelect?.options[pageSelect.selectedIndex]?.text || 'All Pages',
+        language: langSelect?.value || 'bn',
+        autoUpload: true,
+      };
+      if (clientId) payload.clientId = clientId;
+      if (clientSecret) payload.clientSecret = clientSecret;
+
+      if (btn) btn.disabled = true;
+      showToast('Verifying channel with YouTube API...');
+
+      try {
+        const res = await safeFetchJson('/api/youtube/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok && res.data?.channel) {
+          showToast('✓ Channel connected successfully!');
+          closeConnectChannelModal();
+          loadYouTube();
+        } else {
+          showToast('Failed: ' + (res.data?.error || res.error || 'Verification failed'), true);
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function syncYouTubeChannel(id) {
+      showToast('Syncing channel statistics...');
+      const res = await safeFetchJson('/api/youtube/channels/' + id + '/sync', { method: 'POST' });
+      if (res.ok) {
+        showToast('✓ Statistics refreshed');
+        loadYouTube();
+      } else {
+        showToast('Sync failed: ' + (res.data?.error || res.error), true);
+      }
+    }
+
+    async function deleteYouTubeChannel(id) {
+      if (!confirm('Are you sure you want to disconnect this YouTube channel?')) return;
+      showToast('Disconnecting channel...');
+      const res = await safeFetchJson('/api/youtube/channels/' + id, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('✓ Channel disconnected');
+        loadYouTube();
+      } else {
+        showToast('Failed to disconnect: ' + (res.data?.error || res.error), true);
+      }
+    }
+
+    async function toggleChannelAutoUpload(id, autoUpload) {
+      await safeFetchJson('/api/youtube/channels/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoUpload })
+      });
+      showToast(autoUpload ? 'Auto-upload enabled' : 'Auto-upload paused');
+    }
+
+    function openEditYouTubeChannel(id) {
+      const ch = ytChannelsData.find(c => c._id === id);
+      if (!ch) return;
+
+      document.getElementById('yt-edit-channel-id').value = ch._id;
+      document.getElementById('yt-edit-title').value = ch.title || '';
+      document.getElementById('yt-edit-page-select').value = ch.targetPageId || 'all';
+      document.getElementById('yt-edit-language-select').value = ch.language || 'bn';
+      document.getElementById('yt-edit-auto-toggle').checked = ch.autoUpload !== false;
+
+      const modal = document.getElementById('modal-edit-yt-channel');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeEditYouTubeChannelModal() {
+      const modal = document.getElementById('modal-edit-yt-channel');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function saveEditYouTubeChannel() {
+      const id = document.getElementById('yt-edit-channel-id').value;
+      const title = document.getElementById('yt-edit-title').value.trim();
+      const pageSelect = document.getElementById('yt-edit-page-select');
+      const langSelect = document.getElementById('yt-edit-language-select');
+      const autoUpload = document.getElementById('yt-edit-auto-toggle').checked;
+
+      const payload = {
+        title,
+        targetPageId: pageSelect?.value || 'all',
+        targetPageName: pageSelect?.options[pageSelect.selectedIndex]?.text || 'All Pages',
+        language: langSelect?.value || 'bn',
+        autoUpload,
+      };
+
+      showToast('Saving channel settings...');
+      const res = await safeFetchJson('/api/youtube/channels/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        showToast('✓ Settings updated');
+        closeEditYouTubeChannelModal();
+        loadYouTube();
+      } else {
+        showToast('Update failed: ' + (res.data?.error || res.error), true);
+      }
     }
 
     async function saveYouTubeSettings() {
       const clientId = document.getElementById('yt-client-id')?.value.trim();
       const clientSecret = document.getElementById('yt-client-secret')?.value.trim();
-      const refreshToken = document.getElementById('yt-refresh-token')?.value.trim();
-      const autoPost = document.getElementById('yt-auto-toggle')?.checked;
 
-      const payload = { autoPost };
+      const payload = {};
       if (clientId) payload.clientId = clientId;
       if (clientSecret) payload.clientSecret = clientSecret;
-      if (refreshToken) payload.refreshToken = refreshToken;
 
-      showToast('Saving YouTube settings...');
+      showToast('Saving global Google OAuth credentials...');
       const res = await safeFetchJson('/api/youtube/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        showToast('✓ YouTube settings saved');
+        showToast('✓ Google OAuth credentials saved');
         loadYouTube();
       } else {
         showToast('Save failed', true);
       }
     }
 
-    async function triggerYouTubeUploadNow() {
+    async function triggerYouTubeUploadNow(channelId) {
       const btn = document.getElementById('yt-upload-btn');
       if (btn) btn.disabled = true;
       showToast('Uploading latest short...');
       try {
+        const payload = {};
+        if (channelId && typeof channelId === 'string') payload.channelId = channelId;
+
         const res = await safeFetchJson('/api/youtube/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify(payload)
         });
         if (res.ok && res.data) {
-          showToast('✓ Uploaded to YouTube!');
+          showToast('✓ Uploaded Short: ' + (res.data.channelTitle || 'YouTube'));
           loadYouTubeLogs();
         } else {
           showToast('Upload failed: ' + (res.data?.error || res.error || 'Check OAuth'), true);
@@ -4849,13 +5252,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     }
 
     async function startGoogleOAuth() {
-      showToast('Starting Google Sign-In...');
-      const res = await safeFetchJson('/api/youtube/auth/url');
-      if (res.ok && res.data?.authUrl) {
-        window.location.href = res.data.authUrl;
-      } else {
-        showToast('OAuth start failed', true);
-      }
+      openConnectChannelModal();
     }
 
     async function connectGDriveOAuth() {
@@ -4887,7 +5284,9 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
     if (urlParams.get('tab') === 'youtube') {
       switchTab('youtube');
       if (urlParams.get('auth') === 'success') {
-        setTimeout(() => showToast('🎉 YouTube Connected!'), 500);
+        const titleParam = urlParams.get('title');
+        const msg = titleParam ? ('🎉 YouTube Channel "' + decodeURIComponent(titleParam) + '" Connected!') : '🎉 YouTube Channel Connected!';
+        setTimeout(() => showToast(msg), 500);
       }
     } else if (urlParams.get('tab') === 'gdrive-reels') {
       switchTab('gdrive-reels');

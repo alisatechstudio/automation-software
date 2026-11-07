@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getDatabase } from '../../db/index.js';
-import { Setting } from '../../db/schema.js';
+import { Setting, YouTubeChannel } from '../../db/schema.js';
 import { config } from '../../config/env.js';
 
 export interface YouTubeUploadInput {
@@ -9,6 +9,7 @@ export interface YouTubeUploadInput {
   description?: string;
   tags?: string[];
   privacyStatus?: 'public' | 'unlisted' | 'private';
+  isEnglish?: boolean;
 }
 
 export interface YouTubeUploadResult {
@@ -31,13 +32,43 @@ export class YouTubeClient {
   private clientId: string;
   private clientSecret: string;
   private refreshToken: string;
+  private channelId?: string;
   private cachedAccessToken: string | null = null;
   private tokenExpiresAt: number = 0;
 
-  constructor(clientId?: string, clientSecret?: string, refreshToken?: string) {
+  constructor(clientId?: string, clientSecret?: string, refreshToken?: string, channelId?: string) {
     this.clientId = clientId || process.env.YOUTUBE_CLIENT_ID || '';
     this.clientSecret = clientSecret || process.env.YOUTUBE_CLIENT_SECRET || '';
     this.refreshToken = refreshToken || process.env.YOUTUBE_REFRESH_TOKEN || '';
+    this.channelId = channelId;
+  }
+
+  /**
+   * Factory method to create a YouTubeClient for a specific configured channel
+   */
+  public static forChannel(
+    channel: YouTubeChannel,
+    fallbackClientId?: string,
+    fallbackClientSecret?: string
+  ): YouTubeClient {
+    return new YouTubeClient(
+      channel.clientId || fallbackClientId,
+      channel.clientSecret || fallbackClientSecret,
+      channel.refreshToken,
+      channel._id
+    );
+  }
+
+  /**
+   * Tests connection and retrieves profile for this client
+   */
+  public async testConnection(): Promise<{ success: boolean; profile?: YouTubeChannelProfile; error?: string }> {
+    try {
+      const profile = await this.getChannelProfile();
+      return { success: true, profile };
+    } catch (err: any) {
+      return { success: false, error: err.message || String(err) };
+    }
   }
 
   /**
@@ -243,22 +274,25 @@ export class YouTubeClient {
       cleanTitle = `${cleanTitle.substring(0, 88)} #Shorts`;
     }
 
+    const defaultTags = input.isEnglish
+      ? ['Shorts', 'YouTubeShorts', 'TrendingNews', 'USNews', 'WorldNews', 'BreakingNews', 'NewsUpdate']
+      : ['Shorts', 'YouTubeShorts', 'BDNews', 'Bangladesh', 'BanglaNews', 'NewsUpdate'];
+
     const tags = Array.from(
       new Set([
         ...(input.tags || []),
-        'Shorts',
-        'YouTubeShorts',
-        'BDNews',
-        'Bangladesh',
-        'BanglaNews',
-        'NewsUpdate',
+        ...defaultTags,
       ])
     );
+
+    const defaultDescription = input.isEnglish
+      ? '#Shorts #TrendingNews #BreakingNews #NewsUpdate'
+      : '#Shorts #BDNews #Bangladesh #NewsUpdate';
 
     const metadata = {
       snippet: {
         title: cleanTitle,
-        description: input.description || '#Shorts #BDNews #Bangladesh #NewsUpdate',
+        description: input.description || defaultDescription,
         tags,
         categoryId: '25', // News & Politics
       },

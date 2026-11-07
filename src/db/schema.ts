@@ -127,6 +127,7 @@ export interface YouTubeUploadLog {
   articleTitle: string;
   channelId?: string | null;
   channelTitle?: string | null;
+  pageId?: string | null;
   ytVideoId: string;
   ytVideoUrl: string;
   durationMs?: number | null;
@@ -136,14 +137,22 @@ export interface YouTubeUploadLog {
 }
 
 export interface YouTubeChannel {
-  _id: string; // channel ID
+  _id: string; // YouTube Channel ID (e.g. UCxxxx) or custom ID
   title: string;
-  customUrl?: string;
+  customUrl?: string; // e.g. @bdnews24, @trendingnewsworld
   description?: string;
   thumbnailUrl?: string;
   subscriberCount?: string;
   videoCount?: string;
+  clientId?: string; // Optional custom OAuth Client ID
+  clientSecret?: string; // Optional custom OAuth Client Secret
+  refreshToken: string; // The channel's OAuth refresh token
+  targetPageId?: string; // Linked Facebook Page ID ('1405135646008133', '1526917347161119', 'all', etc.)
+  targetPageName?: string; // Linked Facebook Page Name
+  language?: 'bn' | 'en' | 'all'; // Target language
+  autoUpload: boolean; // Auto-upload when a Reel is generated
   isActive: boolean;
+  createdAt?: Date;
   updatedAt: Date;
 }
 

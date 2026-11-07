@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { getDatabase, isMongoConnected } from '../../db/index.js';
-import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, Setting } from '../../db/schema.js';
+import { NewsArticle, FacebookPage, RssSource, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, YouTubeChannel, Setting } from '../../db/schema.js';
 import { PersistentJobQueue } from './queue.js';
 import { PlaywrightImageRenderer } from '../renderer/playwright.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
@@ -433,80 +433,120 @@ export class QueueWorker {
           })());
         }
 
-        // TASK 3: Publish YouTube Shorts
-        const isYtConfigured = await this.ytClient.initCredentials();
+        // TASK 3: Multi-Channel YouTube Shorts Publishing
         const ytAutoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
-        const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : isYtConfigured;
+        const shouldPostYt = ytAutoSetting ? ytAutoSetting.value !== 'false' : true;
 
-        // GUARD: The connected YouTube channel is currently BD News 24/7.
-        // Prevent cross-posting English / Trending News World content to the BD News YouTube channel.
-        const isBDNewsTarget =
-          !isEnglish &&
-          (page._id === '1405135646008133' ||
-           page.name.includes('BD News') ||
-           targetJobPageId === '1405135646008133' ||
-           !targetJobPageId);
+        if (shouldPostYt) {
+          const ytChannels = await this.getActiveYouTubeChannels();
 
-        if (isYtConfigured && shouldPostYt) {
-          if (!isBDNewsTarget) {
-            console.log(`[QueueWorker] ℹ️ Skipping YouTube Shorts auto-post: Connected YouTube channel is for BD News 24/7, while this article is for Trending News World ("${article.title}").`);
-          } else {
-            publishTasks.push((async () => {
-              const ytStartTime = Date.now();
-              try {
-                console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts (BD News)...`);
-                const shortsHashtags = generateViralShortsHashtags({
-                  category: effectiveCategory,
-                  headline: article.title,
-                  userTags: configuredHashtags,
-                });
-                const ytResult = await this.ytClient.uploadShort(
-                  {
-                    videoBuffer: reelBuffer,
-                    title: article.title,
-                    description: `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
-                  },
-                  config.DRY_RUN
+          // Match channels mapped to this job's page or language
+          const matchingYtChannels = ytChannels.filter((ch) => {
+            if (!ch.autoUpload) return false;
+            // 1. Check direct page ID match if configured
+            if (ch.targetPageId && ch.targetPageId !== 'all') {
+              if (targetJobPageId && ch.targetPageId === targetJobPageId) return true;
+              if (page._id && ch.targetPageId === page._id) return true;
+              return false;
+            }
+            // 2. Fallback to language matching
+            if (ch.language === 'en') return isEnglish;
+            if (ch.language === 'bn') return !isEnglish;
+            return true;
+          });
+
+          if (matchingYtChannels.length > 0) {
+            const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+            const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+            const globalClientId = sId?.value || process.env.YOUTUBE_CLIENT_ID;
+            const globalClientSecret = sSec?.value || process.env.YOUTUBE_CLIENT_SECRET;
+
+            for (const ch of matchingYtChannels) {
+              publishTasks.push((async () => {
+                const ytStartTime = Date.now();
+                const channelClient = YouTubeClient.forChannel(
+                  ch,
+                  globalClientId,
+                  globalClientSecret
                 );
-                ytVideoId = ytResult.videoId;
-                ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
+                const isChEnglish = ch.language === 'en' || isEnglish;
+                try {
+                  console.log(`[QueueWorker] 📺 [Parallel] Uploading 15s MP4 Video to YouTube Shorts ("${ch.title}")...`);
+                  const shortsHashtags = isChEnglish
+                    ? generateTrendingNewsHashtags({
+                        category: effectiveCategory,
+                        headline: article.title,
+                        userTags: configuredHashtags,
+                      })
+                    : generateViralShortsHashtags({
+                        category: effectiveCategory,
+                        headline: article.title,
+                        userTags: configuredHashtags,
+                      });
 
-                if (article.link && ytVideoId && !config.DRY_RUN) {
-                  await this.ytClient.addComment(ytVideoId, `বিস্তারিত খবর পড়ুন: ${article.link}`);
+                  const ytResult = await channelClient.uploadShort(
+                    {
+                      videoBuffer: reelBuffer,
+                      title: article.title,
+                      description: isChEnglish
+                        ? `${shortsHashtags}\n\nFull story: ${article.link}`
+                        : `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
+                      isEnglish: isChEnglish,
+                    },
+                    config.DRY_RUN
+                  );
+
+                  ytVideoId = ytResult.videoId;
+                  ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
+
+                  if (article.link && ytVideoId && !config.DRY_RUN) {
+                    const commentText = isChEnglish
+                      ? `Read the full story here: ${article.link}`
+                      : `বিস্তারিত খবর পড়ুন: ${article.link}`;
+                    await channelClient.addComment(ytVideoId, commentText);
+                  }
+
+                  await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                    _id: crypto.randomUUID(),
+                    articleId: article._id,
+                    articleTitle: article.title,
+                    channelId: ch._id,
+                    channelTitle: ch.title,
+                    pageId: ch.targetPageId,
+                    ytVideoId: ytResult.videoId,
+                    ytVideoUrl: ytResult.videoUrl,
+                    durationMs: Date.now() - ytStartTime,
+                    status: ytStatus,
+                    createdAt: new Date(),
+                  });
+                  console.log(`✓ [QueueWorker] Published to YouTube Shorts (${ch.title})! (URL: ${ytResult.videoUrl})`);
+                } catch (ytErr: any) {
+                  ytStatus = 'failed';
+                  const ytErrMsg = ytErr.message || String(ytErr);
+                  console.error(`❌ [QueueWorker] YouTube Short upload failed for channel "${ch.title}": ${ytErrMsg}`);
+
+                  await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                    _id: crypto.randomUUID(),
+                    articleId: article._id,
+                    articleTitle: article.title,
+                    channelId: ch._id,
+                    channelTitle: ch.title,
+                    pageId: ch.targetPageId,
+                    ytVideoId: '',
+                    ytVideoUrl: '',
+                    durationMs: Date.now() - ytStartTime,
+                    status: 'failed',
+                    errorMessage: ytErrMsg,
+                    createdAt: new Date(),
+                  });
                 }
-
-                await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-                  _id: crypto.randomUUID(),
-                  articleId: article._id,
-                  articleTitle: article.title,
-                  ytVideoId: ytResult.videoId,
-                  ytVideoUrl: ytResult.videoUrl,
-                  durationMs: Date.now() - ytStartTime,
-                  status: ytStatus,
-                  createdAt: new Date(),
-                });
-                console.log(`✓ [QueueWorker] Published to YouTube Shorts! (URL: ${ytResult.videoUrl})`);
-              } catch (ytErr: any) {
-                ytStatus = 'failed';
-                const ytErrMsg = ytErr.message || String(ytErr);
-                console.error(`❌ [QueueWorker] YouTube Short upload failed: ${ytErrMsg}`);
-
-                await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
-                  _id: crypto.randomUUID(),
-                  articleId: article._id,
-                  articleTitle: article.title,
-                  ytVideoId: '',
-                  ytVideoUrl: '',
-                  durationMs: Date.now() - ytStartTime,
-                  status: 'failed',
-                  errorMessage: ytErrMsg,
-                  createdAt: new Date(),
-                });
-              }
-            })());
+              })());
+            }
+          } else {
+            console.log(`[QueueWorker] ℹ️ YouTube Shorts skipped: No active channel mapped to page "${page.name}" (${isEnglish ? 'English' : 'Bengali'}).`);
           }
         } else {
-          console.log(`[QueueWorker] ℹ️ YouTube Shorts skipped: isConfigured=${isYtConfigured}, shouldPost=${shouldPostYt}`);
+          console.log(`[QueueWorker] ℹ️ YouTube Shorts skipped: AUTO_POST_YOUTUBE is disabled in Settings.`);
         }
 
         // Wait for all 3 platform tasks simultaneously
@@ -1205,11 +1245,58 @@ export class QueueWorker {
   }
 
   /**
+   * Retrieves all active configured YouTube Channels, auto-migrating legacy credentials if needed
+   */
+  public async getActiveYouTubeChannels(): Promise<YouTubeChannel[]> {
+    const db = getDatabase();
+    let channels = await db.collection<YouTubeChannel>('youtube_channels').find({ isActive: true }).toArray();
+
+    // Auto-migrate legacy channel if youtube_channels collection is empty
+    if (channels.length === 0) {
+      const sRef = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_REFRESH_TOKEN' });
+      if (sRef?.value) {
+        const isConfigured = await this.ytClient.initCredentials();
+        if (isConfigured) {
+          try {
+            const profile = await this.ytClient.getChannelProfile();
+            const defaultChannel: YouTubeChannel = {
+              _id: profile.id || 'channel-bdnews',
+              title: profile.title || 'BD News 24/7',
+              customUrl: profile.customUrl || '@bdnews24',
+              description: profile.description,
+              thumbnailUrl: profile.thumbnailUrl,
+              subscriberCount: profile.subscriberCount,
+              videoCount: profile.videoCount,
+              refreshToken: sRef.value,
+              targetPageId: '1405135646008133',
+              targetPageName: 'BD News 24/7',
+              language: 'bn',
+              autoUpload: true,
+              isActive: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            await db.collection<YouTubeChannel>('youtube_channels').updateOne(
+              { _id: defaultChannel._id },
+              { $set: defaultChannel },
+              { upsert: true }
+            );
+            channels = [defaultChannel];
+          } catch {}
+        }
+      }
+    }
+
+    return channels;
+  }
+
+  /**
    * Manually upload an article's 15s MP4 reel to YouTube Shorts
    */
   public async uploadShortForArticle(
-    articleId: string
-  ): Promise<{ success: boolean; videoId: string; videoUrl: string }> {
+    articleId: string,
+    targetChannelId?: string
+  ): Promise<{ success: boolean; videoId: string; videoUrl: string; channelTitle?: string }> {
     const db = getDatabase();
     const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
     if (!article) {
@@ -1220,6 +1307,35 @@ export class QueueWorker {
       isEnglishText(article.title) ||
       isEnglishText(article.category) ||
       Boolean(article.link && article.link.includes('trendingnews'));
+
+    // Resolve target channel
+    const channels = await this.getActiveYouTubeChannels();
+    let targetChannel: YouTubeChannel | undefined;
+
+    if (targetChannelId) {
+      targetChannel = channels.find((c) => c._id === targetChannelId);
+    }
+    if (!targetChannel) {
+      if (isEnglish) {
+        targetChannel = channels.find((c) => c.language === 'en' || c.targetPageId === '1526917347161119');
+      } else {
+        targetChannel = channels.find((c) => c.language === 'bn' || c.targetPageId === '1405135646008133');
+      }
+    }
+    if (!targetChannel && channels.length > 0) {
+      targetChannel = channels[0];
+    }
+
+    const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
+    const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+    const globalClientId = sId?.value || process.env.YOUTUBE_CLIENT_ID;
+    const globalClientSecret = sSec?.value || process.env.YOUTUBE_CLIENT_SECRET;
+
+    const channelClient = targetChannel
+      ? YouTubeClient.forChannel(targetChannel, globalClientId, globalClientSecret)
+      : this.ytClient;
+
+    const channelTitle = targetChannel?.title || 'YouTube Channel';
 
     let effectiveCategory = article.category;
     if (isEnglish) {
@@ -1262,13 +1378,14 @@ export class QueueWorker {
 
     const ytStartTime = Date.now();
     try {
-      const result = await this.ytClient.uploadShort(
+      const result = await channelClient.uploadShort(
         {
           videoBuffer: reelBuffer,
           title: article.title,
           description: isEnglish
             ? `${shortsHashtags}\n\nFull story: ${article.link}`
             : `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
+          isEnglish: isEnglish,
         },
         config.DRY_RUN
       );
@@ -1277,13 +1394,16 @@ export class QueueWorker {
         const commentText = isEnglish
           ? `Read the full story here: ${article.link}`
           : `বিস্তারিত খবর পড়ুন: ${article.link}`;
-        await this.ytClient.addComment(result.videoId, commentText);
+        await channelClient.addComment(result.videoId, commentText);
       }
 
       await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
         _id: crypto.randomUUID(),
         articleId: article._id,
         articleTitle: article.title,
+        channelId: targetChannel?._id || null,
+        channelTitle: channelTitle,
+        pageId: targetChannel?.targetPageId || null,
         ytVideoId: result.videoId,
         ytVideoUrl: result.videoUrl,
         durationMs: Date.now() - ytStartTime,
@@ -1291,13 +1411,16 @@ export class QueueWorker {
         createdAt: new Date(),
       });
 
-      return { success: true, videoId: result.videoId, videoUrl: result.videoUrl };
+      return { success: true, videoId: result.videoId, videoUrl: result.videoUrl, channelTitle };
     } catch (ytErr: any) {
       const ytErrMsg = ytErr.message || String(ytErr);
       await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
         _id: crypto.randomUUID(),
         articleId: article._id,
         articleTitle: article.title,
+        channelId: targetChannel?._id || null,
+        channelTitle: channelTitle,
+        pageId: targetChannel?.targetPageId || null,
         ytVideoId: '',
         ytVideoUrl: '',
         durationMs: Date.now() - ytStartTime,
