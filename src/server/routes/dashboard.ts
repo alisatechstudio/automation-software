@@ -3708,7 +3708,7 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
 
     async function syncAllCronJobs() {
       const origin = window.location.origin;
-      if (!confirm('Synchronize and configure all distinct automation webhooks (including per-page RSS and per-page Google Drive webhooks) on cron-job.org pointing to:\n' + origin + '\n\nExisting jobs will be updated with this domain and missing jobs will be created. Proceed?')) {
+      if (!confirm('Synchronize and configure all distinct automation webhooks (including per-page RSS and per-page Google Drive webhooks) on cron-job.org pointing to:\\n' + origin + '\\n\\nExisting jobs will be updated with this domain and missing jobs will be created. Proceed?')) {
         return;
       }
       showToast('Synchronizing distinct webhooks on cron-job.org...');
