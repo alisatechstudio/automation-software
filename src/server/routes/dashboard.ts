@@ -4951,14 +4951,14 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
               '</div>' +
               '<div class="flex items-center gap-1">' +
                 langBadge +
-                '<button onclick="openEditYouTubeChannel(\'' + ch._id + '\')" title="Edit Settings" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition text-[11px]">' +
+                '<button data-id="' + ch._id + '" onclick="openEditYouTubeChannel(this.dataset.id)" title="Edit Settings" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition text-[11px]">' +
                   '⚙️' +
                 '</button>' +
               '</div>' +
             '</div>' +
 
             '<div class="flex items-center gap-3 p-2 rounded-lg bg-slate-950/60 border border-slate-800/60 mb-2.5">' +
-              '<img src="' + avatarSrc + '" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/40 object-cover shrink-0" onerror="this.src=\'/assets/images/favicon.png\'" />' +
+              '<img src="' + avatarSrc + '" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/40 object-cover shrink-0" onerror="this.src=&quot;/assets/images/favicon.png&quot;" />' +
               '<div class="overflow-hidden min-w-0 flex-1">' +
                 '<div class="font-bold text-white text-xs truncate" title="' + ch.title + '">' + ch.title + '</div>' +
                 '<div class="text-[11px] text-slate-400 truncate font-mono">' + handle + '</div>' +
@@ -4992,19 +4992,21 @@ dashboardRouter.get('/', (req: Request, res: Response) => {
             '<div class="flex items-center justify-between text-xs">' +
               '<span class="text-slate-400 text-[11px]">Auto-Upload:</span>' +
               '<label class="relative inline-flex items-center cursor-pointer">' +
-                '<input type="checkbox" ' + (ch.autoUpload ? 'checked' : '') + ' onchange="toggleChannelAutoUpload(\'' + ch._id + '\', this.checked)" class="sr-only peer" />' +
-                '<div class="w-7 h-3.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-600"></div>' +
+                '<input type="checkbox" ' + (ch.autoUpload ? 'checked' : '') + ' data-id="' + ch._id + '" onchange="toggleChannelAutoUpload(this.dataset.id, this.checked)" class="sr-only peer" />' +
+                '<div class="w-7 h-3.5 bg-slate-800 rounded-full p-0.5 relative transition-colors peer-checked:bg-red-600 flex items-center">' +
+                  '<div class="w-2.5 h-2.5 bg-white rounded-full transition-transform ' + (ch.autoUpload ? 'translate-x-3 bg-white' : 'translate-x-0 bg-slate-400') + '"></div>' +
+                '</div>' +
               '</label>' +
             '</div>' +
 
             '<div class="grid grid-cols-3 gap-1.5 pt-1">' +
-              '<button onclick="syncYouTubeChannel(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-center gap-1">' +
+              '<button data-id="' + ch._id + '" onclick="syncYouTubeChannel(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-center gap-1">' +
                 '<span>🔄 Sync</span>' +
               '</button>' +
-              '<button onclick="triggerYouTubeUploadNow(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition flex items-center justify-center gap-1">' +
+              '<button data-id="' + ch._id + '" onclick="triggerYouTubeUploadNow(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition flex items-center justify-center gap-1">' +
                 '<span>⚡ Upload</span>' +
               '</button>' +
-              '<button onclick="deleteYouTubeChannel(\'' + ch._id + '\')" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-red-950 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-800 transition flex items-center justify-center gap-1">' +
+              '<button data-id="' + ch._id + '" onclick="deleteYouTubeChannel(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-red-950 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-800 transition flex items-center justify-center gap-1">' +
                 '<span>🗑️ Remove</span>' +
               '</button>' +
             '</div>' +

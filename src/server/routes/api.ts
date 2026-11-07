@@ -2579,18 +2579,23 @@ async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: strin
     type: 'rss',
   });
 
-  // 2. Identify RSS Pages vs Google Drive Pages
-  const gdrivePageIds = new Set(allGdriveChannels.map((c) => c.pageId).filter(Boolean));
-  const rssPageIds = new Set(allSources.map((s) => s.pageId).filter(Boolean));
+  // 2. Classify Pages: 2 Use RSS (BD News 24/7, Trending News World) & 2 Use Google Drive (হক কথা, Alisa Tech Studio)
+  const isGdrivePage = (p: FacebookPage) =>
+    p._id === '1302276172975819' ||
+    p._id === '1268359636369219' ||
+    p.name.includes('হক কথা') ||
+    p.name.includes('Alisa') ||
+    allGdriveChannels.some((c) => c.pageId === p._id);
 
-  // Determine RSS target pages: pages explicitly mapped to RSS feeds, or active pages not dedicated to Drive
-  const rssTargetPages = allPages.filter((p) => rssPageIds.has(p._id) || !gdrivePageIds.has(p._id));
+  const rssPages = allPages.filter((p) => !isGdrivePage(p));
+  const gdrivePages = allPages.filter((p) => isGdrivePage(p));
 
-  if (rssTargetPages.length > 0) {
-    for (const page of rssTargetPages) {
+  // 2. FB Publisher (RSS Feeds) - Distinct Cron for each RSS Page
+  if (rssPages.length > 0) {
+    for (const page of rssPages) {
       defs.push({
         slug: `publish_${page._id}`,
-        title: `2. FB Publisher - ${page.name}`,
+        title: `2. FB Publisher - ${page.name} (RSS)`,
         path: `/api/cron/publish?pageId=${page._id}`,
         fullUrl: buildUrl(`/api/cron/publish?pageId=${page._id}`),
         preset: '15m',
@@ -2614,38 +2619,51 @@ async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: strin
     });
   }
 
-  // 3. For each active Google Drive Channel / Page (Dedicated distinct cron per Drive page)
-  if (activeGdrive.length > 0) {
-    for (const channel of activeGdrive) {
-      const matchedPage = allPages.find((p) => p._id === channel.pageId);
-      const pageLabel = matchedPage?.name || channel.pageName || channel.name || 'Drive Page';
-      const path = channel.pageId
-        ? `/api/cron/gdrive-reels?channelId=${channel._id}&pageId=${channel.pageId}`
-        : `/api/cron/gdrive-reels?channelId=${channel._id}`;
+  // 3. Google Drive Reels - Distinct Cron for each Google Drive Page
+  const handledGdrivePageIds = new Set<string>();
+  if (gdrivePages.length > 0) {
+    for (const page of gdrivePages) {
+      handledGdrivePageIds.add(page._id);
+      const matchedChan = allGdriveChannels.find((c) => c.pageId === page._id);
+      const chanId = matchedChan?._id || `gdrive_${page._id}`;
+      const path = `/api/cron/gdrive-reels?channelId=${chanId}&pageId=${page._id}`;
 
       defs.push({
-        slug: `gdrive_${channel._id}`,
-        title: `3. GDrive Reels - ${pageLabel}`,
+        slug: `gdrive_${page._id}`,
+        title: `3. GDrive Reels - ${page.name} (Google Drive)`,
         path,
         fullUrl: buildUrl(path),
-        preset: channel.scheduleIntervalHours === 1 ? '1h' : '30m',
+        preset: matchedChan?.scheduleIntervalHours === 1 ? '1h' : '30m',
         method: 0,
-        desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${pageLabel}`,
-        pageId: channel.pageId,
-        pageName: pageLabel,
-        channelId: channel._id,
+        desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${page.name}`,
+        pageId: page._id,
+        pageName: page.name,
+        channelId: chanId,
         type: 'gdrive',
       });
     }
-  } else {
+  }
+
+  // Also include any additional custom GDrive channels
+  for (const channel of activeGdrive) {
+    if (channel.pageId && handledGdrivePageIds.has(channel.pageId)) continue;
+    const matchedPage = allPages.find((p) => p._id === channel.pageId);
+    const pageLabel = matchedPage?.name || channel.pageName || channel.name || 'Drive Page';
+    const path = channel.pageId
+      ? `/api/cron/gdrive-reels?channelId=${channel._id}&pageId=${channel.pageId}`
+      : `/api/cron/gdrive-reels?channelId=${channel._id}`;
+
     defs.push({
-      slug: 'gdrive',
-      title: '3. Google Drive Reels (All Due)',
-      path: '/api/cron/gdrive-reels',
-      fullUrl: buildUrl('/api/cron/gdrive-reels'),
-      preset: '30m',
+      slug: `gdrive_${channel._id}`,
+      title: `3. GDrive Reels - ${pageLabel} (Google Drive)`,
+      path,
+      fullUrl: buildUrl(path),
+      preset: channel.scheduleIntervalHours === 1 ? '1h' : '30m',
       method: 0,
-      desc: 'Scans Google Drive channels and publishes video reels to Facebook',
+      desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${pageLabel}`,
+      pageId: channel.pageId,
+      pageName: pageLabel,
+      channelId: channel._id,
       type: 'gdrive',
     });
   }

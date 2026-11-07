@@ -4,7 +4,7 @@ import { getDatabase } from '../../db/index.js';
 import { GDriveReelConfig, FacebookPage, ReelLog } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
-import { generateGDriveReelHashtags, generateViralReelHashtags } from '../../config/constants.js';
+import { generateGDriveReelHashtags, generateViralReelHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
 export interface GDriveVideoItem {
@@ -171,6 +171,56 @@ export class GDriveReelService {
   public async getAllChannels(): Promise<GDriveReelConfig[]> {
     const db = getDatabase();
     let channels = await db.collection<GDriveReelConfig>('gdrive_reel_configs').find({}).toArray();
+
+    // Ensure dedicated Google Drive channels exist for the two Drive pages (হক কথা & Alisa Tech Studio)
+    try {
+      const pages = await db.collection<FacebookPage>('facebook_pages').find({ isActive: true }).toArray();
+      const gdriveTargetPages = pages.filter((p) =>
+        p._id === '1302276172975819' ||
+        p._id === '1268359636369219' ||
+        p.name.includes('হক কথা') ||
+        p.name.includes('Alisa')
+      );
+
+      for (const targetPage of gdriveTargetPages) {
+        const hasChannel = channels.some((c) => c.pageId === targetPage._id || (c.name && c.name.includes(targetPage.name)));
+        if (!hasChannel) {
+          const globalKey = await this.getGlobalApiKey();
+          const channelId = `gdrive_${targetPage._id}`;
+          const newChannel: GDriveReelConfig = {
+            _id: channelId,
+            name: targetPage.name,
+            folderUrlOrId: '',
+            folderId: '',
+            apiKey: globalKey,
+            pageId: targetPage._id,
+            pageName: targetPage.name,
+            isActive: true,
+            scheduleIntervalHours: 2,
+            cronExpression: '0 */2 * * *',
+            category: 'auto',
+            customHashtags: '',
+            captionStrategy: 'viral_hashtags',
+            customCaption: '',
+            firstCommentText: '',
+            orderStrategy: 'oldest_first',
+            postedVideoIds: [],
+            postedVideoNames: [],
+            lastPostedAt: null,
+            lastPostedFile: null,
+            deleteAfterPosting: true,
+            deleteAction: 'trash',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          await db.collection<GDriveReelConfig>('gdrive_reel_configs').insertOne(newChannel);
+          channels.push(newChannel);
+        }
+      }
+    } catch (e: any) {
+      console.warn('[GDriveReelService] Note auto-provisioning Drive channels for pages:', e.message);
+    }
+
     if (!channels || channels.length === 0) {
       const seeded = await this.seedDefaultChannel();
       channels = [seeded];
@@ -606,11 +656,17 @@ export class GDriveReelService {
       // 2. Generate Caption & Accurate Viral Hashtags
       const fileTags = this.extractHashtags(video.name);
       const customUserTags = [conf.customHashtags, ...fileTags].filter(Boolean).join(' ');
+      const isEnglishChannel =
+        Boolean(page?.name && (page.name.includes('Trending') || page.name.includes('English') || page.name.includes('Alisa'))) ||
+        Boolean(conf.name && (conf.name.includes('Trending') || conf.name.includes('English') || conf.name.includes('Alisa'))) ||
+        isEnglishText(video.cleanTitle);
+
       const hashtags = generateGDriveReelHashtags({
         videoTitle: video.cleanTitle,
         channelName: conf.name,
         category: conf.category,
         userTags: customUserTags,
+        isEnglish: isEnglishChannel,
       });
 
       let caption = '';
@@ -897,12 +953,14 @@ export class GDriveReelService {
     }>;
   }> {
     const channels = await this.getAllChannels();
-    let active = channels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
+    let active: GDriveReelConfig[];
 
     if (options?.channelId) {
-      active = active.filter((c) => c._id === options.channelId);
+      active = channels.filter((c) => c._id === options.channelId);
     } else if (options?.pageId) {
-      active = active.filter((c) => c.pageId === options.pageId);
+      active = channels.filter((c) => c.pageId === options.pageId);
+    } else {
+      active = channels.filter((c) => c.isActive && (c.folderUrlOrId || c.folderId));
     }
 
     const processed: any[] = [];
@@ -917,12 +975,22 @@ export class GDriveReelService {
           channelName: 'Channel',
           pageName: options.pageId || 'Unknown Page',
           status: 'failed',
-          reason: `No active Google Drive channel found matching ${options.channelId ? `channel ID "${options.channelId}"` : `page ID "${options.pageId}"`}. Please configure and activate a channel in the Google Drive tab.`,
+          reason: `No Google Drive channel found matching ${options.channelId ? `channel ID "${options.channelId}"` : `page ID "${options.pageId}"`}. Please configure a channel in the Google Drive tab.`,
         }],
       };
     }
 
     for (const channel of active) {
+      if (!channel.folderUrlOrId && !channel.folderId) {
+        processed.push({
+          channelId: channel._id,
+          channelName: channel.name,
+          pageName: channel.pageName || 'Unknown Page',
+          status: 'failed',
+          reason: `Google Drive Folder URL is not configured yet for ${channel.name} (${channel.pageName}). Please set the Folder link in Dashboard > Google Drive tab.`,
+        });
+        continue;
+      }
       const intervalMs = (channel.scheduleIntervalHours || 2) * 60 * 60 * 1000;
       const lastPost = channel.lastPostedAt ? new Date(channel.lastPostedAt).getTime() : 0;
       const isDue = Date.now() - lastPost >= intervalMs - 60000; // 1 min grace

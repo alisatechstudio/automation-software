@@ -1214,6 +1214,7 @@ export interface GenerateGDriveHashtagsOptions {
   category?: string;
   userTags?: string;
   targetCount?: number;
+  isEnglish?: boolean;
 }
 
 /**
@@ -1230,6 +1231,14 @@ export function generateGDriveReelHashtags(options?: GenerateGDriveHashtagsOptio
   const combined = `${title} ${channel}`.toLowerCase();
   const userTagsRaw = (options?.userTags || '').trim();
 
+  const isEnglish =
+    Boolean(options?.isEnglish) ||
+    channel.toLowerCase().includes('trending') ||
+    channel.toLowerCase().includes('world') ||
+    channel.toLowerCase().includes('english') ||
+    channel.toLowerCase().includes('alisa') ||
+    isEnglishText(title);
+
   const selectedTags: string[] = [];
   const seen = new Set<string>();
 
@@ -1242,6 +1251,21 @@ export function generateGDriveReelHashtags(options?: GenerateGDriveHashtagsOptio
     // Clean tag body
     tag = '#' + tag.substring(1).replace(/[\s\.,;:!?'"(){}\[\]\\\/]/g, '');
     if (tag.length <= 1) return;
+
+    // Filter Bengali tags out of English posts
+    if (isEnglish) {
+      const lower = tag.toLowerCase();
+      if (
+        /[\u0980-\u09FF]/.test(tag) ||
+        lower.includes('bangla') ||
+        lower.includes('bangladesh') ||
+        lower.includes('bdnews') ||
+        lower === '#bd' ||
+        lower === 'bd'
+      ) {
+        return;
+      }
+    }
 
     const lower = tag.toLowerCase();
     if (!seen.has(lower)) {
@@ -1311,15 +1335,25 @@ export function generateGDriveReelHashtags(options?: GenerateGDriveHashtagsOptio
     football: ['#Football', '#FootballReels', '#Soccer', '#Goals', '#CR7', '#Messi', '#SportsReels', '#FootballSkills'],
     cricket: ['#Cricket', '#CricketReels', '#CricketLover', '#Tigers', '#BPL', '#IPL', '#SportsReels', '#CricketFans'],
     sports: ['#Sports', '#SportsReels', '#Fitness', '#Workout', '#Athlete', '#FitLife', '#SportsVideo'],
-    comedy: ['#Funny', '#Comedy', '#ComedyReels', '#Memes', '#FunnyVideos', '#Humor', '#Laugh', '#Jokes', '#মজারভিডিও'],
+    comedy: isEnglish
+      ? ['#Funny', '#Comedy', '#ComedyReels', '#Memes', '#FunnyVideos', '#Humor', '#Laugh', '#Jokes']
+      : ['#Funny', '#Comedy', '#ComedyReels', '#Memes', '#FunnyVideos', '#Humor', '#Laugh', '#Jokes', '#মজারভিডিও'],
     technology: ['#Tech', '#Technology', '#TechReels', '#Gadgets', '#AI', '#Innovation', '#TechNews', '#SmartTech'],
     motivation: ['#Motivation', '#Inspiration', '#Mindset', '#Success', '#DailyMotivation', '#Lifestyle', '#Quotes', '#FitnessMotivation'],
-    islamic: ['#Islamic', '#IslamicReels', '#Islam', '#Deen', '#Quran', '#IslamicReminder', '#Muslim', '#ওয়াজ', '#Sunnah'],
-    food: ['#Food', '#Foodie', '#Cooking', '#Recipe', '#FoodReels', '#Delicious', '#StreetFood', '#FoodLover', '#রান্না'],
+    islamic: isEnglish
+      ? ['#Islamic', '#IslamicReels', '#Islam', '#Deen', '#Quran', '#IslamicReminder', '#Muslim', '#Sunnah']
+      : ['#Islamic', '#IslamicReels', '#Islam', '#Deen', '#Quran', '#IslamicReminder', '#Muslim', '#ওয়াজ', '#Sunnah'],
+    food: isEnglish
+      ? ['#Food', '#Foodie', '#Cooking', '#Recipe', '#FoodReels', '#Delicious', '#StreetFood', '#FoodLover']
+      : ['#Food', '#Foodie', '#Cooking', '#Recipe', '#FoodReels', '#Delicious', '#StreetFood', '#FoodLover', '#রান্না'],
     gaming: ['#Gaming', '#Gamer', '#Gameplay', '#GamingReels', '#FreeFire', '#PUBG', '#GamingCommunity', '#VideoGames'],
     travel: ['#Travel', '#TravelReels', '#Nature', '#Adventure', '#Wanderlust', '#Explore', '#TravelGram', '#BeautifulPlaces'],
-    entertainment: ['#Entertainment', '#EntertainmentReels', '#Cinema', '#Drama', '#ViralClips', '#Showbiz', '#নাটক', '#MovieClips'],
-    news: ['#News', '#BreakingNews', '#BanglaNews', '#CurrentAffairs', '#NewsUpdate', '#Bangladesh', '#খবর'],
+    entertainment: isEnglish
+      ? ['#Entertainment', '#EntertainmentReels', '#Cinema', '#Drama', '#ViralClips', '#Showbiz', '#MovieClips']
+      : ['#Entertainment', '#EntertainmentReels', '#Cinema', '#Drama', '#ViralClips', '#Showbiz', '#নাটক', '#MovieClips'],
+    news: isEnglish
+      ? ['#News', '#BreakingNews', '#WorldNews', '#USNews', '#CurrentAffairs', '#NewsUpdate', '#TrendingNews', '#Headlines']
+      : ['#News', '#BreakingNews', '#BanglaNews', '#CurrentAffairs', '#NewsUpdate', '#Bangladesh', '#খবর'],
     viral: ['#Viral', '#Trending', '#Explore', '#ViralVideo', '#ViralReels', '#ForYouPage', '#ExplorePage'],
   };
 
