@@ -77,13 +77,37 @@ export class YouTubeClient {
   public async initCredentials(): Promise<boolean> {
     try {
       const db = getDatabase();
-      const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
-      const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
-      const sRef = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_REFRESH_TOKEN' });
+      const sId = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any },
+      });
+      const sSec = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET', 'YOUTUBE_CLIENT_SECRET'] as any },
+      });
+      const sRef = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['GOOGLE_REFRESH_TOKEN', 'GDRIVE_REFRESH_TOKEN', 'YOUTUBE_REFRESH_TOKEN'] as any },
+      });
 
-      this.clientId = (sId?.value && sId.value.trim()) || this.clientId || process.env.YOUTUBE_CLIENT_ID || '';
-      this.clientSecret = (sSec?.value && sSec.value.trim()) || this.clientSecret || process.env.YOUTUBE_CLIENT_SECRET || '';
-      this.refreshToken = (sRef?.value && sRef.value.trim()) || this.refreshToken || process.env.YOUTUBE_REFRESH_TOKEN || '';
+      this.clientId =
+        (sId?.value && sId.value.trim()) ||
+        this.clientId ||
+        process.env.GOOGLE_CLIENT_ID ||
+        process.env.GDRIVE_CLIENT_ID ||
+        process.env.YOUTUBE_CLIENT_ID ||
+        '';
+      this.clientSecret =
+        (sSec?.value && sSec.value.trim()) ||
+        this.clientSecret ||
+        process.env.GOOGLE_CLIENT_SECRET ||
+        process.env.GDRIVE_CLIENT_SECRET ||
+        process.env.YOUTUBE_CLIENT_SECRET ||
+        '';
+      this.refreshToken =
+        (sRef?.value && sRef.value.trim()) ||
+        this.refreshToken ||
+        process.env.GOOGLE_REFRESH_TOKEN ||
+        process.env.GDRIVE_REFRESH_TOKEN ||
+        process.env.YOUTUBE_REFRESH_TOKEN ||
+        '';
 
       // Auto-sync refresh token to DB if present in env but not in DB
       if (!sRef?.value && this.refreshToken) {

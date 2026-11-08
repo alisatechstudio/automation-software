@@ -2490,8 +2490,15 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
   const host = req.get('host');
   const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
   const db = getDatabase();
-  const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
-  const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
+  const sId = await db.collection<Setting>('settings').findOne({
+    _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any },
+  });
+  const clientId =
+    sId?.value ||
+    process.env.GOOGLE_CLIENT_ID ||
+    process.env.GDRIVE_CLIENT_ID ||
+    process.env.YOUTUBE_CLIENT_ID ||
+    '';
   const originParam = (req.query.origin as string) || (req.path.includes('gdrive') ? 'gdrive' : 'youtube');
   const targetPageId = (req.query.targetPageId as string) || '';
   const targetPageName = (req.query.targetPageName as string) || '';

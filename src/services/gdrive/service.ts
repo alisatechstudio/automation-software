@@ -1217,10 +1217,24 @@ export class GDriveReelService {
       }
 
       if (refreshToken) {
-        const sId = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' as any });
-        const sSec = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' as any });
-        const clientId = (sId?.value && sId.value.trim()) || process.env.YOUTUBE_CLIENT_ID || '';
-        const clientSecret = (sSec?.value && sSec.value.trim()) || process.env.YOUTUBE_CLIENT_SECRET || '';
+        const sId = await db.collection('settings').findOne({
+          _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any },
+        });
+        const sSec = await db.collection('settings').findOne({
+          _id: { $in: ['GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET', 'YOUTUBE_CLIENT_SECRET'] as any },
+        });
+        const clientId =
+          (sId?.value && sId.value.trim()) ||
+          process.env.GOOGLE_CLIENT_ID ||
+          process.env.GDRIVE_CLIENT_ID ||
+          process.env.YOUTUBE_CLIENT_ID ||
+          '';
+        const clientSecret =
+          (sSec?.value && sSec.value.trim()) ||
+          process.env.GOOGLE_CLIENT_SECRET ||
+          process.env.GDRIVE_CLIENT_SECRET ||
+          process.env.YOUTUBE_CLIENT_SECRET ||
+          '';
 
         if (clientId && clientSecret) {
           const res = await fetch('https://oauth2.googleapis.com/token', {
