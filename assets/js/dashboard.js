@@ -260,7 +260,9 @@
       } else if (tabId === 'pages' || tabId === 'groups' || tabId === 'youtube' || tabId === 'tiktok') {
         targetBtnId = 'nav-btn-output';
         tabNameLabel = tabId === 'pages' ? 'Facebook Pages' : tabId === 'groups' ? 'Facebook Groups' : tabId === 'youtube' ? 'YouTube Shorts' : 'TikTok IDs';
-
+      } else if (tabId === 'manual') {
+        targetBtnId = 'nav-btn-manual';
+        tabNameLabel = 'User Manual';
       }
 
       const activeBtn = document.getElementById(targetBtnId);
@@ -327,6 +329,27 @@
       if (tabId === 'gdrive-reels') loadGDriveReels();
       if (tabId === 'youtube') loadYouTube();
       if (tabId === 'tiktok') loadTikTokTab();
+      if (tabId === 'manual') initManualTab();
+    }
+
+    function scrollManualTo(sectionId) {
+      selectNavTab('manual');
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('ring-2', 'ring-amber-500/60');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-amber-500/60'), 2000);
+        }
+      }, 50);
+    }
+
+    function initManualTab() {
+      // Dynamic updates for user manual code blocks with current window origin
+      document.querySelectorAll('.manual-origin-url').forEach(el => {
+        const path = el.getAttribute('data-path') || '';
+        el.innerText = window.location.origin + path;
+      });
     }
 
     // --- SAFE JSON FETCHER ---
@@ -2815,6 +2838,7 @@
     // Initial load & Tab URL check
     loadOverview();
     initCronPills();
+    initManualTab();
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('tab') === 'youtube') {
       switchTab('youtube');

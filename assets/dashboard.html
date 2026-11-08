@@ -180,6 +180,14 @@
           </div>
         </div>
 
+        <!-- 5. User Manual Tab -->
+        <div class="relative">
+          <button id="nav-btn-manual" onclick="selectNavTab('manual')" class="nav-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent transition flex items-center gap-1.5 whitespace-nowrap">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <span>User Manual</span>
+          </button>
+        </div>
+
 
 
       </div>
@@ -307,7 +315,10 @@
               <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
               Simple Automation Architecture (cron-job.org)
             </h3>
-            <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">2 Webhooks</span>
+            <div class="flex items-center gap-2">
+              <button onclick="scrollManualTo('man-architecture')" class="text-[10px] text-amber-400 hover:text-amber-300 underline font-semibold">User Manual ↗</button>
+              <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">2 Webhooks</span>
+            </div>
           </div>
 
           <div class="space-y-3">
@@ -404,7 +415,7 @@
           <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
             <span>📡 RSS Source List & Feed Ingestion</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Automated poll schedule feeds from RSS, creates 9:16 reels with the selected theme, and saves into the source's linked Google Drive folder.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Automated poll schedule feeds from RSS, creates 9:16 reels with the selected theme, and saves into the source's linked Google Drive folder. <button type="button" onclick="scrollManualTo('man-rss')" class="text-cyan-400 hover:text-cyan-300 underline font-medium">Read Manual ↗</button></p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openAddSourceModal()" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-95 shadow-glow-red">
@@ -474,11 +485,12 @@
           </div>
           
           <!-- Tips Banner -->
-          <div class="p-3 bg-slate-950/80 border border-slate-800/80 rounded-lg text-xs text-slate-300 space-y-1">
-            <div class="font-bold text-amber-400 flex items-center gap-1.5 text-[11px]">
-              <span>💡</span> Meta Live Mode Active
+          <div class="p-2.5 bg-slate-950/80 border border-slate-800/80 rounded-lg text-xs text-slate-300 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-amber-400">💡</span>
+              <span class="text-[11px] text-slate-300">Need help generating permanent Facebook Page Tokens?</span>
             </div>
-            <p class="text-[11px] text-slate-400">Tokens are verified to post natively on the Page feed and stories with full public visibility.</p>
+            <button type="button" onclick="scrollManualTo('man-facebook')" class="text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline shrink-0">Read Manual ↗</button>
           </div>
 
           <div id="pages-list" class="space-y-2">
@@ -876,7 +888,7 @@
             Google Drive Multi-Channel Reels
           </h2>
           <p class="text-xs text-slate-300 mt-0.5 max-w-2xl">
-            একাধিক ড্রাইভ ফোল্ডার থেকে পেজগুলোতে রিলস ২৪/৭ স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড করুন।
+            একাধিক ড্রাইভ ফোল্ডার থেকে পেজগুলোতে রিলস ২৪/৭ স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড করুন। <button type="button" onclick="scrollManualTo('man-gdrive')" class="text-emerald-400 hover:text-emerald-300 underline font-medium">How to find Folder ID ↗</button>
           </p>
         </div>
 
@@ -1637,6 +1649,688 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- 10. USER MANUAL TAB -->
+    <div id="tab-manual" class="tab-content hidden space-y-5">
+
+      <!-- Header Banner & Quick Navigation Pills -->
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-slate-900/95 via-slate-950/95 to-amber-950/20 shadow-2xl space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider font-mono">Operations Manual v2.0</span>
+              <span class="text-xs text-slate-400 font-mono">Zero-Queue Architecture</span>
+            </div>
+            <h1 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+              <span class="text-amber-400">📖</span>
+              <span>System User Manual & Operations Guide</span>
+            </h1>
+            <p class="text-xs text-slate-300 max-w-3xl leading-relaxed">
+              Complete architectural setup, webhook configuration for cron-job.org, Google Drive folder linking, Facebook & YouTube token generation, and zero-database-queue operations.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+              <span>↑ Top</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Jump Navigation Pills -->
+        <div class="pt-2 border-t border-slate-800/80 flex flex-wrap gap-1.5 text-xs">
+          <button onclick="scrollManualTo('man-architecture')" class="px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/50 transition flex items-center gap-1">
+            <span>⚡</span> <span>2-Stage Architecture</span>
+          </button>
+          <button onclick="scrollManualTo('man-cronjob')" class="px-2.5 py-1 rounded-lg bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/50 transition flex items-center gap-1">
+            <span>⏱️</span> <span>cron-job.org Setup</span>
+          </button>
+          <button onclick="scrollManualTo('man-gdrive')" class="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/50 transition flex items-center gap-1">
+            <span>📁</span> <span>Google Drive & Folder ID</span>
+          </button>
+          <button onclick="scrollManualTo('man-rss')" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 transition flex items-center gap-1">
+            <span>📡</span> <span>RSS Feeds & Reels</span>
+          </button>
+          <button onclick="scrollManualTo('man-facebook')" class="px-2.5 py-1 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/50 transition flex items-center gap-1">
+            <span>📘</span> <span>Facebook Pages & Tokens</span>
+          </button>
+          <button onclick="scrollManualTo('man-groups')" class="px-2.5 py-1 rounded-lg bg-teal-950/60 hover:bg-teal-900/80 text-teal-300 border border-teal-800/50 transition flex items-center gap-1">
+            <span>👥</span> <span>Facebook Groups Auto-Share</span>
+          </button>
+          <button onclick="scrollManualTo('man-youtube')" class="px-2.5 py-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 transition flex items-center gap-1">
+            <span>▶️</span> <span>YouTube Shorts OAuth</span>
+          </button>
+          <button onclick="scrollManualTo('man-tiktok')" class="px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/50 transition flex items-center gap-1">
+            <span>🎵</span> <span>TikTok Posting API</span>
+          </button>
+          <button onclick="scrollManualTo('man-zeroqueue')" class="px-2.5 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-800/50 transition flex items-center gap-1">
+            <span>🧹</span> <span>Zero-Queue & Data Wipe</span>
+          </button>
+          <button onclick="scrollManualTo('man-env')" class="px-2.5 py-1 rounded-lg bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-800/50 transition flex items-center gap-1">
+            <span>🔐</span> <span>Environment Variables</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: 2-STAGE AUTOMATION ARCHITECTURE -->
+      <div id="man-architecture" class="glass-panel p-4 sm:p-6 rounded-2xl border border-cyan-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-base">⚡</div>
+            <div>
+              <h2 class="text-base font-bold text-white">1. Decoupled 2-Stage Automation Architecture</h2>
+              <p class="text-xs text-slate-400">Why the pipeline is divided into two decoupled stages</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60">Serverless Optimized</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Stage 1 Card -->
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-cyan-500/20 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                <span>📥</span> Stage 1: Input Automation (RSS ➔ Video ➔ Drive)
+              </span>
+              <span class="text-[9px] font-mono bg-cyan-950 px-1.5 py-0.5 rounded text-cyan-300 border border-cyan-800/50">Run every 15-30m</span>
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li>Fetches <strong>1 single most recent article</strong> from configured RSS news feeds.</li>
+              <li>Detects language (Bengali or English) and applies native fonts (Noto Sans Bengali, Hind Siliguri).</li>
+              <li>Renders 9:16 vertical video reel with styled typography and category soundtrack.</li>
+              <li>Uploads the generated .mp4 reel directly into the source's linked Google Drive folder.</li>
+              <li><strong>Zero database queue:</strong> Does NOT create queued jobs or store bulky blobs in MongoDB.</li>
+            </ul>
+          </div>
+
+          <!-- Stage 2 Card -->
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/20 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <span>📤</span> Stage 2: Output Automation (Drive ➔ Social Media ➔ Delete)
+              </span>
+              <span class="text-[9px] font-mono bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-300 border border-emerald-800/50">Run every 1-2h</span>
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+              <li>Scans the Google Drive folder and picks the <strong>oldest video file</strong> (FIFO order).</li>
+              <li>Posts native vertical Reel to Facebook Page feed with viral hashtags.</li>
+              <li>Posts 24-hour visual card to Facebook Stories.</li>
+              <li>Cross-posts to YouTube Shorts (via YouTube Data API v3).</li>
+              <li>Cross-posts to TikTok (via Content Posting API v2).</li>
+              <li>Auto-shares to targeted Facebook Groups with safe anti-spam jitter delay.</li>
+              <li><strong>Auto-Delete:</strong> Moves the posted video to Google Drive Trash so folder storage stays clean.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Architecture Flow Diagram Card -->
+        <div class="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-[11px] text-slate-300 overflow-x-auto">
+          <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-bold font-sans">Pipeline Flowchart</div>
+          <div class="whitespace-pre text-cyan-300/90 leading-relaxed">
+[RSS News Feed] 
+       │  (Stage 1: /api/cron/input)
+       ▼
+[Render 9:16 Reel Video + Bangla Typography]
+       │
+       ▼
+[Google Drive Folder]  ◄─── (Zero-Database Staging Queue)
+       │
+       │  (Stage 2: /api/cron/output)
+       ▼
+┌────────────────────────────────────────────────────────┐
+│  Multi-Network Broadcast:                              │
+│  ├─► Facebook Page Feed (Vertical 9:16 Reel)           │
+│  ├─► Facebook Page Stories (24h Poster)                │
+│  ├─► YouTube Shorts (OAuth Channel)                    │
+│  ├─► TikTok Video (Content Posting API v2)             │
+│  └─► Facebook Groups Auto-Share (Anti-Spam Jitter)     │
+└────────────────────────────────────────────────────────┘
+       │
+       ▼
+[Auto-Delete Video from Google Drive Trash]
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: CRON-JOB.ORG SETUP -->
+      <div id="man-cronjob" class="glass-panel p-4 sm:p-6 rounded-2xl border border-blue-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-base">⏱️</div>
+            <div>
+              <h2 class="text-base font-bold text-white">2. cron-job.org Webhook Configuration</h2>
+              <p class="text-xs text-slate-400">Step-by-step external scheduler setup without server cron daemons</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800/60">Free Scheduler</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <p>
+            Because Vercel is a serverless environment, long-running internal timers (<code class="text-slate-400">node-cron</code>) cannot run in the background. The platform is triggered via reliable external webhooks on <a href="https://cron-job.org" target="_blank" class="text-blue-400 underline font-semibold">cron-job.org</a> (100% free).
+          </p>
+
+          <!-- Step by Step Setup Box -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Step-by-Step Instructions</h3>
+            
+            <div class="space-y-2">
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
+                <div>
+                  <strong>Create a free account:</strong> Go to <a href="https://cron-job.org" target="_blank" class="text-blue-400 underline">https://cron-job.org</a> and sign up.
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
+                <div>
+                  <strong>Create Job 1: Input Cron (Stage 1)</strong>
+                  <div class="mt-1 p-2 rounded bg-slate-900 border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div><span class="text-slate-500">Title:</span> <span class="text-white">FB Automation - Stage 1 (Input)</span></div>
+                    <div><span class="text-slate-500">URL:</span> <code class="text-cyan-300 manual-origin-url" data-path="/api/cron/input">https://your-domain.vercel.app/api/cron/input</code></div>
+                    <div><span class="text-slate-500">Schedule:</span> <span class="text-amber-400">Every 15 minutes</span> (or every 30 minutes)</div>
+                    <div><span class="text-slate-500">Request Method:</span> <span class="text-emerald-400">GET</span></div>
+                    <div><span class="text-slate-500">Headers:</span> <span class="text-slate-300">Authorization: Bearer &lt;YOUR_CRON_SECRET&gt;</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
+                <div>
+                  <strong>Create Job 2: Output Cron (Stage 2)</strong>
+                  <div class="mt-1 p-2 rounded bg-slate-900 border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div><span class="text-slate-500">Title:</span> <span class="text-white">FB Automation - Stage 2 (Output)</span></div>
+                    <div><span class="text-slate-500">URL:</span> <code class="text-emerald-300 manual-origin-url" data-path="/api/cron/output">https://your-domain.vercel.app/api/cron/output</code></div>
+                    <div><span class="text-slate-500">Schedule:</span> <span class="text-amber-400">Every 1 hour</span> (or every 2 hours)</div>
+                    <div><span class="text-slate-500">Request Method:</span> <span class="text-emerald-400">GET</span></div>
+                    <div><span class="text-slate-500">Headers:</span> <span class="text-slate-300">Authorization: Bearer &lt;YOUR_CRON_SECRET&gt;</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split Webhooks for Multi-Feed & Multi-Folder Section -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-cyan-800/40 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-cyan-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <span>⚡</span> Split Webhooks for Multi-Feed & Multi-Folder Scaling
+              </h3>
+              <span class="text-[10px] font-mono text-slate-400">Prevents Vercel Timeouts</span>
+            </div>
+            <p class="text-[11px] text-slate-300">
+              If you have <strong>2 or more RSS feeds or Google Drive folders</strong>, processing all of them in a single cron execution can cause a timeout (Vercel max execution duration is 10s on hobby or 60s on pro). To guarantee lightning-fast execution, configure separate cron jobs in cron-job.org for each specific feed or folder:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+                <span class="text-cyan-400 font-bold block font-sans">Split Input (Feed Wise):</span>
+                <code class="text-slate-300 text-[10px] break-all">/api/cron/input?sourceId=&lt;SOURCE_ID&gt;</code>
+                <div class="text-[10px] text-slate-500 font-sans">Processes only 1 feed per request. Copy direct links from the Overview tab!</div>
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+                <span class="text-emerald-400 font-bold block font-sans">Split Output (Folder Wise):</span>
+                <code class="text-slate-300 text-[10px] break-all">/api/cron/output?folderId=&lt;FOLDER_ID&gt;</code>
+                <div class="text-[10px] text-slate-500 font-sans">Picks the oldest video from that specific Drive folder and posts it.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: GOOGLE DRIVE SETUP & FOLDER ID GUIDE -->
+      <div id="man-gdrive" class="glass-panel p-4 sm:p-6 rounded-2xl border border-emerald-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-base">📁</div>
+            <div>
+              <h2 class="text-base font-bold text-white">3. Google Drive Setup & How to Find Folder ID</h2>
+              <p class="text-xs text-slate-400">Linking Drive folders as the zero-database cloud queue</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">Cloud Buffer</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <div class="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-200 space-y-1">
+            <div class="font-bold flex items-center gap-1.5 text-xs">
+              <span>💡</span> What is a Google Drive Folder ID?
+            </div>
+            <p class="text-[11px] text-slate-300">
+              A Folder ID is a unique alphanumeric string (typically 33 characters long) assigned by Google to every folder. For example: <code class="text-amber-300 font-mono font-bold bg-slate-950/80 px-1.5 py-0.5 rounded">1a2B3c4D5e6F7g8H9i0jKlMnOpQrStUvW</code>.
+            </p>
+          </div>
+
+          <!-- 3 Methods to Find Folder ID -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <div class="text-emerald-400 font-bold text-xs flex items-center gap-1">
+                <span>Method 1:</span> Browser Address Bar
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Open the folder in your web browser. Look at the URL in your address bar:
+              </p>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 font-mono text-[10px] text-slate-300 break-all">
+                https://drive.google.com/drive/folders/<span class="text-emerald-400 font-bold bg-emerald-950/80 px-1 rounded">1a2B3c4D5e...</span>
+              </div>
+              <p class="text-[10px] text-slate-500">The segment after <code class="text-slate-400">/folders/</code> is your Folder ID.</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <div class="text-cyan-400 font-bold text-xs flex items-center gap-1">
+                <span>Method 2:</span> Right-Click Share Link
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Right-click your folder in Google Drive ➔ Click <strong>Share</strong> ➔ Click <strong>Copy link</strong>:
+              </p>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 font-mono text-[10px] text-slate-300 break-all">
+                https://drive.google.com/drive/folders/<span class="text-cyan-400 font-bold bg-cyan-950/80 px-1 rounded">1a2B3c4D5e...</span>?usp=sharing
+              </div>
+              <p class="text-[10px] text-slate-500">The characters between <code class="text-slate-400">/folders/</code> and <code class="text-slate-400">?</code> is your ID.</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <div class="text-amber-400 font-bold text-xs flex items-center gap-1">
+                <span>Method 3:</span> Smart Auto-Extraction
+              </div>
+              <p class="text-[11px] text-slate-400">
+                You don't need to manually trim anything!
+              </p>
+              <p class="text-[11px] text-slate-300">
+                Simply <strong>paste the entire full URL</strong> into the "Linked Google Drive Folder" field in any modal or form. The dashboard automatically cleans and extracts the ID for you.
+              </p>
+            </div>
+          </div>
+
+          <!-- Permissions & Auto-Delete Guide -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🔐</span> Folder Permissions Checklist
+              </h4>
+              <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
+                <li>Right-click your folder in Google Drive ➔ <strong>Share</strong>.</li>
+                <li>Under <strong>General access</strong>, select: <code class="text-emerald-300">Anyone with the link</code>.</li>
+                <li>Set the role to <strong>Viewer</strong> (or <strong>Editor</strong> if uploading via Service Account).</li>
+                <li>Alternatively, share the folder directly with your Service Account email: <code class="text-cyan-300">your-sa@project.iam.gserviceaccount.com</code>.</li>
+              </ul>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🗑️</span> Auto-Delete After Publishing
+              </h4>
+              <p class="text-[11px] text-slate-300">
+                When Stage 2 Output Cron successfully publishes a video to Facebook Reels, YouTube Shorts, and TikTok:
+              </p>
+              <ul class="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
+                <li>The engine calls Google Drive API to move the .mp4 file to <strong class="text-white">Trash</strong>.</li>
+                <li>This ensures your Google Drive storage never overflows.</li>
+                <li>Prevents the same video from ever being re-posted.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: RSS SOURCES & REEL GENERATION -->
+      <div id="man-rss" class="glass-panel p-4 sm:p-6 rounded-2xl border border-rose-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-base">📡</div>
+            <div>
+              <h2 class="text-base font-bold text-white">4. RSS Feeds & 9:16 Reel Generation</h2>
+              <p class="text-xs text-slate-400">Connecting news feeds, selecting visual themes, and automatic typography</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-800/60">Stage 1 Ingestion</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <p>
+            Click <button onclick="openAddSourceModal()" class="px-2 py-0.5 bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/40 rounded font-semibold transition">➕ Add RSS Source</button> in the top navbar or Input Management dropdown to connect a new news feed.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <span class="text-rose-400 font-bold text-xs block">1. Feed Ingestion:</span>
+              <p class="text-[11px] text-slate-400">
+                Input any valid RSS 2.0 or Atom feed URL (e.g. Prothom Alo, BD News 24/7, BBC, CNN). The parser extracts the title, content, pubDate, and featured thumbnail image.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <span class="text-cyan-400 font-bold text-xs block">2. Visual Themes:</span>
+              <p class="text-[11px] text-slate-400">
+                Choose from <code class="text-cyan-300">auto-category</code> (selects 1 of 13 category colorways & audio soundscapes automatically), <code class="text-slate-300">studio-red</code> (Canva replica), <code class="text-slate-300">breaking-bold</code>, <code class="text-slate-300">dark-cinema</code>, or <code class="text-slate-300">rolling</code> rotation.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+              <span class="text-emerald-400 font-bold text-xs block">3. Localized Bengali Fonts:</span>
+              <p class="text-[11px] text-slate-400">
+                The engine bundles <strong>Noto Sans Bengali</strong> and <strong>Hind Siliguri</strong> fonts locally so Bengali text renders with 100% ligatures and zero font distortion.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 5: FACEBOOK PAGES & NEVER-EXPIRING ACCESS TOKENS -->
+      <div id="man-facebook" class="glass-panel p-4 sm:p-6 rounded-2xl border border-indigo-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-base">📘</div>
+            <div>
+              <h2 class="text-base font-bold text-white">5. Facebook Pages & Never-Expiring Tokens</h2>
+              <p class="text-xs text-slate-400">How to generate permanent Page Access Tokens with Meta Graph API</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60">Meta Graph API v21.0</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <p>
+            To post native Reels and 24-hour Stories to Facebook, you need a <strong>Page ID</strong> and a <strong>Long-Lived Page Access Token</strong>. Follow these steps to generate a permanent token that never expires:
+          </p>
+
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
+              <div>
+                Open the <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="text-indigo-400 underline font-semibold">Meta Graph API Explorer</a>.
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
+              <div>
+                Select your Meta App from the <strong>Meta App</strong> dropdown.
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
+              <div>
+                In the <strong>Permissions</strong> section, add the following required permissions:
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  <span class="px-2 py-0.5 rounded bg-slate-900 border border-indigo-700/50 text-indigo-300 font-mono text-[10px]">pages_manage_posts</span>
+                  <span class="px-2 py-0.5 rounded bg-slate-900 border border-indigo-700/50 text-indigo-300 font-mono text-[10px]">pages_read_engagement</span>
+                  <span class="px-2 py-0.5 rounded bg-slate-900 border border-indigo-700/50 text-indigo-300 font-mono text-[10px]">pages_show_list</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
+              <div>
+                Click <strong>Generate Access Token</strong> and grant access. Then in the <strong>User or Page</strong> dropdown, choose your <strong>Facebook Page</strong> (this switches the User Token into a Page Token).
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">5</span>
+              <div>
+                Open the <a href="https://developers.facebook.com/tools/debug/accesstoken/" target="_blank" class="text-indigo-400 underline font-semibold">Access Token Debugger</a>, paste the token, and click <strong>Extend Access Token</strong>. This produces a permanent never-expiring token!
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 font-bold flex items-center justify-center shrink-0 text-[10px]">6</span>
+              <div>
+                In your Meta App Dashboard, switch <strong>App Mode</strong> from <strong class="text-amber-400">Development</strong> to <strong class="text-emerald-400">Live</strong> so your posts are publicly visible to all users.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 6: FACEBOOK GROUPS AUTO-SHARING -->
+      <div id="man-groups" class="glass-panel p-4 sm:p-6 rounded-2xl border border-teal-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-base">👥</div>
+            <div>
+              <h2 class="text-base font-bold text-white">6. Facebook Groups Auto-Sharing & Anti-Spam</h2>
+              <p class="text-xs text-slate-400">Broadcasting published posts to niche groups safely</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-950 text-teal-400 border border-teal-800/60">Engagement Booster</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>🎯</span> Category & Keyword Filtering
+            </h3>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              When adding a Facebook group, you can specify target categories such as <code class="text-teal-300 font-mono">রাজনীতি</code>, <code class="text-teal-300 font-mono">খেলাধুলা</code>, <code class="text-teal-300 font-mono">আন্তর্জাতিক</code>, or <code class="text-teal-300 font-mono">all</code>. The engine only shares news matching the group's specific audience.
+            </p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <h3 class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <span>🛡️</span> Anti-Spam Jitter Safeguard
+            </h3>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              To prevent Facebook from detecting repetitive bot activity or triggering spam rate limits, the auto-share engine introduces a <strong>5 to 10 second randomized jitter delay</strong> between consecutive group shares.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 7: YOUTUBE SHORTS SETUP -->
+      <div id="man-youtube" class="glass-panel p-4 sm:p-6 rounded-2xl border border-red-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-base">▶️</div>
+            <div>
+              <h2 class="text-base font-bold text-white">7. YouTube Shorts Multi-Channel Automation</h2>
+              <p class="text-xs text-slate-400">One-click Google Sign-In and manual OAuth refresh tokens</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800/60">YouTube Data API v3</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+              <h3 class="text-xs font-bold text-red-400">Method 1: One-Click Google Sign-In (Recommended)</h3>
+              <p class="text-[11px] text-slate-400">
+                In the YouTube tab, click <strong>+ Connect Channel</strong> ➔ <strong>Sign in with Google</strong>. Select the Google account that manages your YouTube channel. The system automatically fetches your channel profile, name, avatar, and stores a secure OAuth refresh token.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+              <h3 class="text-xs font-bold text-cyan-400">Method 2: Google Cloud Console Setup</h3>
+              <ul class="text-[11px] text-slate-400 space-y-1 list-disc list-inside">
+                <li>Create a project in <a href="https://console.cloud.google.com" target="_blank" class="text-cyan-400 underline">Google Cloud Console</a>.</li>
+                <li>Enable the <strong>YouTube Data API v3</strong>.</li>
+                <li>Create OAuth 2.0 Web Client credentials.</li>
+                <li>Add Authorized Redirect URI: <code class="text-cyan-300 manual-origin-url" data-path="/api/youtube/auth/callback">https://your-domain.vercel.app/api/youtube/auth/callback</code></li>
+                <li>Scope required: <code class="text-slate-300">https://www.googleapis.com/auth/youtube.upload</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 8: TIKTOK POSTING API V2 -->
+      <div id="man-tiktok" class="glass-panel p-4 sm:p-6 rounded-2xl border border-cyan-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-base">🎵</div>
+            <div>
+              <h2 class="text-base font-bold text-white">8. TikTok Content Posting API v2</h2>
+              <p class="text-xs text-slate-400">Direct TikTok video publishing and safe simulated fallback</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60">TikTok API v2</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+              <h3 class="text-xs font-bold text-white">Credentials & Scopes</h3>
+              <p class="text-[11px] text-slate-400">
+                Register an app on the <a href="https://developers.tiktok.com" target="_blank" class="text-cyan-400 underline">TikTok for Developers Portal</a>. Request the following permissions:
+              </p>
+              <div class="flex flex-wrap gap-1 font-mono text-[10px]">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300">video.upload</span>
+                <span class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300">video.publish</span>
+              </div>
+              <p class="text-[10px] text-slate-500">Provide your TikTok Access Token, Client Key (App ID), and Client Secret in the TikTok tab.</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950/70 border border-cyan-500/30 space-y-2">
+              <h3 class="text-xs font-bold text-cyan-300">Safe Simulated Mode</h3>
+              <p class="text-[11px] text-slate-300">
+                If you don't use TikTok or your token is not configured yet, the engine automatically runs in <strong>Safe Simulated Mode</strong>. This simulates TikTok video publishing without throwing errors, allowing Facebook and YouTube publishing to finish uninterrupted.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 9: ZERO-QUEUE DATABASE & DATA WIPE -->
+      <div id="man-zeroqueue" class="glass-panel p-4 sm:p-6 rounded-2xl border border-amber-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-base">🧹</div>
+            <div>
+              <h2 class="text-base font-bold text-white">9. Zero-Database-Queue & Data Wipe Guide</h2>
+              <p class="text-xs text-slate-400">Maintaining high performance with zero database queue bloat</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800/60">Zero-Queue Storage</span>
+        </div>
+
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <h3 class="text-xs font-bold text-white">Why is there no queue in the database?</h3>
+            <p class="text-[11px] text-slate-400">
+              Legacy systems stored incoming articles and pending rendering jobs in MongoDB tables (<code class="text-slate-300">news_articles</code>, <code class="text-slate-300">jobs</code>). Over time, thousands of unposted records accumulated, leading to memory leaks, slow database queries, and serverless timeouts. In this architecture, <strong>Google Drive is your queue</strong>. Videos are staged as .mp4 files in Google Drive, keeping the database light, fast, and free of clutter.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-3.5 rounded-xl bg-rose-950/20 border border-rose-500/30 space-y-2">
+              <h3 class="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                <span>🗑️</span> What the "🧹 Wipe Data" Button Clears:
+              </h3>
+              <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
+                <li>Historical unposted articles in <code class="text-rose-400 font-mono">news_articles</code>.</li>
+                <li>Obsolete queue records in <code class="text-rose-400 font-mono">jobs</code>.</li>
+                <li>Past publishing history in <code class="text-rose-400 font-mono">post_logs</code>.</li>
+              </ul>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+              <h3 class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <span>🛡️</span> What is 100% PRESERVED and Kept Safe:
+              </h3>
+              <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
+                <li>All configured RSS sources (<code class="text-emerald-400 font-mono">rss_sources</code>).</li>
+                <li>All connected Facebook Pages (<code class="text-emerald-400 font-mono">facebook_pages</code>).</li>
+                <li>All connected YouTube Channels (<code class="text-emerald-400 font-mono">youtube_channels</code>).</li>
+                <li>All Google Drive Channel mappings (<code class="text-emerald-400 font-mono">gdrive_channels</code>).</li>
+                <li>All settings and API tokens.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 10: ENVIRONMENT VARIABLES REFERENCE -->
+      <div id="man-env" class="glass-panel p-4 sm:p-6 rounded-2xl border border-purple-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-base">🔐</div>
+            <div>
+              <h2 class="text-base font-bold text-white">10. Complete Environment Variables Reference</h2>
+              <p class="text-xs text-slate-400">Settings to configure in your Vercel Project Settings ➔ Environment Variables</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800/60">Vercel Config</span>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/60">
+          <table class="w-full text-left text-xs font-mono text-slate-300">
+            <thead class="bg-slate-900/80 text-[10px] uppercase text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">Variable Name</th>
+                <th class="py-2.5 px-3">Required</th>
+                <th class="py-2.5 px-3">Description</th>
+                <th class="py-2.5 px-3">Example Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              <tr>
+                <td class="py-2 px-3 text-cyan-300 font-bold">CRON_SECRET</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 text-[10px]">Required</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Bearer token for securing webhook endpoints (/api/cron/*)</td>
+                <td class="py-2 px-3 text-slate-500">my-secret-key-123</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-cyan-300 font-bold">MONGODB_URI</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 text-[10px]">Required</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Connection string to your MongoDB Atlas cluster</td>
+                <td class="py-2 px-3 text-slate-500">mongodb+srv://user:pass@cluster.mongodb.net/fb_automation</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-emerald-300 font-bold">GOOGLE_DRIVE_API_KEY</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Recommended</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">API Key for scanning public Google Drive folders</td>
+                <td class="py-2 px-3 text-slate-500">AIzaSyB...</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-emerald-300 font-bold">GOOGLE_SERVICE_ACCOUNT_EMAIL</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Service account email for downloading & trashing Drive files</td>
+                <td class="py-2 px-3 text-slate-500">sa@project.iam.gserviceaccount.com</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-emerald-300 font-bold">GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Private key for Google Service Account</td>
+                <td class="py-2 px-3 text-slate-500">-----BEGIN RSA PRIVATE KEY-----...</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-indigo-300 font-bold">FACEBOOK_PAGE_ACCESS_TOKEN</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Default fallback Page Access Token (can also be saved in UI)</td>
+                <td class="py-2 px-3 text-slate-500">EAAB...</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-indigo-300 font-bold">FACEBOOK_PAGE_ID</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Default fallback Page ID</td>
+                <td class="py-2 px-3 text-slate-500">1405135646008133</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-red-300 font-bold">YOUTUBE_CLIENT_ID</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">OAuth Client ID from Google Cloud Console for YouTube Shorts</td>
+                <td class="py-2 px-3 text-slate-500">123...apps.googleusercontent.com</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-red-300 font-bold">YOUTUBE_CLIENT_SECRET</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">OAuth Client Secret for YouTube Data API v3</td>
+                <td class="py-2 px-3 text-slate-500">GOCSPX-...</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-3 text-cyan-300 font-bold">TIKTOK_ACCESS_TOKEN</td>
+                <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">Optional</span></td>
+                <td class="py-2 px-3 font-sans text-slate-400">Bearer token for TikTok Content Posting API v2</td>
+                <td class="py-2 px-3 text-slate-500">act.example...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
   </main>
