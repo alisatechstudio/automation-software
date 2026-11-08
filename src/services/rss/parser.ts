@@ -80,13 +80,10 @@ export class RssParserService {
 
         const pubDate = item.pubDate || item.isoDate ? new Date(item.pubDate || item.isoDate!) : new Date();
 
-        // 1. Extract image from RSS feed fields
-        let imageUrl = this.extractImageFromFeedItem(item);
-
-        // 2. Fallback: scrape og:image from the article page if no image in RSS
-        if (!imageUrl && link) {
-          imageUrl = await this.scrapeOgImage(link);
-        }
+        // 1. Extract image from RSS feed fields instantly (zero latency)
+        // Note: Do NOT scrape article pages in this loop over all 50 feed items, which causes 30s+ timeouts.
+        // Images are lazy-loaded on-demand only for the specific single article that is chosen for rendering.
+        const imageUrl = this.extractImageFromFeedItem(item);
 
         items.push({
           guid,
@@ -148,14 +145,15 @@ export class RssParserService {
   public async scrapeOgImage(articleUrl: string): Promise<string | undefined> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
       const response = await fetch(articleUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          Accept: 'text/html,application/xhtml+xml',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
       });
       clearTimeout(timeoutId);
@@ -168,7 +166,9 @@ export class RssParserService {
       const ogImage =
         $('meta[property="og:image"]').attr('content') ||
         $('meta[name="twitter:image"]').attr('content') ||
-        $('meta[itemprop="image"]').attr('content');
+        $('meta[itemprop="image"]').attr('content') ||
+        $('article img').first().attr('src') ||
+        $('main img').first().attr('src');
 
       if (ogImage && (ogImage.startsWith('http://') || ogImage.startsWith('https://'))) {
         return ogImage;

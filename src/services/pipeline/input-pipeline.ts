@@ -377,6 +377,16 @@ export class InputPipelineService {
           const targetTheme = source.reelTheme || source.templateId || 'auto-category';
           const reelDuration = source.reelDuration || 15;
 
+          // Lazy-load cover image on-demand for this single target article if not present in RSS
+          if (!item.imageUrl && item.link) {
+            try {
+              console.log(`[InputCron] 🖼️ Lazy-loading cover image for target article: ${item.link}...`);
+              item.imageUrl = await this.parserService.scrapeOgImage(item.link);
+            } catch (imgErr: any) {
+              console.warn('[InputCron] Could not scrape cover image for target article:', imgErr.message);
+            }
+          }
+
           console.log(`[InputCron] 🎬 Instantly rendering Reel for most recent RSS item: "${item.title}" (Theme: ${targetTheme})...`);
 
           let reelBuffer: Buffer | null = null;
