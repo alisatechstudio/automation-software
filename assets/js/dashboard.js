@@ -761,17 +761,17 @@
           '<div class="pt-2 border-t border-slate-900 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">' +
             '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
               '<div class="flex items-center justify-between">' +
-                '<span class="text-cyan-400 font-bold">📰 RSS / Post Cron</span>' +
-                '<button data-path="/api/cron/publish?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+                '<span class="text-cyan-400 font-bold">📥 Input Cron</span>' +
+                '<button data-path="/api/cron/input?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
               '</div>' +
-              '<div class="text-[9px] text-slate-400 truncate">/api/cron/publish?pageId=' + p.id + '</div>' +
+              '<div class="text-[9px] text-slate-400 truncate">/api/cron/input?pageId=' + p.id + '</div>' +
             '</div>' +
             '<div class="bg-slate-900/60 p-2 rounded border border-slate-800/60 space-y-1">' +
               '<div class="flex items-center justify-between">' +
-                '<span class="text-emerald-400 font-bold">🎬 GDrive Reels Cron</span>' +
-                '<button data-path="/api/cron/gdrive-reels?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
+                '<span class="text-emerald-400 font-bold">📤 Output Cron</span>' +
+                '<button data-path="/api/cron/output?pageId=' + p.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Copy</button>' +
               '</div>' +
-              '<div class="text-[9px] text-slate-400 truncate">/api/cron/gdrive-reels?pageId=' + p.id + '</div>' +
+              '<div class="text-[9px] text-slate-400 truncate">/api/cron/output?pageId=' + p.id + '</div>' +
             '</div>' +
           '</div>' +
           '<div id="diagnose-result-' + p.id + '" class="hidden text-xs p-2.5 rounded font-mono"></div>' +
@@ -1820,7 +1820,7 @@
         };
         const catBadge = '<span class="text-slate-400 ml-1.5 px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
 
-        const cronPath = '/api/cron/gdrive-reels?channelId=' + c._id + (c.pageId ? '&pageId=' + c.pageId : '');
+        const cronPath = '/api/cron/output?channelId=' + c._id + (c.pageId ? '&pageId=' + c.pageId : '');
 
         return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
           '<div class="flex items-start justify-between gap-2 mb-1.5">' +

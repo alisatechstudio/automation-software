@@ -1239,11 +1239,6 @@ async function executeInputCron(req: Request, res: Response) {
   }
 }
 
-// Handler: 1B. Legacy RSS Cron wrapper (points to Input Cron)
-async function executeRssCron(req: Request, res: Response) {
-  return executeInputCron(req, res);
-}
-
 // Handler: 2B. Output Cron (Stage 2: Folder-wise Drive -> Facebook + YouTube + TikTok)
 async function executeOutputCron(req: Request, res: Response) {
   const startTime = Date.now();
@@ -1275,522 +1270,35 @@ async function executeOutputCron(req: Request, res: Response) {
   }
 }
 
-// Handler: 2. Facebook Post/Reels Publishing
-async function executePublishCron(req: Request, res: Response) {
-  const startTime = Date.now();
-  try {
-    const db = getDatabase();
-    const targetPageId = (req.query.pageId as string) || (req.query.page as string);
-    let job = await queue.fetchNextJob(targetPageId);
-
-    if (!job) {
-      // If queue is empty, check for unposted articles for this specific page or active pages
-      const articlesCol = db.collection<NewsArticle>('news_articles');
-      const pagesCol = db.collection<FacebookPage>('facebook_pages');
-      const jobsCol = db.collection<Job>('jobs');
-      const sourcesCol = db.collection<RssSource>('rss_sources');
-
-      let pageQuery: any = { isActive: true };
-      if (targetPageId && targetPageId !== 'all') {
-        pageQuery = { _id: targetPageId, isActive: true };
-      }
-      let page = await pagesCol.findOne(pageQuery);
-      if (!page && targetPageId && targetPageId !== 'all') {
-        page = await pagesCol.findOne({ _id: targetPageId });
-      }
-
-      if (page) {
-        const pageSources = await sourcesCol.find({
-          $or: [{ pageId: page._id }, { page_id: page._id }]
-        }).toArray();
-        const sourceIds = pageSources.map(s => s._id);
-
-        let articleQuery: any = { status: { $ne: 'published' } };
-        if (sourceIds.length > 0) {
-          articleQuery.sourceId = { $in: sourceIds };
-        }
-        let article = await articlesCol.findOne(articleQuery, { sort: { createdAt: -1 } });
-        if (!article) {
-          const failedLog = await db.collection<PostLog>('post_logs').findOne(
-            {
-              pageId: page._id,
-              $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }]
-            },
-            { sort: { createdAt: -1 } }
-          );
-          if (failedLog?.articleId) {
-            article = await articlesCol.findOne({ _id: failedLog.articleId });
-          }
-        }
-
-        if (article) {
-          const matchedSource = pageSources.find(s => s._id === article?.sourceId);
-          const templateId = matchedSource?.templateId || (isEnglishText(article.title) ? 'template-trendingnews-breaking' : 'template-canva-bdnews');
-          const jobId = crypto.randomUUID();
-          job = {
-            _id: jobId,
-            type: 'process_article',
-            articleId: article._id,
-            pageId: page._id,
-            payload: {
-              articleId: article._id,
-              sourceId: article.sourceId,
-              pageId: page._id,
-              templateId,
-            },
-            status: 'pending',
-            attempts: 0,
-            maxAttempts: 3,
-            runAt: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          await jobsCol.insertOne(job as any);
-          console.log(`[Publish Cron] Created immediate job ${jobId} for article "${article.title}" on page "${page.name}"`);
-        }
-      }
-    }
-
-    if (!job) {
-      res.json({
-        success: true,
-        job: 'facebook_publish',
-        pageId: targetPageId || 'all',
-        processed: false,
-        durationMs: Date.now() - startTime,
-        message: targetPageId ? `Queue is empty and all articles published for page ${targetPageId}.` : 'Queue is empty and all articles have been published.',
-      });
-      return;
-    }
-
-    console.log(`[Publish Cron] Executing job ${job._id} for page ${job.pageId}...`);
-    const jobPromise = worker.processJob(job);
-
-    if (req.query.async === 'true' && process.env.VERCEL) {
-      safeWaitUntil(jobPromise);
-      res.json({
-        success: true,
-        job: 'facebook_publish',
-        async: true,
-        jobId: job._id,
-        pageId: job.pageId,
-        durationMs: Date.now() - startTime,
-        message: 'Job dispatched to background worker via Vercel waitUntil.',
-      });
-      return;
-    }
-
-    await jobPromise;
-    const logsCol = db.collection<PostLog>('post_logs');
-    const latestLog = await logsCol.findOne({ articleId: job.articleId }, { sort: { createdAt: -1 } });
-    const isSuccess = latestLog?.status === 'success' || latestLog?.status === 'dry_run';
-
-    res.json({
-      success: isSuccess,
-      job: 'facebook_publish',
-      processed: true,
-      jobId: job._id,
-      pageId: job.pageId,
-      log: latestLog,
-      durationMs: Date.now() - startTime,
-      error: !isSuccess ? (latestLog?.errorMessage || 'Reel or post failed to upload') : undefined,
-    });
-  } catch (err: any) {
-    console.error('[Publish Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'facebook_publish', error: err.message });
-  }
-}
-
-// Handler: 3. Google Drive Multi-Channel Reels
-async function executeGdriveCron(req: Request, res: Response) {
-  const startTime = Date.now();
-  try {
-    const pageId = (req.query.pageId as string) || (req.query.page as string);
-    const channelId = (req.query.channelId as string) || (req.query.channel as string);
-    const force = req.query.force !== 'false';
-
-    const result = await gdriveReelService.publishAllDueChannels({
-      force,
-      channelId,
-      pageId,
-    });
-    res.json({
-      success: true,
-      job: 'gdrive_reels',
-      pageId: pageId || 'all',
-      channelId: channelId || 'all',
-      timestamp: new Date().toISOString(),
-      durationMs: Date.now() - startTime,
-      result,
-    });
-  } catch (err: any) {
-    console.error('[GDrive Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'gdrive_reels', error: err.message });
-  }
-}
-
-// Handler: 4. Facebook 24-Hour Stories
-async function executeStoriesCron(req: Request, res: Response) {
-  const startTime = Date.now();
-  try {
-    const db = getDatabase();
-    const page = await db.collection<FacebookPage>('facebook_pages').findOne({ isActive: true });
-    if (!page) {
-      res.status(400).json({ success: false, job: 'facebook_stories', error: 'No active Facebook Page found' });
-      return;
-    }
-
-    const recentStoryLogs = await db
-      .collection<StoryLog>('story_logs')
-      .find({ status: { $in: ['success', 'dry_run'] } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
-    const recentArticleIds = recentStoryLogs.map((s: StoryLog) => s.articleId).filter(Boolean);
-
-    let targetArticle = await db.collection<NewsArticle>('news_articles').findOne(
-      { _id: { $nin: recentArticleIds as string[] } },
-      { sort: { pubDate: -1, createdAt: -1 } }
-    );
-    if (!targetArticle) {
-      targetArticle = await db.collection<NewsArticle>('news_articles').findOne({}, { sort: { pubDate: -1, createdAt: -1 } });
-    }
-
-    if (!targetArticle) {
-      res.json({
-        success: true,
-        job: 'facebook_stories',
-        processed: false,
-        durationMs: Date.now() - startTime,
-        message: 'No articles available to generate Facebook Story.',
-      });
-      return;
-    }
-
-    console.log(`[Stories Cron] Rendering 1080x1080 card for "${targetArticle.title}"...`);
-    const renderResult = await canvasRenderer.render({
-      templateId: 'template-canva-bdnews',
-      headline: targetArticle.title,
-      category: targetArticle.category || 'বিশেষ খবর',
-      imageUrl: targetArticle.imageUrl || undefined,
-    });
-
-    const fbClient = new FacebookGraphClient();
-    console.log(`[Stories Cron] Publishing Photo Story to page "${page.name}"...`);
-    const { photoId, storyId } = await fbClient.publishPhotoStory(
-      page._id,
-      page.accessToken,
-      renderResult.imageBuffer,
-      config.DRY_RUN
-    );
-
-    const durationMs = Date.now() - startTime;
-    await db.collection<StoryLog>('story_logs').insertOne({
-      _id: crypto.randomUUID(),
-      articleId: targetArticle._id,
-      articleTitle: targetArticle.title,
-      pageId: page._id,
-      pageName: page.name,
-      fbPhotoId: photoId,
-      fbStoryId: storyId,
-      renderedImagePath: renderResult.outputPath || null,
-      durationMs,
-      status: config.DRY_RUN ? 'dry_run' : 'success',
-      createdAt: new Date(),
-    });
-
-    res.json({
-      success: true,
-      job: 'facebook_stories',
-      processed: true,
-      headline: targetArticle.title,
-      pageName: page.name,
-      photoId,
-      storyId,
-      durationMs,
-    });
-  } catch (err: any) {
-    console.error('[Stories Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'facebook_stories', error: err.message });
-  }
-}
-
-// Handler: 5. YouTube Shorts Auto-Upload
-async function executeYoutubeCron(req: Request, res: Response) {
-  const startTime = Date.now();
-  try {
-    const db = getDatabase();
-    await ytClient.initCredentials();
-    const autoSetting = await db.collection<Setting>('settings').findOne({ _id: 'AUTO_POST_YOUTUBE' });
-    if (autoSetting?.value === 'false') {
-      res.json({
-        success: false,
-        job: 'youtube_shorts',
-        enabled: false,
-        message: 'AUTO_POST_YOUTUBE is disabled in Settings.',
-      });
-      return;
-    }
-
-    let targetChannels = await worker.getActiveYouTubeChannels();
-    const queryChannelId = (req.query.channelId as string) || (req.query.channel as string);
-    const queryPageId = (req.query.pageId as string) || (req.query.page as string);
-
-    if (queryChannelId) {
-      targetChannels = targetChannels.filter((c) => c._id === queryChannelId);
-    } else if (queryPageId) {
-      targetChannels = targetChannels.filter((c) => c.targetPageId === queryPageId || c.targetPageId === 'all');
-    }
-
-    if (targetChannels.length === 0) {
-      res.json({
-        success: false,
-        job: 'youtube_shorts',
-        message: 'No active YouTube channels found or configured.',
-      });
-      return;
-    }
-
-    const channelResults: any[] = [];
-
-    for (const channel of targetChannels) {
-      const isChEnglish = channel.language === 'en' || channel.targetPageId === '1526917347161119';
-
-      // Find uploaded article IDs for this channel
-      const uploadedLogs = await db
-        .collection<YouTubeUploadLog>('youtube_upload_logs')
-        .find({ channelId: channel._id, status: { $in: ['success', 'dry_run'] } })
-        .toArray();
-      const uploadedArticleIds = uploadedLogs.map((l) => l.articleId).filter(Boolean);
-
-      let targetArticle: NewsArticle | null = null;
-
-      if (isChEnglish) {
-        // Find newest unposted English / Trending News article
-        const candidates = await db
-          .collection<NewsArticle>('news_articles')
-          .find({ _id: { $nin: uploadedArticleIds as string[] } })
-          .sort({ pubDate: -1, createdAt: -1 })
-          .limit(40)
-          .toArray();
-        targetArticle = candidates.find((a: NewsArticle) => isEnglishText(a.title) || (a.link && a.link.includes('trendingnews'))) || null;
-
-        // Fallback to any English article
-        if (!targetArticle) {
-          const allCandidates = await db
-            .collection<NewsArticle>('news_articles')
-            .find({})
-            .sort({ pubDate: -1, createdAt: -1 })
-            .limit(40)
-            .toArray();
-          targetArticle = allCandidates.find((a: NewsArticle) => isEnglishText(a.title) || (a.link && a.link.includes('trendingnews'))) || null;
-        }
-      } else {
-        // Find newest unposted Bengali / BD News article
-        const candidates = await db
-          .collection<NewsArticle>('news_articles')
-          .find({
-            _id: { $nin: uploadedArticleIds as string[] },
-            link: { $not: /trendingnews/i },
-          })
-          .sort({ pubDate: -1, createdAt: -1 })
-          .limit(40)
-          .toArray();
-        targetArticle = candidates.find((a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))) || null;
-
-        // Fallback to any BD News article
-        if (!targetArticle) {
-          const allCandidates = await db
-            .collection<NewsArticle>('news_articles')
-            .find({ link: { $not: /trendingnews/i } })
-            .sort({ pubDate: -1, createdAt: -1 })
-            .limit(40)
-            .toArray();
-          targetArticle = allCandidates.find((a: NewsArticle) => !isEnglishText(a.title) && !(a.link && a.link.includes('trendingnews'))) || null;
-        }
-      }
-
-      if (targetArticle) {
-        try {
-          console.log(`[YouTube Cron] Uploading short for "${targetArticle.title}" to channel "${channel.title}"...`);
-          const uploadRes = await worker.uploadShortForArticle(targetArticle._id, channel._id);
-          channelResults.push({
-            channelId: channel._id,
-            channelTitle: channel.title,
-            articleTitle: targetArticle.title,
-            success: uploadRes.success,
-            videoId: uploadRes.videoId,
-            videoUrl: uploadRes.videoUrl,
-          });
-        } catch (uErr: any) {
-          channelResults.push({
-            channelId: channel._id,
-            channelTitle: channel.title,
-            articleTitle: targetArticle.title,
-            success: false,
-            error: uErr.message,
-          });
-        }
-      } else {
-        channelResults.push({
-          channelId: channel._id,
-          channelTitle: channel.title,
-          skipped: true,
-          message: 'No matching articles available for this channel.',
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      job: 'youtube_shorts',
-      processedChannels: channelResults.length,
-      durationMs: Date.now() - startTime,
-      channels: channelResults,
-    });
-  } catch (err: any) {
-    console.error('[YouTube Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'youtube_shorts', error: err.message });
-  }
-}
-
-// Handler: 6. Self-Healing Queue Maintenance & Reset
-async function executeCleanupCron(req: Request, res: Response) {
-  const startTime = Date.now();
-  try {
-    const db = getDatabase();
-    // 1. Unstick jobs stuck in 'processing' status > 15 minutes
-    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
-    const stuckRes = await db.collection<Job>('jobs').updateMany(
-      {
-        status: 'processing',
-        updatedAt: { $lt: fifteenMinsAgo },
-      },
-      {
-        $set: {
-          status: 'pending',
-          updatedAt: new Date(),
-          lastError: 'Job execution timed out; reset to pending by self-healing cleanup cron',
-        },
-      }
-    );
-
-    // 2. Reset unposted articles whose logs falsely said success with empty fbPostId
-    const unpostedLogs = await db.collection<PostLog>('post_logs').find({
-      $and: [
-        { status: 'success' },
-        { $or: [{ fbPostId: null }, { fbPostId: '' }] },
-      ],
-    }).toArray();
-    const articleIds = Array.from(new Set(unpostedLogs.map((l: PostLog) => l.articleId).filter(Boolean)));
-    if (unpostedLogs.length > 0) {
-      await db.collection('post_logs').updateMany(
-        { _id: { $in: unpostedLogs.map((l) => l._id) as any } },
-        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
-      );
-      await db.collection('reel_logs').updateMany(
-        { fbPostId: { $in: [null, ''] }, status: 'success' },
-        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
-      );
-    }
-    if (articleIds.length > 0) {
-      await db.collection('news_articles').updateMany(
-        { _id: { $in: articleIds as any } },
-        { $set: { status: 'pending' } }
-      );
-    }
-
-    res.json({
-      success: true,
-      job: 'cleanup',
-      durationMs: Date.now() - startTime,
-      unlockedStuckJobs: stuckRes.modifiedCount,
-      resetUnpostedArticles: articleIds.length,
-      message: `Self-healing cleanup complete: unlocked ${stuckRes.modifiedCount} stuck jobs, reset ${articleIds.length} unposted articles`,
-    });
-  } catch (err: any) {
-    console.error('[Cleanup Cron] Error:', err);
-    res.status(500).json({ success: false, job: 'cleanup', error: err.message });
-  }
-}
-
 // -------------------------------------------------------------
-// DISTINCT AUTOMATION WEBHOOK ENDPOINTS (INPUT & OUTPUT CRONS)
+// AUTOMATION CRON ENDPOINTS (INPUT & OUTPUT CRONS ONLY)
 // -------------------------------------------------------------
 
 // 1. Stage 1: Input Cron (Fetch RSS -> Render Video Reels -> Save to Linked Drive Folder)
-apiRouter.all(['/cron/input', '/cron/rss', '/cron/poll', '/cron/ingest'], async (req: Request, res: Response) => {
+apiRouter.all('/cron/input', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeInputCron(req, res);
 });
 
-// 2. Stage 2: Output Cron (Folder-wise Get Oldest from Drive -> Post to FB, YouTube, TikTok)
-apiRouter.all(['/cron/output', '/cron/publish', '/cron/gdrive-reels', '/cron/gdrive', '/cron/drive', '/cron/post'], async (req: Request, res: Response) => {
+// 2. Stage 2: Output Cron (Folder-wise Get Oldest from Drive -> Post to FB, YouTube, TikTok -> Drive Cleanup)
+apiRouter.all('/cron/output', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeOutputCron(req, res);
 });
 
-// 3. Facebook Stories Endpoint
-apiRouter.all(['/cron/stories', '/cron/story'], async (req: Request, res: Response) => {
-  if (!verifyCronAuth(req, res)) return;
-  await executeStoriesCron(req, res);
-});
-
-// 4. YouTube Shorts Endpoint
-apiRouter.all(['/cron/youtube', '/cron/shorts'], async (req: Request, res: Response) => {
-  if (!verifyCronAuth(req, res)) return;
-  await executeYoutubeCron(req, res);
-});
-
-// 5. Queue Maintenance & Cleanup Endpoint
-apiRouter.all(['/cron/cleanup', '/cron/maintain', '/cron/repair'], async (req: Request, res: Response) => {
-  if (!verifyCronAuth(req, res)) return;
-  await executeCleanupCron(req, res);
-});
-
-// 6. Unified Full Pipeline Endpoint (Runs Input Cron, then runs Output Cron)
-apiRouter.all(['/cron/pipeline', '/cron/all', '/cron/page-rss'], async (req: Request, res: Response) => {
-  if (!verifyCronAuth(req, res)) return;
-  const targetPageId = (req.query.pageId as string) || (req.query.page as string);
-  try {
-    console.log('[Pipeline Cron] 🔄 Step 1: Running Input Cron...');
-    await inputPipeline.runInputCron({ pageId: targetPageId });
-  } catch (err: any) {
-    console.warn('[Pipeline Cron] Note in Input step:', err.message);
-  }
-  console.log('[Pipeline Cron] 🔄 Step 2: Running Output Cron (Folder-wise publish)...');
-  await executeOutputCron(req, res);
-});
-
-// 7. Universal Gateway Endpoint (/api/cron)
+// 3. Universal Gateway Endpoint (/api/cron)
 apiRouter.all('/cron', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
 
   const jobParam = ((req.query.job as string) || '').toLowerCase().trim();
-  if (jobParam === 'input' || jobParam === 'rss' || jobParam === 'poll' || jobParam === 'ingest') {
+  if (jobParam === 'input') {
     return executeInputCron(req, res);
   }
-  if (jobParam === 'output' || jobParam === 'publish' || jobParam === 'gdrive' || jobParam === 'gdrive-reels' || jobParam === 'drive' || jobParam === 'post') {
+  if (jobParam === 'output') {
     return executeOutputCron(req, res);
-  }
-  if (jobParam === 'pipeline' || jobParam === 'all' || jobParam === 'page-rss') {
-    const targetPageId = (req.query.pageId as string) || (req.query.page as string);
-    try {
-      await inputPipeline.runInputCron({ pageId: targetPageId });
-    } catch {}
-    return executeOutputCron(req, res);
-  }
-  if (jobParam === 'stories' || jobParam === 'story') {
-    return executeStoriesCron(req, res);
-  }
-  if (jobParam === 'youtube' || jobParam === 'shorts') {
-    return executeYoutubeCron(req, res);
-  }
-  if (jobParam === 'cleanup' || jobParam === 'maintain' || jobParam === 'repair') {
-    return executeCleanupCron(req, res);
   }
 
-  // If GET without a specific job, return full distinct cron catalog
+  // If GET without a specific job, return clean catalog showing only input and output
   if (req.method === 'GET') {
     const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.get('host') || 'localhost:3000';
@@ -1823,31 +1331,14 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
           method: 'GET / POST',
           desc: 'Fetches the oldest reel from Google Drive folder, publishes to Facebook Pages, YouTube Shorts, and TikTok, then deletes the processed video folder from Drive.',
         },
-        {
-          slug: 'pipeline',
-          title: 'Full End-to-End Pipeline (Stage 1 + Stage 2)',
-          path: '/api/cron/pipeline',
-          fullUrl: `${baseUrl}/api/cron/pipeline${secretSuffix}`,
-          method: 'GET / POST',
-          desc: 'Executes Stage 1 Input Cron followed immediately by Stage 2 Output Cron.',
-        },
       ],
     });
   }
 
-  // If POST without ?job=..., run backward-compatible safe pass
-  const results: any = { timestamp: new Date().toISOString(), legacyPass: true };
-  try {
-    results.rss = await dedupeService.pollAllActiveSources();
-  } catch (e: any) {
-    results.rssError = e.message;
-  }
-  try {
-    results.gdriveReels = await gdriveReelService.publishAllDueChannels();
-  } catch (e: any) {
-    results.gdriveError = e.message;
-  }
-  res.json({ success: true, ...results });
+  res.status(400).json({
+    success: false,
+    error: 'Specify ?job=input or ?job=output or call /api/cron/input or /api/cron/output directly.',
+  });
 });
 
 // -------------------------------------------------------------

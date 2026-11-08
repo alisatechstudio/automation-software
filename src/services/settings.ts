@@ -178,3 +178,4 @@ export async function getAllDbSettings(): Promise<Record<string, string>> {
 export function invalidateSettingsCache(): void {
   lastFetched = 0;
 }
+
