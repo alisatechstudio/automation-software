@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import { getDatabase, isDbConnected, initDatabase } from '../../db/index.js';
+import { getAllDbSettings, setManyDbSettings, getDbSetting } from '../../services/settings.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, YouTubeChannel, GDriveReelConfig } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
@@ -1796,17 +1797,41 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
     const baseUrl = `${protocol}://${host}`;
     const cronSecret = process.env.CRON_SECRET;
     const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
-    const defs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
 
     return res.json({
       status: 'active',
-      name: 'Multi-Page Distinct Cron Webhooks (RSS & Google Drive)',
+      name: 'BD News 24/7 Automation Pipeline (Two-Stage Architecture)',
       timestamp: new Date().toISOString(),
       cronSecretConfigured: Boolean(cronSecret),
       authInstructions: cronSecret
         ? 'Pass "Authorization: Bearer <secret>" or "x-cron-secret: <secret>" header, or append "?secret=<secret>" to URLs.'
         : 'CRON_SECRET is not set in environment; webhooks are open for triggers.',
-      endpoints: defs,
+      endpoints: [
+        {
+          slug: 'input',
+          title: 'Stage 1: Input Cron (RSS Ingestion -> Reel Generation -> Google Drive)',
+          path: '/api/cron/input',
+          fullUrl: `${baseUrl}/api/cron/input${secretSuffix}`,
+          method: 'GET / POST',
+          desc: 'Polls active RSS feeds, creates vertical news reels with dynamic templates, and uploads to linked Google Drive folders.',
+        },
+        {
+          slug: 'output',
+          title: 'Stage 2: Output Cron (Google Drive -> Facebook Page / YouTube / TikTok -> Drive Cleanup)',
+          path: '/api/cron/output',
+          fullUrl: `${baseUrl}/api/cron/output${secretSuffix}`,
+          method: 'GET / POST',
+          desc: 'Fetches the oldest reel from Google Drive folder, publishes to Facebook Pages, YouTube Shorts, and TikTok, then deletes the processed video folder from Drive.',
+        },
+        {
+          slug: 'pipeline',
+          title: 'Full End-to-End Pipeline (Stage 1 + Stage 2)',
+          path: '/api/cron/pipeline',
+          fullUrl: `${baseUrl}/api/cron/pipeline${secretSuffix}`,
+          method: 'GET / POST',
+          desc: 'Executes Stage 1 Input Cron followed immediately by Stage 2 Output Cron.',
+        },
+      ],
     });
   }
 
@@ -2428,12 +2453,10 @@ apiRouter.post('/queue/reset-unposted', async (req: Request, res: Response) => {
   }
 });
 
-// 8. Settings
+// 8. Settings (100% Database-Driven)
 apiRouter.get('/settings', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const rows = await db.collection<Setting>('settings').find({}).toArray();
-
+    const dbSettings = await getAllDbSettings();
     const settingsMap: Record<string, string> = {
       POLL_INTERVAL_CRON: config.POLL_INTERVAL_CRON,
       MAX_ARTICLE_AGE_HOURS: String(config.MAX_ARTICLE_AGE_HOURS),
@@ -2451,14 +2474,9 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
       AUTO_POST_YOUTUBE: 'true',
+      ...dbSettings,
     };
-
-    for (const r of rows) {
-      if (r._id !== 'CRONJOB_API_KEY') {
-        settingsMap[r._id] = r.value;
-      }
-    }
-
+    delete settingsMap['CRONJOB_API_KEY'];
     res.json(settingsMap);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2467,683 +2485,14 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
 
 apiRouter.post('/settings', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
     const body = req.body;
-    const settingsCol = db.collection<Setting>('settings');
-
-    for (const [key, value] of Object.entries(body)) {
-      if (key === 'CRONJOB_API_KEY') continue;
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        await settingsCol.updateOne(
-          { _id: key },
-          {
-            $set: {
-              value: String(value),
-              updatedAt: new Date(),
-            },
-          },
-          { upsert: true }
-        );
-      }
+    if (body && typeof body === 'object') {
+      delete body['CRONJOB_API_KEY'];
+      await setManyDbSettings(body);
     }
-
-    // Always ensure CRONJOB_API_KEY is purged from database
-    await settingsCol.deleteOne({ _id: 'CRONJOB_API_KEY' }).catch(() => null);
-
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ==============================================================================
-// 8.1. cron-job.org Management API (Full CRUD, Sync & Manual Runner)
-// ==============================================================================
-
-async function getCronJobApiKey(): Promise<string> {
-  try {
-    if (isDbConnected()) {
-      const db = getDatabase();
-      const setting = await db.collection<Setting>('settings').findOne({ _id: 'CRONJOB_API_KEY' });
-      if (setting && setting.value && setting.value.trim().length > 0) {
-        return setting.value.trim();
-      }
-    }
-  } catch {
-    // fallback
-  }
-  return (config.CRONJOB_API_KEY || process.env.CRONJOB_API_KEY || '').trim();
-}
-
-async function callCronJobApi(path: string, options: { method?: string; body?: any; apiKey?: string } = {}) {
-  const apiKey = options.apiKey || (await getCronJobApiKey());
-  if (!apiKey) {
-    throw new Error('cron-job.org API Key is not configured. Please save your API key in Settings.');
-  }
-  const url = `https://api.cron-job.org${path}`;
-  const fetchOptions: RequestInit = {
-    method: options.method || 'GET',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-  };
-  if (options.body !== undefined) {
-    fetchOptions.body = JSON.stringify(options.body);
-  }
-  const response = await fetch(url, fetchOptions);
-  const text = await response.text();
-  let data: any = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { raw: text };
-  }
-  if (!response.ok) {
-    const errorMsg = data?.error?.message || data?.message || `cron-job.org API error (HTTP ${response.status})`;
-    const error: any = new Error(errorMsg);
-    error.status = response.status;
-    error.data = data;
-    throw error;
-  }
-  return data;
-}
-
-async function callCronJobApiWithRetry(
-  path: string,
-  options: { method?: string; body?: any; apiKey?: string } = {},
-  retries = 3
-): Promise<any> {
-  try {
-    return await callCronJobApi(path, options);
-  } catch (err: any) {
-    if ((err.status === 429 || String(err.message).includes('429')) && retries > 0) {
-      console.warn(`[cron-job.org] Rate limit (429) on ${path}. Waiting 1500ms before retry (${retries} left)...`);
-      await new Promise((r) => setTimeout(r, 1500));
-      return callCronJobApiWithRetry(path, options, retries - 1);
-    }
-    throw err;
-  }
-}
-
-function parseCronJobSchedule(preset: string, timezone: string = 'Asia/Dhaka', customMinutes?: number[], customHours?: number[]) {
-  const schedule: any = {
-    timezone: timezone || 'Asia/Dhaka',
-    hours: [-1],
-    mdays: [-1],
-    minutes: [0],
-    months: [-1],
-    wdays: [-1],
-  };
-
-  switch (preset) {
-    case '5m':
-      schedule.minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-      break;
-    case '10m':
-      schedule.minutes = [0, 10, 20, 30, 40, 50];
-      break;
-    case '15m':
-      schedule.minutes = [0, 15, 30, 45];
-      break;
-    case '30m':
-      schedule.minutes = [0, 30];
-      break;
-    case '1h':
-      schedule.minutes = [0];
-      break;
-    case '1h_15':
-      schedule.minutes = [15];
-      break;
-    case '2h':
-      schedule.hours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
-      schedule.minutes = [0];
-      break;
-    case '6h':
-      schedule.hours = [0, 6, 12, 18];
-      schedule.minutes = customMinutes && customMinutes.length > 0 ? customMinutes : [45];
-      break;
-    case '12h':
-      schedule.hours = [0, 12];
-      schedule.minutes = [0];
-      break;
-    case '24h':
-      schedule.hours = [0];
-      schedule.minutes = [0];
-      break;
-    case 'custom':
-      if (Array.isArray(customHours) && customHours.length > 0) {
-        schedule.hours = customHours;
-      }
-      if (Array.isArray(customMinutes) && customMinutes.length > 0) {
-        schedule.minutes = customMinutes;
-      }
-      break;
-    default:
-      if (Array.isArray(customMinutes) && customMinutes.length > 0) {
-        schedule.minutes = customMinutes;
-      } else {
-        schedule.minutes = [0, 10, 20, 30, 40, 50];
-      }
-      break;
-  }
-  return schedule;
-}
-
-// 8.1.1. List all cron jobs
-apiRouter.get('/cron-jobs', async (req: Request, res: Response) => {
-  try {
-    const apiKey = await getCronJobApiKey();
-    if (!apiKey) {
-      res.json({
-        success: false,
-        apiKeyConfigured: false,
-        error: 'cron-job.org API Key is not configured. Please set CRONJOB_API_KEY in Settings.',
-        jobs: [],
-      });
-      return;
-    }
-
-    const data = await callCronJobApi('/jobs');
-    res.json({
-      success: true,
-      apiKeyConfigured: true,
-      jobs: data.jobs || [],
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      apiKeyConfigured: true,
-      error: err.message,
-    });
-  }
-});
-
-interface WebhookDefinition {
-  slug: string;
-  title: string;
-  path: string;
-  fullUrl: string;
-  preset: string;
-  method: number;
-  desc: string;
-  pageId?: string;
-  pageName?: string;
-  channelId?: string;
-  type: 'rss' | 'publish' | 'gdrive' | 'system';
-  customMinutes?: number[];
-}
-
-async function getDynamicWebhookDefinitions(baseUrl: string, secretSuffix: string): Promise<WebhookDefinition[]> {
-  let allPages: FacebookPage[] = [];
-  let allSources: RssSource[] = [];
-  let allGdriveChannels: GDriveReelConfig[] = [];
-
-  try {
-    if (!isDbConnected()) {
-      await initDatabase().catch(() => null);
-    }
-    if (isDbConnected()) {
-      const db = getDatabase();
-      const pagesCol = db.collection<FacebookPage>('facebook_pages');
-      const sourcesCol = db.collection<RssSource>('rss_sources');
-      const gdriveCol = db.collection<GDriveReelConfig>('gdrive_reel_configs');
-
-      allPages = await pagesCol.find({ isActive: { $ne: false } }).toArray();
-      allSources = await sourcesCol.find({ isActive: { $ne: false } }).toArray();
-      allGdriveChannels = await gdriveCol.find({}).toArray();
-    }
-  } catch (err: any) {
-    console.warn('[API] Could not query database for dynamic webhook definitions, using fallback:', err.message);
-  }
-
-  // Fallbacks if database is initializing or empty
-  if (allPages.length === 0) {
-    allPages = [
-      { _id: '1526917347161119', name: 'Trending News World', isActive: true } as any,
-      { _id: '1405135646008133', name: 'BD News 24/7- বিডি নিউজ ২৪/৭', isActive: true } as any,
-      { _id: '1268359636369219', name: 'Alisa Tech Studio', isActive: true } as any,
-      { _id: '1302276172975819', name: 'হক কথা', isActive: true } as any,
-    ];
-  }
-  if (allGdriveChannels.length === 0) {
-    allGdriveChannels = [
-      {
-        _id: 'default_gdrive_reels',
-        name: 'হক কথা',
-        pageId: '1302276172975819',
-        pageName: 'হক কথা',
-        folderUrlOrId: 'dummy',
-        isActive: true,
-        scheduleIntervalHours: 1,
-      } as any,
-      {
-        _id: 'gdrive_ch_53ba65aa',
-        name: 'Alisa Tech Studio',
-        pageId: '1268359636369219',
-        pageName: 'Alisa Tech Studio',
-        folderUrlOrId: 'dummy',
-        isActive: true,
-        scheduleIntervalHours: 1,
-      } as any,
-    ];
-  }
-
-  const activeGdrive = allGdriveChannels.filter((c) => c.isActive !== false && (c.folderUrlOrId || c.folderId));
-
-  const defs: WebhookDefinition[] = [];
-
-  const buildUrl = (path: string) => {
-    if (!secretSuffix) return `${baseUrl}${path}`;
-    const separator = path.includes('?') ? '&' : '?';
-    return `${baseUrl}${path}${secretSuffix.replace('?', separator)}`;
-  };
-
-  // 1. Global RSS Poller (Ingests & queues articles)
-  defs.push({
-    slug: 'rss',
-    title: '1. RSS Ingestion (All Feeds)',
-    path: '/api/cron/rss',
-    fullUrl: buildUrl('/api/cron/rss'),
-    preset: '10m',
-    method: 0,
-    desc: 'Polls all active Bangla & English RSS feeds and queues new articles',
-    type: 'rss',
-  });
-
-  // 2. Classify Pages: 2 Use RSS (BD News 24/7, Trending News World) & 2 Use Google Drive (হক কথা, Alisa Tech Studio)
-  const isGdrivePage = (p: FacebookPage) =>
-    p._id === '1302276172975819' ||
-    p._id === '1268359636369219' ||
-    p.name.includes('হক কথা') ||
-    p.name.includes('Alisa') ||
-    allGdriveChannels.some((c) => c.pageId === p._id);
-
-  const rssPages = allPages.filter((p) => !isGdrivePage(p));
-  const gdrivePages = allPages.filter((p) => isGdrivePage(p));
-
-  // 2. FB Publisher (RSS Feeds) - Distinct Cron for each RSS Page
-  if (rssPages.length > 0) {
-    for (const page of rssPages) {
-      defs.push({
-        slug: `publish_${page._id}`,
-        title: `2. FB Publisher - ${page.name} (RSS)`,
-        path: `/api/cron/publish?pageId=${page._id}`,
-        fullUrl: buildUrl(`/api/cron/publish?pageId=${page._id}`),
-        preset: '15m',
-        method: 0,
-        desc: `Dispatches queued articles & renders cards/reels specifically for ${page.name}`,
-        pageId: page._id,
-        pageName: page.name,
-        type: 'publish',
-      });
-    }
-  } else {
-    defs.push({
-      slug: 'publish',
-      title: '2. Facebook Publisher (Global Queue)',
-      path: '/api/cron/publish',
-      fullUrl: buildUrl('/api/cron/publish'),
-      preset: '15m',
-      method: 0,
-      desc: 'Dispatches next pending queued job to active Facebook pages',
-      type: 'publish',
-    });
-  }
-
-  // 3. Google Drive Reels - Distinct Cron for each Google Drive Page
-  const handledGdrivePageIds = new Set<string>();
-  if (gdrivePages.length > 0) {
-    for (const page of gdrivePages) {
-      handledGdrivePageIds.add(page._id);
-      const matchedChan = allGdriveChannels.find((c) => c.pageId === page._id);
-      const chanId = matchedChan?._id || `gdrive_${page._id}`;
-      const path = `/api/cron/gdrive-reels?channelId=${chanId}&pageId=${page._id}`;
-
-      defs.push({
-        slug: `gdrive_${page._id}`,
-        title: `3. GDrive Reels - ${page.name} (Google Drive)`,
-        path,
-        fullUrl: buildUrl(path),
-        preset: matchedChan?.scheduleIntervalHours === 1 ? '1h' : '30m',
-        method: 0,
-        desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${page.name}`,
-        pageId: page._id,
-        pageName: page.name,
-        channelId: chanId,
-        type: 'gdrive',
-      });
-    }
-  }
-
-  // Also include any additional custom GDrive channels
-  for (const channel of activeGdrive) {
-    if (channel.pageId && handledGdrivePageIds.has(channel.pageId)) continue;
-    const matchedPage = allPages.find((p) => p._id === channel.pageId);
-    const pageLabel = matchedPage?.name || channel.pageName || channel.name || 'Drive Page';
-    const path = channel.pageId
-      ? `/api/cron/gdrive-reels?channelId=${channel._id}&pageId=${channel.pageId}`
-      : `/api/cron/gdrive-reels?channelId=${channel._id}`;
-
-    defs.push({
-      slug: `gdrive_${channel._id}`,
-      title: `3. GDrive Reels - ${pageLabel} (Google Drive)`,
-      path,
-      fullUrl: buildUrl(path),
-      preset: channel.scheduleIntervalHours === 1 ? '1h' : '30m',
-      method: 0,
-      desc: `Downloads scheduled video from Google Drive and posts with viral hashtags to ${pageLabel}`,
-      pageId: channel.pageId,
-      pageName: pageLabel,
-      channelId: channel._id,
-      type: 'gdrive',
-    });
-  }
-
-  // 4. Stories, YouTube Shorts, & System Maintenance
-  defs.push({
-    slug: 'stories',
-    title: '4. Facebook Stories',
-    path: '/api/cron/stories',
-    fullUrl: buildUrl('/api/cron/stories'),
-    preset: '1h',
-    method: 0,
-    desc: 'Uploads 1080x1080 visual poster to Facebook Page Stories',
-    type: 'system',
-  });
-
-  defs.push({
-    slug: 'youtube',
-    title: '5. YouTube Shorts',
-    path: '/api/cron/youtube',
-    fullUrl: buildUrl('/api/cron/youtube'),
-    preset: '1h_15',
-    customMinutes: [15],
-    method: 0,
-    desc: 'Auto-uploads vertical news reels to YouTube Shorts',
-    type: 'system',
-  });
-
-  defs.push({
-    slug: 'cleanup',
-    title: '6. Self Cleaning Maintenance',
-    path: '/api/cron/cleanup',
-    fullUrl: buildUrl('/api/cron/cleanup'),
-    preset: '6h',
-    customMinutes: [45],
-    method: 0,
-    desc: 'Self-healing queue repair and maintenance',
-    type: 'system',
-  });
-
-  return defs;
-}
-
-// 8.1.1b. Get Dynamic Distinct Webhook Endpoints
-apiRouter.get('/cron-jobs/system-webhooks', async (req: Request, res: Response) => {
-  try {
-    const rawBaseUrl = (req.query.baseUrl as string) || `${req.protocol}://${req.get('host')}`;
-    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
-    const cronSecret = process.env.CRON_SECRET;
-    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
-    const defs = await getDynamicWebhookDefinitions(baseUrl, secretSuffix);
-    res.json({
-      success: true,
-      baseUrl,
-      cronSecretConfigured: Boolean(cronSecret),
-      endpoints: defs,
-      webhooks: defs,
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// 8.1.1c. Sync All Disabled (Prevents recreating deleted cron jobs)
-apiRouter.post('/cron-jobs/sync-all', async (req: Request, res: Response) => {
-  res.json({
-    success: false,
-    disabled: true,
-    message: 'cron-job.org sync has been permanently disabled. No jobs were created or modified.',
-  });
-});
-
-// 8.1.1d. Purge / Delete All Cron Jobs from cron-job.org & Remove API Key
-apiRouter.all(['/cron-jobs/delete-all', '/cron-jobs/purge', '/cron-jobs/wipe'], async (req: Request, res: Response) => {
-  try {
-    const apiKey = await getCronJobApiKey();
-    const deletedJobs: any[] = [];
-
-    if (apiKey) {
-      try {
-        const existing = await callCronJobApiWithRetry('/jobs', { apiKey }, 2);
-        const existingJobs: any[] = existing.jobs || [];
-
-        for (const j of existingJobs) {
-          try {
-            await callCronJobApiWithRetry(`/jobs/${j.jobId}`, { method: 'DELETE', apiKey }, 2);
-            deletedJobs.push({ jobId: j.jobId, title: j.title });
-            await new Promise((r) => setTimeout(r, 650));
-          } catch (delErr: any) {
-            console.warn(`[cron-job.org] Failed to delete job ${j.jobId}:`, delErr.message);
-          }
-        }
-      } catch (queryErr: any) {
-        console.warn('[cron-job.org] Could not query jobs for deletion:', queryErr.message);
-      }
-    }
-
-    if (isDbConnected()) {
-      const db = getDatabase();
-      await db.collection('settings').deleteOne({ _id: 'CRONJOB_API_KEY' }).catch(() => null);
-    }
-
-    res.json({
-      success: true,
-      deletedCount: deletedJobs.length,
-      deletedJobs,
-      apiKeyRemoved: true,
-      message: `Permanently deleted ${deletedJobs.length} jobs from cron-job.org and removed API key from system.`,
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// 8.1.2. Get specific cron job details
-apiRouter.get('/cron-jobs/:id', async (req: Request, res: Response) => {
-  try {
-    const jobId = req.params.id;
-    const data = await callCronJobApi(`/jobs/${jobId}`);
-    res.json({
-      success: true,
-      job: data.jobDetails,
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-// 8.1.3. Create new cron job (Disabled)
-apiRouter.post('/cron-jobs', async (req: Request, res: Response) => {
-  res.status(400).json({
-    success: false,
-    error: 'Creating cron jobs on cron-job.org has been disabled.',
-  });
-});
-
-// 8.1.4. Update existing cron job
-apiRouter.patch('/cron-jobs/:id', async (req: Request, res: Response) => {
-  try {
-    const jobId = req.params.id;
-    const { title, url, enabled, schedule, preset, timezone, requestMethod, saveResponses, customMinutes, customHours } = req.body;
-
-    const jobUpdate: any = {};
-    if (title !== undefined) jobUpdate.title = title.trim();
-    if (url !== undefined) jobUpdate.url = url.trim();
-    if (enabled !== undefined) jobUpdate.enabled = Boolean(enabled);
-    if (saveResponses !== undefined) jobUpdate.saveResponses = Boolean(saveResponses);
-    if (requestMethod !== undefined) jobUpdate.requestMethod = Number(requestMethod);
-
-    if (schedule && typeof schedule === 'object' && schedule.timezone) {
-      jobUpdate.schedule = schedule;
-    } else if (preset) {
-      jobUpdate.schedule = parseCronJobSchedule(preset, timezone || 'Asia/Dhaka', customMinutes, customHours);
-    } else if (timezone) {
-      jobUpdate.schedule = { timezone };
-    }
-
-    await callCronJobApi(`/jobs/${jobId}`, {
-      method: 'PATCH',
-      body: { job: jobUpdate },
-    });
-
-    res.json({
-      success: true,
-      message: 'Cron job updated successfully',
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-// 8.1.5. Toggle enabled / disabled status
-apiRouter.post('/cron-jobs/:id/toggle', async (req: Request, res: Response) => {
-  try {
-    const jobId = req.params.id;
-    let targetEnabled = req.body.enabled;
-
-    if (typeof targetEnabled !== 'boolean') {
-      const details = await callCronJobApi(`/jobs/${jobId}`);
-      targetEnabled = !details.jobDetails?.enabled;
-    }
-
-    await callCronJobApi(`/jobs/${jobId}`, {
-      method: 'PATCH',
-      body: { job: { enabled: targetEnabled } },
-    });
-
-    res.json({
-      success: true,
-      enabled: targetEnabled,
-      message: `Cron job ${targetEnabled ? 'enabled' : 'disabled'} successfully`,
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-// 8.1.6. Delete cron job
-apiRouter.delete('/cron-jobs/:id', async (req: Request, res: Response) => {
-  try {
-    const jobId = req.params.id;
-    await callCronJobApi(`/jobs/${jobId}`, {
-      method: 'DELETE',
-    });
-
-    res.json({
-      success: true,
-      message: 'Cron job deleted successfully',
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-// 8.1.7. Manual Trigger / Run Now
-apiRouter.post('/cron-jobs/:id/run', async (req: Request, res: Response) => {
-  const startTime = Date.now();
-  try {
-    const jobId = req.params.id;
-    let targetUrl = req.body.url;
-    let targetMethod = req.body.method;
-
-    if (!targetUrl) {
-      const details = await callCronJobApi(`/jobs/${jobId}`);
-      targetUrl = details.jobDetails?.url;
-      if (targetMethod === undefined) {
-        targetMethod = details.jobDetails?.requestMethod === 1 ? 'POST' : 'GET';
-      }
-    }
-
-    if (!targetUrl) {
-      res.status(400).json({ success: false, error: 'Job URL not found' });
-      return;
-    }
-
-    const cronSecret = process.env.CRON_SECRET;
-    const fetchHeaders: Record<string, string> = {
-      'User-Agent': 'cron-job.org-manual-runner/1.0',
-    };
-    if (cronSecret) {
-      fetchHeaders['Authorization'] = `Bearer ${cronSecret}`;
-      fetchHeaders['x-cron-secret'] = cronSecret;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
-
-    const runRes = await fetch(targetUrl, {
-      method: targetMethod || 'GET',
-      headers: fetchHeaders,
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    const duration = Date.now() - startTime;
-    const text = await runRes.text();
-    let parsedBody: any = null;
-    try {
-      parsedBody = JSON.parse(text);
-    } catch {
-      parsedBody = text.slice(0, 300);
-    }
-
-    res.json({
-      success: runRes.ok,
-      httpStatus: runRes.status,
-      statusText: runRes.statusText,
-      durationMs: duration,
-      response: parsedBody,
-    });
-  } catch (err: any) {
-    const duration = Date.now() - startTime;
-    res.json({
-      success: false,
-      httpStatus: 0,
-      statusText: err.name === 'AbortError' ? 'Timeout (45s)' : 'Error',
-      durationMs: duration,
-      error: err.message,
-    });
-  }
-});
-
-// 8.1.8. Execution History / Logs
-apiRouter.get('/cron-jobs/:id/history', async (req: Request, res: Response) => {
-  try {
-    const jobId = req.params.id;
-    const data = await callCronJobApi(`/jobs/${jobId}/history`);
-    res.json({
-      success: true,
-      history: data.history || [],
-    });
-  } catch (err: any) {
-    res.status(err.status || 500).json({
-      success: false,
-      error: err.message,
-    });
   }
 });
 

@@ -116,7 +116,27 @@ CREATE TABLE IF NOT EXISTS `group_share_logs` (
   INDEX `idx_groupsharelogs_created` (`createdAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 12. Application Settings Table
+-- 12. Google Drive Reel Configurations Table
+CREATE TABLE IF NOT EXISTS `gdrive_reel_configs` (
+  `_id` VARCHAR(191) NOT NULL,
+  `data` LONGTEXT NOT NULL,
+  `createdAt` DATETIME NULL,
+  `updatedAt` DATETIME NULL,
+  PRIMARY KEY (`_id`),
+  INDEX `idx_gdrivereelconfigs_created` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 13. TikTok Upload Logs Table
+CREATE TABLE IF NOT EXISTS `tiktok_upload_logs` (
+  `_id` VARCHAR(191) NOT NULL,
+  `data` LONGTEXT NOT NULL,
+  `createdAt` DATETIME NULL,
+  `updatedAt` DATETIME NULL,
+  PRIMARY KEY (`_id`),
+  INDEX `idx_tiktoklogs_created` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. Application Settings Table
 CREATE TABLE IF NOT EXISTS `settings` (
   `_id` VARCHAR(191) NOT NULL,
   `data` LONGTEXT NOT NULL,

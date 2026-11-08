@@ -182,23 +182,20 @@ export function createServer(): Express {
 
   // Database Connection Auto-Retry Middleware
   app.use(async (req: Request, res: Response, next: NextFunction) => {
-    // Template preview and cron-job.org endpoints don't require database connection
-    if (req.path.startsWith('/api/preview') || req.path.startsWith('/api/cron-jobs')) {
+    // Template preview endpoints don't require database connection
+    if (req.path.startsWith('/api/preview')) {
       return next();
     }
 
-    // If MongoDB is not connected, try to reconnect lazily
+    // If database is not connected, try to reconnect lazily
     if (!isMongoConnected()) {
       await initMongoDb();
     }
 
     // If still not connected and accessing root or web UI, show helpful Setup Diagnostics
     if (!isMongoConnected()) {
-      // Catalog overview and cron-jobs endpoints do not require database
+      // Catalog overview endpoint does not require database
       if (req.path === '/api/cron' && req.method === 'GET' && !req.query.job) {
-        return next();
-      }
-      if (req.path.startsWith('/api/cron-jobs')) {
         return next();
       }
 

@@ -20,7 +20,10 @@ export class TelegramAlertService {
   }
 
   public async sendFailureAlert(alert: AlertPayload): Promise<boolean> {
-    if (!this.botToken || !this.chatId) {
+    const botToken = this.botToken || config.TELEGRAM_BOT_TOKEN;
+    const chatId = this.chatId || config.TELEGRAM_CHAT_ID;
+
+    if (!botToken || !chatId) {
       console.log('[TelegramAlert] Bot token or chat ID not configured, skipping alert.');
       return false;
     }
@@ -40,12 +43,12 @@ export class TelegramAlertService {
       .join('\n');
 
     try {
-      const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: this.chatId,
+          chat_id: chatId,
           text: message,
           parse_mode: 'Markdown',
           disable_web_page_preview: true,

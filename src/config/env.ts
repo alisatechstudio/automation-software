@@ -28,9 +28,17 @@ export interface AppConfig {
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
-  CRONJOB_API_KEY?: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
+}
+
+let dynamicLookup: ((key: string) => string | undefined) | null = null;
+
+/**
+ * Registers a synchronous settings resolver function to enable 100% database-driven runtime configuration.
+ */
+export function registerSettingsLookup(lookup: (key: string) => string | undefined): void {
+  dynamicLookup = lookup;
 }
 
 const rootDir = process.cwd();
@@ -47,7 +55,7 @@ const resolvedDbType: 'mysql' | 'mongodb' =
     ? (process.env.MYSQL_DATABASE && !process.env.MONGODB_URI ? 'mysql' : 'mongodb')
     : (process.env.MONGODB_URI || process.env.MONGODB_URL ? 'mongodb' : (process.env.MYSQL_DATABASE ? 'mysql' : 'mongodb'));
 
-export const config: AppConfig = {
+const baseConfig: AppConfig = {
   PORT: process.env.PORT && !isNaN(Number(process.env.PORT)) ? parseInt(process.env.PORT, 10) : 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
   DB_TYPE: resolvedDbType,
@@ -77,7 +85,33 @@ export const config: AppConfig = {
   DEFAULT_COMMENT_FORMAT:
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
-  CRONJOB_API_KEY: process.env.CRONJOB_API_KEY || '',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };
+
+/**
+ * Proxied config object: queries the in-memory database settings cache on every access,
+ * falling back to .env baseConfig if not configured in the database.
+ */
+export const config: AppConfig = new Proxy(baseConfig, {
+  get(target, prop: string) {
+    if (dynamicLookup) {
+      const dbVal = dynamicLookup(prop);
+      if (dbVal !== undefined && dbVal !== null && dbVal !== '') {
+        if (prop === 'DRY_RUN') return dbVal === 'true' || dbVal === '1';
+        if (prop === 'ENABLE_VIDEO_REELS') return dbVal === 'true' || dbVal === '1';
+        if (
+          prop === 'MAX_ARTICLE_AGE_HOURS' ||
+          prop === 'MAX_POSTS_PER_HOUR' ||
+          prop === 'MIN_DELAY_SECONDS' ||
+          prop === 'MAX_DELAY_SECONDS'
+        ) {
+          const num = parseInt(dbVal, 10);
+          if (!isNaN(num)) return num;
+        }
+        return dbVal;
+      }
+    }
+    return (target as any)[prop];
+  },
+});

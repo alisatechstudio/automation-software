@@ -193,15 +193,16 @@ export async function initMongo(): Promise<any> {
 
 export async function initDatabase(): Promise<any> {
   const dbType = config.DB_TYPE;
+  let activeDb: any = null;
 
   if (dbType === 'mysql') {
     try {
-      return await initMySql();
+      activeDb = await initMySql();
     } catch (mysqlErr: any) {
       console.warn(`[Database] MySQL connection failed: ${mysqlErr.message}. Checking MongoDB fallback...`);
       if (config.MONGODB_URI) {
         try {
-          return await initMongo();
+          activeDb = await initMongo();
         } catch (mErr: any) {
           lastError = `MySQL error: ${mysqlErr.message} | Mongo error: ${mErr.message}`;
         }
@@ -211,12 +212,12 @@ export async function initDatabase(): Promise<any> {
     }
   } else {
     try {
-      return await initMongo();
+      activeDb = await initMongo();
     } catch (mongoErr: any) {
       console.warn(`[Database] MongoDB connection failed: ${mongoErr.message}. Checking MySQL fallback...`);
       if (config.MYSQL_DATABASE) {
         try {
-          return await initMySql();
+          activeDb = await initMySql();
         } catch (myErr: any) {
           lastError = `Mongo error: ${mongoErr.message} | MySQL error: ${myErr.message}`;
         }
@@ -224,6 +225,14 @@ export async function initDatabase(): Promise<any> {
         lastError = `MongoDB Error: ${mongoErr.message}`;
       }
     }
+  }
+
+  if (activeDb) {
+    try {
+      const { refreshDbSettings } = await import('../services/settings.js');
+      await refreshDbSettings(true);
+    } catch {}
+    return activeDb;
   }
 
   isConnected = false;
@@ -263,3 +272,19 @@ function maskUri(uri: string): string {
 }
 
 export default dbInstance;
+
+export {
+  refreshDbSettings,
+  getDbSetting,
+  getDbSettingSync,
+  getDbSettingBool,
+  getDbSettingBoolSync,
+  getDbSettingNumber,
+  isDbDryRun,
+  isDbDryRunSync,
+  setDbSetting,
+  setManyDbSettings,
+  getAllDbSettings,
+  invalidateSettingsCache,
+} from '../services/settings.js';
+
