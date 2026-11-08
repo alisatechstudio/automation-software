@@ -439,6 +439,12 @@
           animateValue('stat-shares', data.groupSharesCount || 0);
           animateValue('stat-articles', data.articlesCount || 0);
 
+          animateValue('stat-posts', data.successfulPosts || 0);
+          const totalEndpoints = (data.pagesCount || 0) + (data.youtubeChannelsCount || 0) + (data.gdriveChannelsCount || 0) + (data.groupsCount || 0);
+          animateValue('stat-endpoints', totalEndpoints);
+          const totalDispatches = (data.reelsCount || 0) + (data.youtubeCount || 0) + (data.tiktokCount || 0) + (data.storiesCount || 0) + (data.groupSharesCount || 0) + (data.successfulPosts || 0);
+          animateValue('stat-dispatches', totalDispatches);
+
           const badge = document.getElementById('dry-run-badge');
           const radar = document.getElementById('status-pulse-radar');
           if (data.dryRun) {

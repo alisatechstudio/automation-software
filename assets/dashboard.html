@@ -401,91 +401,69 @@
 
       </div>
 
-      <!-- Quick Operations Trigger Cards (2 Cards Grid - "Keep Card Only") -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- KPI Row 4: Operational Reach & Efficiency (4 Cards) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
-        <!-- Card 13: Stage 1 Input Operations Card -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-cyan-500/30 bg-slate-950/40 space-y-3">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Stage 1: Input Automation Trigger</h3>
-            </div>
-            <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">Instant Reel</span>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="text-xs font-mono text-slate-400 shrink-0">Webhook:</span>
-              <code data-cron-path="/api/cron/input" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-cyan-800/60 text-cyan-300 font-mono truncate">/api/cron/input</code>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <button onclick="copyCronUrl('/api/cron/input', this)" class="text-[10px] font-semibold text-cyan-300 hover:text-white px-2 py-1 rounded bg-cyan-950 hover:bg-cyan-800 border border-cyan-700/60 transition">📋 Copy</button>
-              <button onclick="triggerInputCronNow()" class="text-[10px] font-bold text-white px-3 py-1 rounded bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 transition active:scale-95 shadow">⚡ Run Input</button>
+        <!-- Card 13: Standard Facebook Posts Published -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-sky-500/20 hover:border-sky-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-sky-400 font-mono">Facebook Posts</span>
+            <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </div>
           </div>
-
-          <div class="space-y-1">
-            <div class="flex items-center justify-between text-[10px] text-slate-400">
-              <span class="font-bold text-slate-300">Dedicated Source Webhooks:</span>
-              <span>1 Feed Per Request</span>
-            </div>
-            <div id="split-input-crons-list" class="space-y-1 max-h-48 overflow-y-auto"></div>
+          <div id="stat-posts" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+            Feed Articles Live
           </div>
         </div>
 
-        <!-- Card 14: Stage 2 Output Operations Card -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-emerald-500/30 bg-slate-950/40 space-y-3">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Stage 2: Output Automation Trigger</h3>
-            </div>
-            <span class="text-[10px] font-mono text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60">Multi-Channel</span>
-          </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="text-xs font-mono text-slate-400 shrink-0">Webhook:</span>
-              <code data-cron-path="/api/cron/output" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-emerald-800/60 text-emerald-300 font-mono truncate">/api/cron/output</code>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <button onclick="copyCronUrl('/api/cron/output', this)" class="text-[10px] font-semibold text-emerald-300 hover:text-white px-2 py-1 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-700/60 transition">📋 Copy</button>
-              <button onclick="triggerOutputCronNow()" class="text-[10px] font-bold text-slate-950 px-3 py-1 rounded bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 font-black transition active:scale-95 shadow">⚡ Run Output</button>
+        <!-- Card 14: Total Distribution Endpoints -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-indigo-500/20 hover:border-indigo-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 font-mono">Total Endpoints</span>
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
             </div>
           </div>
-
-          <div class="space-y-1">
-            <div class="flex items-center justify-between text-[10px] text-slate-400">
-              <span class="font-bold text-slate-300">Dedicated Folder Webhooks:</span>
-              <span>1 Folder Per Request</span>
-            </div>
-            <div id="split-output-crons-list" class="space-y-1 max-h-48 overflow-y-auto"></div>
+          <div id="stat-endpoints" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            Broadcast Targets
           </div>
         </div>
 
-      </div>
-
-      <!-- Engine Live Specs Card (Card Only) -->
-      <div class="glass-panel rounded-xl p-3.5 sm:p-4 border border-slate-800 bg-slate-950/40">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
-            <span class="text-[10px] uppercase font-mono text-slate-400">Renderer Engine</span>
-            <div class="font-bold text-cyan-300 truncate">Playwright Chromium + Canva</div>
+        <!-- Card 15: Total Dispatches Across All Platforms -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-fuchsia-500/20 hover:border-fuchsia-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-fuchsia-400 font-mono">Total Dispatches</span>
+            <div class="w-8 h-8 rounded-lg bg-fuchsia-500/10 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
           </div>
-          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
-            <span class="text-[10px] uppercase font-mono text-slate-400">Bangla Typography</span>
-            <div class="font-bold text-emerald-300 truncate">Noto Sans & Hind Siliguri</div>
-          </div>
-          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
-            <span class="text-[10px] uppercase font-mono text-slate-400">Database Storage</span>
-            <div class="font-bold text-purple-300 truncate">MongoDB Atlas (Zero-Queue)</div>
-          </div>
-          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
-            <span class="text-[10px] uppercase font-mono text-slate-400">Anti-Spam Jitter</span>
-            <div class="font-bold text-amber-300 truncate">5-10s Dynamic Protection</div>
+          <div id="stat-dispatches" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse"></span>
+            All Platform Deliveries
           </div>
         </div>
+
+        <!-- Card 16: Publishing Success Rate -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-emerald-500/20 hover:border-emerald-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">Delivery Success</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+          </div>
+          <div id="stat-success-rate" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">100%</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            Zero-Queue Precision
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -1952,15 +1930,17 @@
               If you have <strong>2 or more RSS feeds or Google Drive folders</strong>, processing all of them in a single cron execution can cause a timeout (Vercel max execution duration is 10s on hobby or 60s on pro). To guarantee lightning-fast execution, configure separate cron jobs in cron-job.org for each specific feed or folder:
             </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono">
-              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1.5">
                 <span class="text-cyan-400 font-bold block font-sans">Split Input (Feed Wise):</span>
                 <code class="text-slate-300 text-[10px] break-all">/api/cron/input?sourceId=&lt;SOURCE_ID&gt;</code>
-                <div class="text-[10px] text-slate-500 font-sans">Processes only 1 feed per request. Copy direct links from the Overview tab!</div>
+                <div class="text-[10px] text-slate-500 font-sans">Processes only 1 feed per request:</div>
+                <div id="split-input-crons-list" class="space-y-1 pt-1"></div>
               </div>
-              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1.5">
                 <span class="text-emerald-400 font-bold block font-sans">Split Output (Folder Wise):</span>
                 <code class="text-slate-300 text-[10px] break-all">/api/cron/output?folderId=&lt;FOLDER_ID&gt;</code>
-                <div class="text-[10px] text-slate-500 font-sans">Picks the oldest video from that specific Drive folder and posts it.</div>
+                <div class="text-[10px] text-slate-500 font-sans">Picks oldest video from specific folder:</div>
+                <div id="split-output-crons-list" class="space-y-1 pt-1"></div>
               </div>
             </div>
           </div>
