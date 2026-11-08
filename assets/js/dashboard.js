@@ -1818,39 +1818,32 @@
           viral: '🔥 Viral',
           auto: '🌟 Auto'
         };
-        const catBadge = '<span class="text-slate-400 ml-1.5 px-1.5 py-0.2 rounded bg-slate-800 text-[9px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
+        const catBadge = '<span class="text-slate-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
+        const pageBadge = '<span class="text-slate-300 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono truncate max-w-[130px]" title="' + escapeHtml(c.pageName || c.pageId || 'All Pages') + '">📄 ' + escapeHtml(c.pageName || c.pageId || 'All Pages') + '</span>';
 
-        const cronPath = '/api/cron/output?channelId=' + c._id + (c.pageId ? '&pageId=' + c.pageId : '');
-
-        return '<div class="glass-panel p-3 rounded-lg border transition ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90' : 'border-slate-800/80 bg-slate-950/60') + '">' +
-          '<div class="flex items-start justify-between gap-2 mb-1.5">' +
+        return '<div class="glass-panel p-3.5 rounded-xl border transition-all duration-200 ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90 shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-500/30' : 'border-slate-800/80 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-900/40') + '">' +
+          '<div class="flex items-start justify-between gap-2 mb-2">' +
             '<div class="min-w-0 flex-1">' +
               '<div class="flex items-center gap-1.5">' +
-                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400" data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)">' + (c.name || 'Channel') + '</h4>' +
+                '<span class="w-2 h-2 rounded-full ' + (c.isActive ? 'bg-emerald-400 shadow-glow-emerald' : 'bg-slate-600') + '"></span>' +
+                '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition" data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)">' + escapeHtml(c.name || 'Channel') + '</h4>' +
                 '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
-              '<div class="text-[10px] text-slate-400 truncate flex items-center"><span>Page: ' + (c.pageName || c.pageId || 'None') + '</span>' + catBadge + '</div>' +
+              '<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">' + pageBadge + catBadge + '</div>' +
             '</div>' +
-            '<div class="flex items-center gap-1">' +
-              '<button data-id="' + c._id + '" onclick="editGDriveChannel(this.dataset.id)" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-white" title="Edit">✎</button>' +
-              '<button data-id="' + c._id + '" onclick="deleteGDriveChannel(this.dataset.id)" class="p-1 rounded bg-slate-900 text-rose-400 hover:text-rose-300" title="Delete">✕</button>' +
+            '<div class="flex items-center gap-1 shrink-0">' +
+              '<button data-id="' + c._id + '" onclick="editGDriveChannel(this.dataset.id)" class="w-6 h-6 rounded flex items-center justify-center bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 transition text-[11px]" title="Edit Channel">✎</button>' +
+              '<button data-id="' + c._id + '" onclick="deleteGDriveChannel(this.dataset.id)" class="w-6 h-6 rounded flex items-center justify-center bg-slate-900 text-slate-400 hover:text-rose-400 hover:bg-rose-950 transition text-[11px]" title="Delete Channel">✕</button>' +
             '</div>' +
           '</div>' +
-          '<div class="text-[10px] font-mono text-slate-400 py-1 border-y border-slate-900 flex justify-between">' +
+          '<div class="text-[10px] font-mono text-slate-400 py-1.5 border-y border-slate-900/80 flex items-center justify-between">' +
             '<span>⏱️ Every ' + (c.scheduleIntervalHours || 2) + 'h</span>' +
             autoDeleteBadge +
-            '<span class="text-purple-400">✓ ' + postedCount + ' Posted</span>' +
+            '<span class="text-purple-300 font-semibold">✓ ' + postedCount + ' Posted</span>' +
           '</div>' +
-          '<div class="flex items-center gap-1.5 pt-1.5">' +
-            '<button data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)" class="flex-1 py-1 px-2 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-semibold border border-slate-800 transition">View Videos</button>' +
-            '<button data-id="' + c._id + '" onclick="publishNextForGDriveChannel(this.dataset.id)" class="py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] transition active:scale-95">Post Now</button>' +
-          '</div>' +
-          '<div class="mt-2 pt-2 border-t border-slate-900 flex flex-col gap-1">' +
-            '<div class="flex items-center justify-between text-[9px] text-slate-400">' +
-              '<span class="font-mono text-emerald-400 font-semibold">⚡ Distinct Cron Webhook:</span>' +
-              '<button data-path="' + escapeHtml(cronPath) + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-800 text-emerald-300 border border-emerald-700/50 transition">Copy URL</button>' +
-            '</div>' +
-            '<input type="text" readonly value="' + (window.location.origin + cronPath) + '" class="w-full bg-slate-900/90 border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 select-all focus:outline-none" onclick="this.select()">' +
+          '<div class="flex items-center gap-2 pt-2">' +
+            '<button data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)" class="flex-1 py-1.5 px-2.5 rounded-lg text-[10px] font-semibold border transition ' + (isSelected ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800') + '">' + (isSelected ? '📁 Viewing Videos' : '📁 View Videos') + '</button>' +
+            '<button data-id="' + c._id + '" onclick="publishNextForGDriveChannel(this.dataset.id)" class="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-[10px] transition active:scale-95 shadow shrink-0">⚡ Post Now</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -2328,53 +2321,44 @@
 
         return '<div class="glass-panel p-4 rounded-xl flex flex-col justify-between space-y-3 border border-slate-800 hover:border-red-900/40 transition relative group">' +
           '<div>' +
-            '<div class="flex items-center justify-between pb-2 border-b border-slate-800/80 mb-2.5">' +
-              '<div class="flex items-center gap-1.5">' +
-                '<span class="w-2 h-2 rounded-full ' + (ch.isActive ? 'bg-emerald-400 shadow-glow-emerald' : 'bg-slate-600') + '"></span>' +
-                '<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">' + (ch.isActive ? 'Active Channel' : 'Inactive') + '</span>' +
+            '<div class="flex items-start justify-between gap-3 mb-3">' +
+              '<div class="flex items-center gap-3 min-w-0 flex-1">' +
+                '<img src="' + avatarSrc + '" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/40 object-cover shrink-0" onerror="this.src=&quot;/assets/images/favicon.png&quot;" />' +
+                '<div class="min-w-0 flex-1">' +
+                  '<div class="flex items-center gap-1.5">' +
+                    '<span class="w-2 h-2 rounded-full shrink-0 ' + (ch.isActive ? 'bg-emerald-400 shadow-glow-emerald' : 'bg-slate-600') + '"></span>' +
+                    '<h4 class="font-bold text-white text-xs truncate" title="' + escapeHtml(ch.title) + '">' + escapeHtml(ch.title) + '</h4>' +
+                  '</div>' +
+                  '<div class="text-[11px] text-slate-400 truncate font-mono mt-0.5">' + escapeHtml(handle) + '</div>' +
+                '</div>' +
               '</div>' +
-              '<div class="flex items-center gap-1">' +
+              '<div class="flex items-center gap-1.5 shrink-0">' +
                 langBadge +
-                '<button data-id="' + ch._id + '" onclick="openEditYouTubeChannel(this.dataset.id)" title="Edit Settings" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition text-[11px]">' +
-                  '⚙️' +
-                '</button>' +
+                '<button data-id="' + ch._id + '" onclick="openEditYouTubeChannel(this.dataset.id)" title="Edit Settings" class="w-6 h-6 rounded flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition text-xs">⚙️</button>' +
               '</div>' +
             '</div>' +
 
-            '<div class="flex items-center gap-3 p-2 rounded-lg bg-slate-950/60 border border-slate-800/60 mb-2.5">' +
-              '<img src="' + avatarSrc + '" alt="Avatar" class="w-10 h-10 rounded-full border border-red-500/40 object-cover shrink-0" onerror="this.src=&quot;/assets/images/favicon.png&quot;" />' +
-              '<div class="overflow-hidden min-w-0 flex-1">' +
-                '<div class="font-bold text-white text-xs truncate" title="' + ch.title + '">' + ch.title + '</div>' +
-                '<div class="text-[11px] text-slate-400 truncate font-mono">' + handle + '</div>' +
+            '<div class="grid grid-cols-3 gap-1.5 text-center text-[10px] font-mono mb-2">' +
+              '<div class="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80">' +
+                '<div class="text-slate-400 text-[9px] uppercase">Page</div>' +
+                '<div class="font-bold text-slate-200 truncate mt-0.5" title="' + escapeHtml(pageName) + '">' + escapeHtml(pageName) + '</div>' +
               '</div>' +
-            '</div>' +
-
-            '<div class="p-2 rounded-lg bg-red-950/20 border border-red-900/30 text-[11px] space-y-1 mb-2.5">' +
-              '<div class="flex items-center justify-between">' +
-                '<span class="text-slate-400 text-[10px]">Linked Facebook Page:</span>' +
-                '<span class="text-red-300 font-bold truncate max-w-[150px]">' + pageName + '</span>' +
+              '<div class="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80">' +
+                '<div class="text-slate-400 text-[9px] uppercase">Subs</div>' +
+                '<div class="font-bold text-white mt-0.5">' + subCount + '</div>' +
               '</div>' +
-              '<div class="flex items-center justify-between">' +
-                '<span class="text-slate-400 text-[10px]">Channel ID:</span>' +
-                '<span class="text-slate-400 font-mono text-[9px] truncate max-w-[150px]">' + ch._id + '</span>' +
-              '</div>' +
-            '</div>' +
-
-            '<div class="grid grid-cols-2 gap-2 text-center text-xs mb-1">' +
-              '<div class="p-2 rounded-lg bg-slate-950/40 border border-slate-800/60">' +
-                '<div class="font-bold text-white font-mono text-sm">' + subCount + '</div>' +
-                '<div class="text-[10px] text-slate-400">Subscribers</div>' +
-              '</div>' +
-              '<div class="p-2 rounded-lg bg-slate-950/40 border border-slate-800/60">' +
-                '<div class="font-bold text-white font-mono text-sm">' + vidCount + '</div>' +
-                '<div class="text-[10px] text-slate-400">Total Videos</div>' +
+              '<div class="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800/80">' +
+                '<div class="text-slate-400 text-[9px] uppercase">Videos</div>' +
+                '<div class="font-bold text-white mt-0.5">' + vidCount + '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
 
-          '<div class="pt-2 border-t border-slate-800 space-y-2">' +
+          '<div class="pt-2.5 border-t border-slate-800/80 space-y-2.5">' +
             '<div class="flex items-center justify-between text-xs">' +
-              '<span class="text-slate-400 text-[11px]">Auto-Upload:</span>' +
+              '<span class="text-slate-300 text-[11px] font-medium flex items-center gap-1.5">' +
+                '<span>⚡ Auto-Upload Shorts</span>' +
+              '</span>' +
               '<label class="relative inline-flex items-center cursor-pointer">' +
                 '<input type="checkbox" ' + (ch.autoUpload ? 'checked' : '') + ' data-id="' + ch._id + '" onchange="toggleChannelAutoUpload(this.dataset.id, this.checked)" class="sr-only peer" />' +
                 '<div class="w-7 h-3.5 bg-slate-800 rounded-full p-0.5 relative transition-colors peer-checked:bg-red-600 flex items-center">' +
@@ -2383,15 +2367,15 @@
               '</label>' +
             '</div>' +
 
-            '<div class="grid grid-cols-3 gap-1.5 pt-1">' +
-              '<button data-id="' + ch._id + '" onclick="syncYouTubeChannel(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-center gap-1">' +
+            '<div class="grid grid-cols-3 gap-1.5 pt-0.5">' +
+              '<button data-id="' + ch._id + '" onclick="syncYouTubeChannel(this.dataset.id)" class="py-1.5 px-2 text-[10px] font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-center gap-1">' +
                 '<span>🔄 Sync</span>' +
               '</button>' +
-              '<button data-id="' + ch._id + '" onclick="triggerYouTubeUploadNow(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 transition flex items-center justify-center gap-1">' +
+              '<button data-id="' + ch._id + '" onclick="triggerYouTubeUploadNow(this.dataset.id)" class="py-1.5 px-2 text-[10px] font-semibold rounded-lg bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800/50 transition flex items-center justify-center gap-1">' +
                 '<span>⚡ Upload</span>' +
               '</button>' +
-              '<button data-id="' + ch._id + '" onclick="deleteYouTubeChannel(this.dataset.id)" class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 hover:bg-red-950 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-800 transition flex items-center justify-center gap-1">' +
-                '<span>🗑️ Remove</span>' +
+              '<button data-id="' + ch._id + '" onclick="deleteYouTubeChannel(this.dataset.id)" class="py-1.5 px-2 text-[10px] font-semibold rounded-lg bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900/50 transition flex items-center justify-center gap-1">' +
+                '<span>✕ Remove</span>' +
               '</button>' +
             '</div>' +
           '</div>' +
