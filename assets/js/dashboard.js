@@ -2866,11 +2866,17 @@
         const titleParam = urlParams.get('title');
         const msg = titleParam ? ('🎉 YouTube Channel "' + decodeURIComponent(titleParam) + '" Connected!') : '🎉 YouTube Channel Connected!';
         setTimeout(() => showToast(msg), 500);
+      } else if (urlParams.get('auth_error')) {
+        const errParam = decodeURIComponent(urlParams.get('auth_error'));
+        setTimeout(() => showToast('⚠️ YouTube Auth Error: ' + errParam, true), 500);
       }
     } else if (urlParams.get('tab') === 'gdrive-reels') {
       switchTab('gdrive-reels');
       if (urlParams.get('auth') === 'success') {
         setTimeout(() => showToast('🎉 Google Drive Connected (Auto-Delete Ready)!'), 500);
+      } else if (urlParams.get('auth_error')) {
+        const errParam = decodeURIComponent(urlParams.get('auth_error'));
+        setTimeout(() => showToast('⚠️ Google Drive Auth Error: ' + errParam, true), 500);
       }
     } else if (urlParams.get('tab')) {
       switchTab(urlParams.get('tab'));

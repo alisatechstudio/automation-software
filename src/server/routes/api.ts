@@ -2592,7 +2592,7 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
   };
   const stateEncoded = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${stateEncoded}`;
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent%20select_account&state=${stateEncoded}`;
 
   res.json({
     authUrl,
@@ -2633,7 +2633,7 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     const tokenResult = await ytClient.exchangeCodeForTokens(code, redirectUri);
 
     const db = getDatabase();
-    if (tokenResult.refreshToken) {
+    if (tokenResult.refreshToken && statePayload.origin === 'gdrive') {
       await setDbSetting('GDRIVE_REFRESH_TOKEN', tokenResult.refreshToken);
       await setDbSetting('GOOGLE_REFRESH_TOKEN', tokenResult.refreshToken);
       try {
@@ -2647,13 +2647,22 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
           { $set: { value: tokenResult.refreshToken, updatedAt: new Date() } },
           { upsert: true }
         );
-        console.log('[Google OAuth Callback] ✓ Google Drive & YouTube refresh tokens saved successfully to database settings!');
+        console.log('[Google OAuth Callback] ✓ Google Drive refresh token saved successfully to database settings!');
       } catch (saveErr: any) {
         console.warn('[Google OAuth Callback] Note saving GDRIVE_REFRESH_TOKEN:', saveErr.message);
       }
     }
 
     if (statePayload.origin === 'youtube') {
+      let channelRefreshToken = tokenResult.refreshToken;
+      if (!channelRefreshToken) {
+        // Fallback to existing refresh token if Google didn't return one on re-consent
+        const existingRef = await db.collection<Setting>('settings').findOne({
+          _id: { $in: ['YOUTUBE_REFRESH_TOKEN', 'GOOGLE_REFRESH_TOKEN'] as any },
+        });
+        channelRefreshToken = existingRef?.value || '';
+      }
+
       const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
       const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
 
@@ -2661,7 +2670,7 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
       const chClient = new YouTubeClient(
         sId?.value || process.env.YOUTUBE_CLIENT_ID,
         sSec?.value || process.env.YOUTUBE_CLIENT_SECRET,
-        tokenResult.refreshToken
+        channelRefreshToken
       );
       const profile = await chClient.getChannelProfile();
 
@@ -2679,7 +2688,7 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
         thumbnailUrl: profile.thumbnailUrl,
         subscriberCount: profile.subscriberCount,
         videoCount: profile.videoCount,
-        refreshToken: tokenResult.refreshToken,
+        refreshToken: channelRefreshToken,
         targetPageId: statePayload.targetPageId || 'all',
         targetPageName: pageName || 'All Pages',
         language: statePayload.language || (statePayload.targetPageId === '1526917347161119' ? 'en' : 'bn'),
