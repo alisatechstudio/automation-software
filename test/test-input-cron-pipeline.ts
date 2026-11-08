@@ -117,36 +117,33 @@ async function testInputPipeline() {
 
   assert.ok((result2.results[0]?.skippedDuplicate || 0) >= 1, 'First article must be detected as duplicate and skipped');
 
-  // Test 4: Unrendered Article Recovery Test
-  console.log('\n[Test 4] Testing recovery of an unrendered article (status: ingested)...');
-  const latestArticle = await testDb.collection('news_articles').findOne({}, { sort: { createdAt: -1 } });
-  assert.ok(latestArticle, 'Latest article must exist');
+  // Test 4: Instant Most Recent Article Processing & Zero-Queue Verification
+  console.log('\n[Test 4] Testing Instant Most Recent Article Processing & Zero-Queue in DB...');
+  const queuedInDb = await testDb.collection('news_articles').find({
+    status: { $in: ['ingested', 'queued', 'pending'] as any },
+  }).toArray();
+  assert.strictEqual(queuedInDb.length, 0, 'No queue items must exist in database');
+  console.log('✓ Confirmed 0 queue/pending items in database.');
 
-  // Mark the article as 'ingested' with no gdriveFileId to simulate a previous crash/failure
-  await testDb.collection('news_articles').updateOne(
-    { _id: latestArticle!._id },
-    { $set: { status: 'ingested', gdriveFileId: null } }
-  );
-
-  const result3 = await pipeline.runInputCron({
+  const result4 = await pipeline.runInputCron({
     sourceId: testSourceId,
-    force: false,
-    maxArticlesPerSource: 1,
+    force: true,
   });
 
-  console.log('✓ Recovery run result:', {
-    success: result3.success,
-    reelsCreated: result3.totalReelsCreated,
-    uploadedToDrive: result3.totalUploadedToDrive,
+  console.log('✓ Instant run result:', {
+    success: result4.success,
+    reelsCreated: result4.totalReelsCreated,
+    uploadedToDrive: result4.totalUploadedToDrive,
   });
 
-  assert.strictEqual(result3.totalReelsCreated, 1, 'Previously failed/unrendered article must be rendered and uploaded!');
-  assert.strictEqual(result3.totalUploadedToDrive, 1, 'Recovered article must be saved to Drive folder!');
+  assert.strictEqual(result4.totalReelsCreated, 1, 'Must create exactly 1 reel for the most recent article');
+  assert.strictEqual(result4.totalUploadedToDrive, 1, 'Must upload exactly 1 reel to Drive folder');
 
-  // Verify updated status
-  const recoveredDoc = await testDb.collection('news_articles').findOne({ _id: latestArticle!._id });
-  assert.strictEqual(recoveredDoc?.status, 'uploaded_to_drive', 'Recovered article must now be uploaded_to_drive');
-  assert.ok(recoveredDoc?.gdriveFileId, 'Recovered article must have gdriveFileId');
+  const afterRunQueued = await testDb.collection('news_articles').find({
+    status: { $in: ['ingested', 'queued', 'pending'] as any },
+  }).toArray();
+  assert.strictEqual(afterRunQueued.length, 0, 'No queue items should ever be inserted into database');
+  console.log('✓ Zero-queue architecture verified: 1 reel instantly saved to Drive, 0 queue items in DB.');
 
   // Test 5: Split Input Cron (Feed + Drive Folder Wise)
   console.log('\n[Test 5] Testing Split Input Cron across multiple feeds & Drive folders...');

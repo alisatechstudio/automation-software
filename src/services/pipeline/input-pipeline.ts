@@ -259,7 +259,7 @@ export class InputPipelineService {
 
       const now = new Date();
       const cutoffTime = new Date(now.getTime() - maxAgeHours * 60 * 60 * 1000);
-      const maxPerSource = options?.maxArticlesPerSource || 5;
+      const maxPerSource = options?.maxArticlesPerSource || 1;
 
       // Safe execution time budget: 50s on Vercel (60s timeout); 240s elsewhere
       const MAX_EXECUTION_MS = process.env.VERCEL ? 50000 : 240000;
@@ -301,8 +301,8 @@ export class InputPipelineService {
 
         grandTotalFetched += fetchedItems.length;
 
-        // Sort items OLDEST FIRST (FIFO order)
-        fetchedItems.sort((a, b) => a.pubDate.getTime() - b.pubDate.getTime());
+        // Sort items NEWEST FIRST (most recent first - instant processing)
+        fetchedItems.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
 
         // Check if all items in feed are older than cutoff
         const allOlderThanCutoff = fetchedItems.length > 0 && fetchedItems.every((it) => it.pubDate < cutoffTime);
@@ -314,15 +314,20 @@ export class InputPipelineService {
         let uploadedToDrive = 0;
         const processedArticles: SourceInputResult['articles'] = [];
 
+        // Select the single most recent article (or up to maxPerSource) - NO QUEUE in DB
+        const targetItems: any[] = [];
         for (const item of fetchedItems) {
-          if (Date.now() - startTime > MAX_EXECUTION_MS) {
-            console.log(`[InputCron] ⏱️ Execution time budget reached. Wrapping up remaining articles for "${source.name}".`);
+          if (targetItems.length >= maxPerSource) break;
+
+          // If forced, immediately pick the most recent item
+          if (options?.force) {
+            targetItems.push(item);
             break;
           }
 
-          // Age filter: skip if older than cutoffTime, UNLESS force is enabled or all feed items are older
+          // Age filter: skip if older than cutoffTime, UNLESS all feed items are older
           const isTooOld = item.pubDate < cutoffTime;
-          if (isTooOld && !options?.force && !allOlderThanCutoff) {
+          if (isTooOld && !allOlderThanCutoff) {
             skippedTooOld++;
             continue;
           }
@@ -332,24 +337,29 @@ export class InputPipelineService {
             $or: [{ guid: item.guid }, { link: item.link }],
           });
 
-          // Only truly skip if the article was already rendered and saved to Google Drive (or published)
           const alreadyInDrive = existing && (
             existing.status === 'uploaded_to_drive' ||
             existing.status === 'published' ||
             Boolean(existing.gdriveFileId)
           );
 
-          if (alreadyInDrive && !options?.force) {
+          if (alreadyInDrive) {
             skippedDuplicate++;
             continue;
           }
 
-          if (newArticlesFound >= maxPerSource) {
-            console.log(`[InputCron] Reached batch limit (${maxPerSource}) for source "${source.name}". Remaining articles will be processed on next tick.`);
-            break;
-          }
+          targetItems.push(item);
+        }
 
+        if (targetItems.length === 0 && !options?.force) {
+          console.log(`[InputCron] ℹ️ Feed "${source.name}" is up to date (no new articles). Most recent item already saved in Drive folder "${folderId}".`);
+        }
+
+        for (const item of targetItems) {
           newArticlesFound++;
+          const existing = await articlesCol.findOne({
+            $or: [{ guid: item.guid }, { link: item.link }],
+          });
           const articleId = existing?._id || crypto.randomUUID();
 
           // Detect language & category
@@ -367,7 +377,7 @@ export class InputPipelineService {
           const targetTheme = source.reelTheme || source.templateId || 'auto-category';
           const reelDuration = source.reelDuration || 15;
 
-          console.log(`[InputCron] 🎬 [${newArticlesFound}/${maxPerSource}] Rendering Reel for "${item.title}" (Theme: ${targetTheme})...`);
+          console.log(`[InputCron] 🎬 Instantly rendering Reel for most recent RSS item: "${item.title}" (Theme: ${targetTheme})...`);
 
           let reelBuffer: Buffer | null = null;
           try {
@@ -389,7 +399,7 @@ export class InputPipelineService {
             console.warn(`[InputCron] Reel video rendering note for "${item.title}":`, renderErr.message);
           }
 
-          // If reel buffer succeeded, upload to source-wise linked Google Drive folder
+          // If reel buffer succeeded, upload directly to source-wise linked Google Drive folder
           let gdriveFileId: string | null = null;
           let filename: string = '';
 
@@ -427,39 +437,39 @@ export class InputPipelineService {
             } catch (upErr: any) {
               console.error(`[InputCron] Error uploading reel to Drive:`, upErr.message);
             }
-          }
 
-          // Insert or update article doc with full tracking
-          const articleDoc: any = {
-            sourceId: source._id,
-            guid: item.guid,
-            link: item.link,
-            title: item.title,
-            description: item.description || '',
-            category: effectiveCategory,
-            pubDate: item.pubDate,
-            imageUrl: item.imageUrl || null,
-            status: gdriveFileId ? 'uploaded_to_drive' : (reelBuffer ? 'rendered' : 'ingested'),
-            gdriveFileId,
-            gdriveFolderId: folderId,
-            renderedVideoPath: reelBuffer ? path.join(config.DATA_DIR, 'rendered', `${articleId}.mp4`) : null,
-            gdriveUploadStatus: gdriveFileId ? 'uploaded' : 'pending',
-            updatedAt: new Date(),
-          };
+            // Record in DB for deduplication only - NO QUEUE in database
+            const articleDoc: any = {
+              sourceId: source._id,
+              guid: item.guid,
+              link: item.link,
+              title: item.title,
+              description: item.description || '',
+              category: effectiveCategory,
+              pubDate: item.pubDate,
+              imageUrl: item.imageUrl || null,
+              status: gdriveFileId ? 'uploaded_to_drive' : 'rendered',
+              gdriveFileId,
+              gdriveFolderId: folderId,
+              renderedVideoPath: localVideoPath,
+              gdriveUploadStatus: gdriveFileId ? 'uploaded' : 'pending',
+              updatedAt: new Date(),
+            };
 
-          if (existing) {
-            await articlesCol.updateOne({ _id: existing._id }, { $set: articleDoc });
-          } else {
-            articleDoc._id = articleId;
-            articleDoc.createdAt = new Date();
-            await articlesCol.insertOne(articleDoc as any);
+            if (existing) {
+              await articlesCol.updateOne({ _id: existing._id }, { $set: articleDoc });
+            } else {
+              articleDoc._id = articleId;
+              articleDoc.createdAt = new Date();
+              await articlesCol.insertOne(articleDoc as any);
+            }
           }
 
           processedArticles.push({
             title: item.title,
             gdriveFileId: gdriveFileId || undefined,
             filename,
-            status: articleDoc.status,
+            status: gdriveFileId ? 'uploaded_to_drive' : (reelBuffer ? 'rendered' : 'skipped'),
           });
         }
 

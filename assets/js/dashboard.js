@@ -401,7 +401,7 @@
         const res = await safeFetchJson('/api/stats');
         if (res.ok && res.data) {
           const data = res.data;
-          animateValue('stat-pending', data.queue?.pending || 0);
+          animateValue('stat-pending', data.reelsInDrive !== undefined ? data.reelsInDrive : (data.queue?.pending || 0));
           animateValue('stat-published', data.successfulPosts || 0);
           animateValue('stat-sources', data.sourcesCount || 0);
           animateValue('stat-pages', data.pagesCount || 0);

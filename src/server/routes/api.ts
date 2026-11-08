@@ -40,6 +40,9 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const queueStats = await queue.getStats();
 
     const articlesCount = await db.collection('news_articles').countDocuments();
+    const reelsInDrive = await db.collection('news_articles').countDocuments({
+      status: 'uploaded_to_drive',
+    });
     const pagesCount = await db.collection('facebook_pages').countDocuments();
     const sourcesCount = await db.collection('rss_sources').countDocuments();
     const groupsCount = await db.collection('facebook_groups').countDocuments();
@@ -62,6 +65,7 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     res.json({
       queue: queueStats,
       articlesCount,
+      reelsInDrive,
       pagesCount,
       sourcesCount,
       groupsCount,
@@ -1260,8 +1264,8 @@ async function executeInputCron(req: Request, res: Response) {
     const targetFolderId = (req.query.folderId as string) || (req.query.folder as string);
     const targetPageId = (req.query.pageId as string) || (req.query.page as string);
     const allParam = req.query.all === 'true' || req.query.allSources === 'true';
-    const force = req.query.force !== 'false';
-    const maxArticles = parseInt((req.query.max as string) || '3', 10) || 3;
+    const force = req.query.force === 'true';
+    const maxArticles = parseInt((req.query.max as string) || '1', 10) || 1;
 
     console.log(`[Input Cron] 📥 Starting Split Input Pipeline (sourceId: ${targetSourceId || 'auto-round-robin'}, folderId: ${targetFolderId || 'auto'}, pageId: ${targetPageId || 'all'})...`);
     const inputResult = await inputPipeline.runInputCron({
@@ -1878,7 +1882,7 @@ apiRouter.post('/pipeline/run-input', async (req: Request, res: Response) => {
       folderId,
       pageId,
       force: force !== false,
-      maxArticlesPerSource: maxArticles || 5,
+      maxArticlesPerSource: maxArticles || 1,
     });
     res.json(result);
   } catch (err: any) {

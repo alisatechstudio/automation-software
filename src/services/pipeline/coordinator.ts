@@ -40,10 +40,7 @@ export class PipelineCoordinator {
   public async start(): Promise<void> {
     console.log('[Coordinator] 🚀 Initializing 2-Stage Automation Pipeline (Input Cron -> Google Drive -> Output Cron)...');
 
-    // 1. Start queue worker for background reliability
-    this.worker.start();
-
-    // 2. Start Stage 2: Output Cron (Folder-wise Google Drive -> Facebook + YouTube + TikTok)
+    // 1. Stage 2: Output Cron (Folder-wise Google Drive -> Facebook + YouTube + TikTok)
     try {
       await this.gdriveReelService.startScheduler();
       console.log('[Coordinator] ✓ Stage 2 (Output Cron - Folder-wise) scheduler active.');
