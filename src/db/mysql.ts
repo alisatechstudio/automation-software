@@ -15,16 +15,8 @@ export const ALL_COLLECTIONS = [
   'facebook_pages',
   'rss_sources',
   'news_articles',
-  'jobs',
-  'post_logs',
-  'reel_logs',
-  'story_logs',
-  'youtube_upload_logs',
   'youtube_channels',
-  'facebook_groups',
-  'group_share_logs',
   'gdrive_reel_configs',
-  'tiktok_upload_logs',
   'settings',
 ];
 

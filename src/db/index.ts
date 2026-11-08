@@ -176,14 +176,6 @@ export async function initMongo(): Promise<any> {
   await articlesCol.createIndex({ pubDate: -1 }).catch(() => {});
   await articlesCol.createIndex({ status: 1 }).catch(() => {});
 
-  const jobsCol = db.collection('jobs');
-  await jobsCol.createIndex({ status: 1, runAt: 1 }).catch(() => {});
-  await jobsCol.createIndex({ articleId: 1 }).catch(() => {});
-
-  const logsCol = db.collection('post_logs');
-  await logsCol.createIndex({ articleId: 1 }).catch(() => {});
-  await logsCol.createIndex({ pageId: 1, status: 1, createdAt: -1 }).catch(() => {});
-
   const sourcesCol = db.collection('rss_sources');
   await sourcesCol.createIndex({ url: 1 }, { unique: true }).catch(() => {});
 

@@ -37,28 +37,20 @@ const tikTokClient = new TikTokClient();
 apiRouter.get('/stats', async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const queueStats = await queue.getStats();
+    const queueStats = { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 };
 
-    const articlesCount = await db.collection('news_articles').countDocuments();
+    const articlesCount = await db.collection('news_articles').countDocuments().catch(() => 0);
     const reelsInDrive = await db.collection('news_articles').countDocuments({
       status: 'uploaded_to_drive',
-    });
-    const pagesCount = await db.collection('facebook_pages').countDocuments();
-    const sourcesCount = await db.collection('rss_sources').countDocuments();
-    const groupsCount = await db.collection('facebook_groups').countDocuments();
-    const groupSharesCount = await db.collection('group_share_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
-    const reelsCount = await db.collection('reel_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
-    const storiesCount = await db.collection('story_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
-    const youtubeCount = await db.collection('youtube_upload_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
-    const youtubeChannelsCount = await db.collection('youtube_channels').countDocuments();
+    }).catch(() => 0);
+    const pagesCount = await db.collection('facebook_pages').countDocuments().catch(() => 0);
+    const sourcesCount = await db.collection('rss_sources').countDocuments().catch(() => 0);
+    const groupsCount = 0;
+    const groupSharesCount = 0;
+    const reelsCount = 0;
+    const storiesCount = 0;
+    const youtubeCount = 0;
+    const youtubeChannelsCount = await db.collection('youtube_channels').countDocuments().catch(() => 0);
     let gdriveChannelsCount = 0;
     try {
       const gdriveChannels = await gdriveReelService.getAllChannels();
@@ -66,12 +58,8 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     } catch {
       // fallback
     }
-    const tiktokCount = await db.collection('tiktok_upload_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
-    const successfulPosts = await db.collection('post_logs').countDocuments({
-      status: { $in: ['success', 'dry_run'] },
-    });
+    const tiktokCount = 0;
+    const successfulPosts = 0;
 
     res.json({
       queue: queueStats,
@@ -2091,6 +2079,94 @@ apiRouter.post(['/maintenance/clear-database', '/system/clear-legacy-data'], asy
     });
   } catch (err: any) {
     console.error('[Maintenance] Error clearing database:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7e. Maintenance: Drop Unwanted Database Collections / Tables (Jobs, Logs, Groups)
+apiRouter.all(['/database/drop-unwanted-tables', '/database/drop-unwanted-collections'], async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+
+    const unwanted = [
+      'jobs',
+      'facebook_groups',
+      'group_share_logs',
+      'story_logs',
+      'post_logs',
+      'reel_logs',
+      'youtube_upload_logs',
+      'tiktok_upload_logs',
+    ];
+
+    const dropped: string[] = [];
+    const skipped: string[] = [];
+    const errors: Record<string, string> = {};
+
+    for (const name of unwanted) {
+      try {
+        const col = db.collection(name);
+        if (typeof (col as any).drop === 'function') {
+          await (col as any).drop();
+          dropped.push(name);
+        } else if (typeof (db as any).pool?.query === 'function') {
+          await (db as any).pool.query(`DROP TABLE IF EXISTS \`${name}\``);
+          dropped.push(name);
+        } else {
+          await col.deleteMany({});
+          dropped.push(`${name} (cleared)`);
+        }
+      } catch (err: any) {
+        if (
+          err.message &&
+          (err.message.includes('ns not found') ||
+           err.message.includes("doesn't exist") ||
+           err.codeName === 'NamespaceNotFound')
+        ) {
+          skipped.push(name);
+        } else {
+          errors[name] = err.message;
+        }
+      }
+    }
+
+    let remainingCollections: string[] = [];
+    try {
+      if (typeof (db as any).listCollections === 'function') {
+        const list = await (db as any).listCollections().toArray();
+        remainingCollections = list.map((c: any) => c.name);
+      } else if (typeof (db as any).pool?.query === 'function') {
+        const [rows]: any = await (db as any).pool.query('SHOW TABLES');
+        remainingCollections = rows.map((r: any) => Object.values(r)[0]);
+      }
+    } catch {}
+
+    res.json({
+      success: true,
+      message: 'Unwanted database collections/tables dropped successfully.',
+      dropped,
+      skipped,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
+      remainingCollections,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+apiRouter.get('/database/list-collections', async (_req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    let collections: string[] = [];
+    if (typeof (db as any).listCollections === 'function') {
+      const list = await (db as any).listCollections().toArray();
+      collections = list.map((c: any) => c.name);
+    } else if (typeof (db as any).pool?.query === 'function') {
+      const [rows]: any = await (db as any).pool.query('SHOW TABLES');
+      collections = rows.map((r: any) => Object.values(r)[0]);
+    }
+    res.json({ success: true, collections });
+  } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
