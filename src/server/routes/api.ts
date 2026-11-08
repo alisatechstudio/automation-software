@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
 import { getDatabase, isDbConnected, initDatabase } from '../../db/index.js';
-import { getAllDbSettings, setManyDbSettings, getDbSetting } from '../../services/settings.js';
+import { getAllDbSettings, setManyDbSettings, getDbSetting, setDbSetting } from '../../services/settings.js';
 import { FacebookPage, RssSource, Setting, NewsArticle, Job, PostLog, FacebookGroup, GroupShareLog, ReelLog, StoryLog, YouTubeUploadLog, YouTubeChannel, GDriveReelConfig } from '../../db/schema.js';
 import { PersistentJobQueue } from '../../services/queue/queue.js';
 import { QueueWorker, getNextRollingReelTheme } from '../../services/queue/worker.js';
@@ -2440,8 +2440,28 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     await ytClient.initCredentials();
     const tokenResult = await ytClient.exchangeCodeForTokens(code, redirectUri);
 
+    const db = getDatabase();
+    if (tokenResult.refreshToken) {
+      await setDbSetting('GDRIVE_REFRESH_TOKEN', tokenResult.refreshToken);
+      await setDbSetting('GOOGLE_REFRESH_TOKEN', tokenResult.refreshToken);
+      try {
+        await db.collection('settings').updateOne(
+          { _id: 'GDRIVE_REFRESH_TOKEN' as any },
+          { $set: { value: tokenResult.refreshToken, updatedAt: new Date() } },
+          { upsert: true }
+        );
+        await db.collection('settings').updateOne(
+          { _id: 'GOOGLE_REFRESH_TOKEN' as any },
+          { $set: { value: tokenResult.refreshToken, updatedAt: new Date() } },
+          { upsert: true }
+        );
+        console.log('[Google OAuth Callback] ✓ Google Drive & YouTube refresh tokens saved successfully to database settings!');
+      } catch (saveErr: any) {
+        console.warn('[Google OAuth Callback] Note saving GDRIVE_REFRESH_TOKEN:', saveErr.message);
+      }
+    }
+
     if (statePayload.origin === 'youtube') {
-      const db = getDatabase();
       const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
       const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
 
@@ -2488,7 +2508,7 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
       return res.redirect(`/?tab=youtube&auth=success&channel_added=true&title=${encodeURIComponent(channelDoc.title)}`);
     }
 
-    res.redirect(`/?tab=${targetTab}&auth=success`);
+    res.redirect(`/?tab=${targetTab}&auth=success&gdrive_connected=true`);
   } catch (err: any) {
     console.error('[Google OAuth Callback] Exchange error:', err.message);
     res.redirect(`/?tab=${targetTab}&auth_error=${encodeURIComponent(err.message)}`);

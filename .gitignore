@@ -1,4 +1,6 @@
 node_modules/
+data/
+!data/.gitkeep
 dist/
 data/*.db*
 data/rendered/*.png

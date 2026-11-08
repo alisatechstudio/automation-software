@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import { getDatabase } from '../../db/index.js';
+import { getDatabase, isDbConnected, initDatabase } from '../../db/index.js';
 import { NewsArticle, RssSource, GDriveReelConfig, Setting } from '../../db/schema.js';
 import { RssParserService } from '../rss/parser.js';
 import { ReelVideoRenderer } from '../renderer/reel.js';
@@ -85,31 +85,56 @@ export class InputPipelineService {
       }
     }
 
-    // 2. Folder configured for this source's target Facebook Page
-    const targetPageId = source.pageId || (source as any).page_id;
-    if (targetPageId) {
-      const pageChannel = await db.collection<GDriveReelConfig>('gdrive_reel_configs').findOne({
-        $or: [{ pageId: targetPageId }, { sourceId: source._id }],
-      });
-      if (pageChannel && (pageChannel.folderId || pageChannel.folderUrlOrId)) {
-        const extracted = this.gdriveService.extractFolderId(pageChannel.folderUrlOrId || pageChannel.folderId);
+    // 2. Look through all configured channels in database
+    try {
+      const allChannels = await this.gdriveService.getAllChannels();
+      const targetPageId = source.pageId || (source as any).page_id;
+
+      // 2A. Match by pageId or sourceId
+      const matched = allChannels.find(
+        (c) => (targetPageId && c.pageId === targetPageId) || (c as any).sourceId === source._id
+      );
+      if (matched && (matched.folderId || matched.folderUrlOrId)) {
+        const extracted = this.gdriveService.extractFolderId(matched.folderUrlOrId || matched.folderId);
         if (extracted) {
-          return { folderId: extracted, folderName: pageChannel.name };
+          return { folderId: extracted, folderName: matched.name };
         }
       }
-    }
 
-    // 3. Fallback to default / primary Google Drive Reel channel
-    const defaultChannel = await this.gdriveService.getConfig();
-    if (defaultChannel && (defaultChannel.folderId || defaultChannel.folderUrlOrId)) {
-      const extracted = this.gdriveService.extractFolderId(defaultChannel.folderUrlOrId || defaultChannel.folderId);
+      // 2B. Fallback to any active channel with a folder
+      for (const channel of allChannels) {
+        if (channel.folderId || channel.folderUrlOrId) {
+          const extracted = this.gdriveService.extractFolderId(channel.folderUrlOrId || channel.folderId);
+          if (extracted) {
+            return { folderId: extracted, folderName: channel.name };
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Fallback to settings / env
+    try {
+      const setting = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['GDRIVE_DEFAULT_FOLDER', 'GDRIVE_FOLDER_ID', 'GOOGLE_DRIVE_FOLDER_ID'] as any },
+      });
+      if (setting?.value) {
+        const extracted = this.gdriveService.extractFolderId(setting.value);
+        if (extracted) {
+          return { folderId: extracted, folderName: 'Default Settings Drive Folder' };
+        }
+      }
+    } catch {}
+
+    const envFolder = process.env.GDRIVE_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (envFolder) {
+      const extracted = this.gdriveService.extractFolderId(envFolder);
       if (extracted) {
-        return { folderId: extracted, folderName: defaultChannel.name };
+        return { folderId: extracted, folderName: 'Default Env Drive Folder' };
       }
     }
 
-    // 4. Default fallback folder name based on source
-    const fallbackId = `folder_${source._id.slice(0, 8)}`;
+    // 4. Default fallback folder ID based on source
+    const fallbackId = `folder_${source._id ? source._id.slice(0, 8) : 'default'}`;
     return { folderId: fallbackId, folderName: `${source.name} Default Folder` };
   }
 
@@ -142,38 +167,59 @@ export class InputPipelineService {
 
     this.isRunning = true;
     try {
+      if (!isDbConnected()) {
+        try {
+          await initDatabase();
+        } catch {}
+      }
+
       const db = getDatabase();
       const sourcesCol = db.collection<RssSource>('rss_sources');
       const articlesCol = db.collection<NewsArticle>('news_articles');
       const settingsCol = db.collection<Setting>('settings');
 
       // 1. Determine active sources to process
-      const filter: any = {
-        $or: [
-          { isActive: true },
-          { isActive: { $ne: false } },
-          { is_active: true },
-          { is_active: { $ne: false } },
-        ],
-      };
-
-      if (options?.sourceId) {
-        filter._id = options.sourceId;
-      } else if (options?.pageId && options.pageId !== 'all') {
-        filter.$and = [
-          {
-            $or: [{ pageId: options.pageId }, { page_id: options.pageId }],
-          },
-        ];
+      let allSources: RssSource[] = [];
+      try {
+        allSources = await sourcesCol.find({}).toArray();
+      } catch (findErr: any) {
+        console.error('[InputCron] Error fetching RSS sources:', findErr.message);
       }
 
-      const activeSources = await sourcesCol.find(filter).toArray();
+      let activeSources = allSources.filter((s: any) => {
+        const act = s.isActive ?? s.is_active ?? true;
+        return act !== false && act !== 0 && act !== '0' && act !== 'false';
+      });
+
+      if (options?.sourceId) {
+        activeSources = activeSources.filter((s) => s._id === options.sourceId);
+      } else if (options?.pageId && options.pageId !== 'all') {
+        activeSources = activeSources.filter((s: any) => {
+          const pid = s.pageId || s.page_id;
+          return pid === options.pageId;
+        });
+      }
+
       console.log(`[InputCron] 📥 Input Cron started! Evaluating ${activeSources.length} active RSS sources...`);
+
+      if (activeSources.length === 0) {
+        console.warn(`[InputCron] ⚠️ No active RSS sources found in database.`);
+        return {
+          success: true,
+          timestamp: new Date().toISOString(),
+          durationMs: Date.now() - startTime,
+          sourcesProcessed: 0,
+          totalFetched: 0,
+          totalReelsCreated: 0,
+          totalUploadedToDrive: 0,
+          results: [],
+        };
+      }
 
       // 2. Determine max article age
       let maxAgeHours = config.MAX_ARTICLE_AGE_HOURS || 24;
       try {
-        const ageSetting = await settingsCol.findOne({ _id: 'MAX_ARTICLE_AGE_HOURS' });
+        const ageSetting = await settingsCol.findOne({ _id: 'MAX_ARTICLE_AGE_HOURS' as any });
         if (ageSetting?.value) {
           const parsed = parseInt(ageSetting.value, 10);
           if (!isNaN(parsed) && parsed > 0) maxAgeHours = parsed;
@@ -184,12 +230,20 @@ export class InputPipelineService {
       const cutoffTime = new Date(now.getTime() - maxAgeHours * 60 * 60 * 1000);
       const maxPerSource = options?.maxArticlesPerSource || 5;
 
+      // Safe execution time budget: 50s on Vercel (60s timeout); 240s elsewhere
+      const MAX_EXECUTION_MS = process.env.VERCEL ? 50000 : 240000;
+
       const sourceResults: SourceInputResult[] = [];
       let grandTotalFetched = 0;
       let grandTotalReelsCreated = 0;
       let grandTotalUploadedToDrive = 0;
 
       for (const source of activeSources) {
+        if (Date.now() - startTime > MAX_EXECUTION_MS) {
+          console.log(`[InputCron] ⏱️ Reached execution budget limit (${Math.round((Date.now() - startTime) / 1000)}s). Wrapping up sources cleanly.`);
+          break;
+        }
+
         console.log(`\n[InputCron] 📡 Processing RSS source: "${source.name}" (${source.url})...`);
         const { folderId, folderName } = await this.resolveDriveFolderForSource(source);
 
@@ -219,6 +273,9 @@ export class InputPipelineService {
         // Sort items OLDEST FIRST (FIFO order)
         fetchedItems.sort((a, b) => a.pubDate.getTime() - b.pubDate.getTime());
 
+        // Check if all items in feed are older than cutoff
+        const allOlderThanCutoff = fetchedItems.length > 0 && fetchedItems.every((it) => it.pubDate < cutoffTime);
+
         let newArticlesFound = 0;
         let skippedDuplicate = 0;
         let skippedTooOld = 0;
@@ -227,8 +284,14 @@ export class InputPipelineService {
         const processedArticles: SourceInputResult['articles'] = [];
 
         for (const item of fetchedItems) {
-          // Age filter
-          if (item.pubDate < cutoffTime) {
+          if (Date.now() - startTime > MAX_EXECUTION_MS) {
+            console.log(`[InputCron] ⏱️ Execution time budget reached. Wrapping up remaining articles for "${source.name}".`);
+            break;
+          }
+
+          // Age filter: skip if older than cutoffTime, UNLESS force is enabled or all feed items are older
+          const isTooOld = item.pubDate < cutoffTime;
+          if (isTooOld && !options?.force && !allOlderThanCutoff) {
             skippedTooOld++;
             continue;
           }
@@ -238,7 +301,14 @@ export class InputPipelineService {
             $or: [{ guid: item.guid }, { link: item.link }],
           });
 
-          if (existing) {
+          // Only truly skip if the article was already rendered and saved to Google Drive (or published)
+          const alreadyInDrive = existing && (
+            existing.status === 'uploaded_to_drive' ||
+            existing.status === 'published' ||
+            Boolean(existing.gdriveFileId)
+          );
+
+          if (alreadyInDrive && !options?.force) {
             skippedDuplicate++;
             continue;
           }
@@ -249,7 +319,7 @@ export class InputPipelineService {
           }
 
           newArticlesFound++;
-          const articleId = crypto.randomUUID();
+          const articleId = existing?._id || crypto.randomUUID();
 
           // Detect language & category
           const isEnglish =
@@ -264,7 +334,7 @@ export class InputPipelineService {
 
           const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
           const targetTheme = source.reelTheme || source.templateId || 'auto-category';
-          const reelDuration = source.reelDuration || 18;
+          const reelDuration = source.reelDuration || 15;
 
           console.log(`[InputCron] 🎬 [${newArticlesFound}/${maxPerSource}] Rendering Reel for "${item.title}" (Theme: ${targetTheme})...`);
 
@@ -328,9 +398,8 @@ export class InputPipelineService {
             }
           }
 
-          // Insert article doc with full tracking
-          const articleDoc: NewsArticle = {
-            _id: articleId,
+          // Insert or update article doc with full tracking
+          const articleDoc: any = {
             sourceId: source._id,
             guid: item.guid,
             link: item.link,
@@ -344,10 +413,16 @@ export class InputPipelineService {
             gdriveFolderId: folderId,
             renderedVideoPath: reelBuffer ? path.join(config.DATA_DIR, 'rendered', `${articleId}.mp4`) : null,
             gdriveUploadStatus: gdriveFileId ? 'uploaded' : 'pending',
-            createdAt: new Date(),
+            updatedAt: new Date(),
           };
 
-          await articlesCol.insertOne(articleDoc as any);
+          if (existing) {
+            await articlesCol.updateOne({ _id: existing._id }, { $set: articleDoc });
+          } else {
+            articleDoc._id = articleId;
+            articleDoc.createdAt = new Date();
+            await articlesCol.insertOne(articleDoc as any);
+          }
 
           processedArticles.push({
             title: item.title,

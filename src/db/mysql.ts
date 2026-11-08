@@ -157,7 +157,7 @@ export function applyUpdate(doc: any, update: any, isInsert: boolean = false): a
   return doc;
 }
 
-function sortDocuments(docs: any[], sortObj: any): any[] {
+export function sortDocuments(docs: any[], sortObj: any): any[] {
   if (!sortObj || Object.keys(sortObj).length === 0) return docs;
   const sortKeys = Object.keys(sortObj);
 

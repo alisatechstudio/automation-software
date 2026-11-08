@@ -3,6 +3,7 @@ import { MongoClient, MongoClientOptions } from 'mongodb';
 import { attachDatabasePool } from '@vercel/functions';
 import { config } from '../config/env.js';
 import { MySqlDatabase } from './mysql.js';
+import { FileDatabase } from './file-db.js';
 import { AppDatabase } from './types.js';
 
 let mongoClient: MongoClient | null = null;
@@ -35,6 +36,11 @@ export function getDatabase(): AppDatabase {
     );
   }
   return dbInstance;
+}
+
+export function setDatabaseInstance(db: any): void {
+  dbInstance = db;
+  isConnected = !!db;
 }
 
 export async function initMySql(): Promise<any> {
@@ -235,10 +241,19 @@ export async function initDatabase(): Promise<any> {
     return activeDb;
   }
 
-  isConnected = false;
-  dbInstance = null;
-  console.error(`[Database] Initial database connection attempt failed: ${lastError}`);
-  return null;
+  console.warn(`[Database] Remote database unavailable (${lastError}). Initializing persistent local file database fallback...`);
+  const fileDb = new FileDatabase();
+  dbInstance = fileDb;
+  isConnected = true;
+  lastError = null;
+  activeDbType = 'mysql';
+
+  try {
+    const { refreshDbSettings } = await import('../services/settings.js');
+    await refreshDbSettings(true);
+  } catch {}
+
+  return fileDb;
 }
 
 export async function initMongoDb(): Promise<any> {

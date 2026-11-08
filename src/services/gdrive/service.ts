@@ -411,8 +411,9 @@ export class GDriveReelService {
       try {
         console.log(`[GDriveReelService] ☁️ Uploading "${filename}" (${options.videoBuffer.length} bytes) to Google Drive folder "${cleanFolderId}"...`);
 
-        // Resumable upload initialization
-        const initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable';
+        // Resumable upload initialization with full shared drive support
+        const initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true';
+        const isRealDriveFolder = !cleanFolderId.startsWith('folder_') && cleanFolderId.length > 10;
         const initRes = await fetch(initUrl, {
           method: 'POST',
           headers: {
@@ -423,7 +424,7 @@ export class GDriveReelService {
           },
           body: JSON.stringify({
             name: filename,
-            parents: [cleanFolderId],
+            ...(isRealDriveFolder ? { parents: [cleanFolderId] } : {}),
           }),
         });
 
@@ -449,24 +450,29 @@ export class GDriveReelService {
                 webViewLink: `https://drive.google.com/file/d/${fileData.id}/view`,
                 isLocalFallback: false,
               };
+            } else {
+              const putErr = await putRes.text().catch(() => '');
+              console.warn(`[GDriveReelService] Drive API upload chunk failed ${putRes.status}: ${putErr}`);
             }
           }
+        } else {
+          const errText = await initRes.text().catch(() => '');
+          console.warn(`[GDriveReelService] Drive API upload init returned status ${initRes.status}: ${errText}. Using local folder fallback.`);
         }
-        console.warn(`[GDriveReelService] Drive API upload returned status ${initRes.status}. Using local folder fallback.`);
       } catch (uploadErr: any) {
         console.warn(`[GDriveReelService] Drive API upload note: ${uploadErr.message}. Using local folder fallback.`);
       }
     }
 
     // Dry Run or Local Fallback
-    const fallbackFileId = `gdrive_file_${crypto.randomUUID().slice(0, 10)}`;
+    const fallbackFileId = `local_${Buffer.from(filename).toString('hex').slice(0, 16)}`;
     console.log(`[GDriveReelService] ✓ Saved reel to linked folder "${cleanFolderId}" (Local Fallback: ${localSaved}, File ID: ${fallbackFileId})`);
     return {
       success: true,
       fileId: fallbackFileId,
       filename,
       isLocalFallback: true,
-      webViewLink: `https://drive.google.com/drive/folders/${cleanFolderId}`,
+      webViewLink: `/api/gdrive-reels/files/${fallbackFileId}/preview`,
     };
   }
 
@@ -1174,12 +1180,44 @@ export class GDriveReelService {
   public async getGoogleOAuthToken(): Promise<string | null> {
     try {
       const db = getDatabase();
-      const sRef = await db.collection('settings').findOne({ _id: 'GDRIVE_REFRESH_TOKEN' as any });
-      if (sRef?.value) {
+      let refreshToken =
+        (await getDbSetting('GDRIVE_REFRESH_TOKEN')) ||
+        (await getDbSetting('GOOGLE_REFRESH_TOKEN')) ||
+        (await getDbSetting('YOUTUBE_REFRESH_TOKEN'));
+
+      if (!refreshToken) {
+        const sRef = await db.collection('settings').findOne({
+          _id: { $in: ['GDRIVE_REFRESH_TOKEN', 'GOOGLE_REFRESH_TOKEN', 'YOUTUBE_REFRESH_TOKEN'] as any },
+        });
+        if (sRef?.value) refreshToken = sRef.value;
+      }
+
+      // Check connected YouTube channels which were authorized with full Google Drive scope
+      if (!refreshToken) {
+        try {
+          const ytChannel = await db.collection<any>('youtube_channels').findOne({
+            refreshToken: { $exists: true, $ne: '' },
+          });
+          if (ytChannel?.refreshToken) {
+            refreshToken = ytChannel.refreshToken;
+          }
+        } catch {}
+      }
+
+      if (!refreshToken) {
+        refreshToken =
+          process.env.GDRIVE_REFRESH_TOKEN ||
+          process.env.GOOGLE_REFRESH_TOKEN ||
+          process.env.YOUTUBE_REFRESH_TOKEN ||
+          '';
+      }
+
+      if (refreshToken) {
         const sId = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' as any });
         const sSec = await db.collection('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' as any });
-        const clientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || '';
-        const clientSecret = sSec?.value || process.env.YOUTUBE_CLIENT_SECRET || '';
+        const clientId = (sId?.value && sId.value.trim()) || process.env.YOUTUBE_CLIENT_ID || '';
+        const clientSecret = (sSec?.value && sSec.value.trim()) || process.env.YOUTUBE_CLIENT_SECRET || '';
+
         if (clientId && clientSecret) {
           const res = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
@@ -1187,12 +1225,15 @@ export class GDriveReelService {
             body: new URLSearchParams({
               client_id: clientId,
               client_secret: clientSecret,
-              refresh_token: sRef.value,
+              refresh_token: refreshToken,
               grant_type: 'refresh_token',
             }).toString(),
           });
           const data = (await res.json()) as any;
           if (data.access_token) return data.access_token;
+          if (data.error) {
+            console.warn(`[GDriveReelService] Note refreshing Google OAuth token: ${data.error_description || data.error}`);
+          }
         }
       }
 
