@@ -987,7 +987,7 @@
               <span id="gdrive-api-key-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">API Key: Checking...</span>
               <span id="gdrive-oauth-status-pill" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">OAuth: Checking...</span>
             </div>
-            <p class="text-[10px] text-slate-400">API Key reads public folders. Google Sign-In is used to auto-delete / trash .mp4 files after posting.</p>
+            <p class="text-[10px] text-slate-400">Google Sign-In is required to upload reels directly into your Drive cloud folder and auto-delete files after posting (API Key is read-only).</p>
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -995,9 +995,9 @@
           <button onclick="saveGlobalGDriveApiKey()" id="btn-save-global-api-key" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold border border-slate-700 transition shrink-0">
             Save Key
           </button>
-          <button onclick="connectGDriveOAuth()" id="btn-connect-gdrive-oauth" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shrink-0 hidden flex items-center gap-1 shadow">
+          <button onclick="connectGDriveOAuth()" id="btn-connect-gdrive-oauth" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition shrink-0 hidden flex items-center gap-1 shadow" title="Sign in with Google to enable uploading directly to drive.google.com and automatic file deletion">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
-            <span>Connect Google</span>
+            <span>Connect Google Account</span>
           </button>
         </div>
       </div>
@@ -2015,13 +2015,13 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
               <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>🔐</span> Folder Permissions Checklist
+                <span>🔐</span> Google Sign-In & Upload Permissions
               </h4>
               <ul class="text-[11px] text-slate-300 space-y-1 list-disc list-inside">
-                <li>Right-click your folder in Google Drive ➔ <strong>Share</strong>.</li>
-                <li>Under <strong>General access</strong>, select: <code class="text-emerald-300">Anyone with the link</code>.</li>
-                <li>Set the role to <strong>Viewer</strong> (or <strong>Editor</strong> if uploading via Service Account).</li>
-                <li>Alternatively, share the folder directly with your Service Account email: <code class="text-cyan-300">your-sa@project.iam.gserviceaccount.com</code>.</li>
+                <li><strong class="text-white">Google Sign-In is required</strong> to upload reels directly into your Drive cloud folder. An API key is read-only.</li>
+                <li>Go to <strong>Drive Management</strong> and click <strong class="text-cyan-400">Connect Google Account</strong>.</li>
+                <li>Ensure the Google account you connect has <strong>Editor access</strong> to the linked folder.</li>
+                <li>If Google is not connected, the engine stages reels in local server storage as a safety fallback so no reels are lost.</li>
               </ul>
             </div>
 

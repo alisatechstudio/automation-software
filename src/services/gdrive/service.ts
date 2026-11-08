@@ -462,6 +462,12 @@ export class GDriveReelService {
       }
     }
 
+    if (!oauthToken) {
+      console.warn(`[GDriveReelService] ⚠️ Google OAuth token is missing. Video "${filename}" saved to local engine storage. To upload directly to drive.google.com, click "Connect Google Account" in the Drive Management tab.`);
+    } else if (config.DRY_RUN) {
+      console.log(`[GDriveReelService] 🧪 DRY_RUN is active. Video "${filename}" saved to local engine storage.`);
+    }
+
     // Dry Run or Local Fallback
     const fallbackFileId = `local_${Buffer.from(filename).toString('hex').slice(0, 16)}`;
     console.log(`[GDriveReelService] ✓ Saved reel to linked folder "${cleanFolderId}" (Local Fallback: ${localSaved}, File ID: ${fallbackFileId})`);

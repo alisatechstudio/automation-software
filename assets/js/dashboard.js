@@ -1886,14 +1886,14 @@
           if (authRes.ok && authRes.data) {
             if (authRes.data.hasOAuth) {
               if (oauthPill) {
-                oauthPill.innerText = '✓ Google Sign-In (Auto-Delete Ready)';
+                oauthPill.innerText = '✓ Google Drive Connected (Cloud Upload & Auto-Delete Ready)';
                 oauthPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
               }
               if (connectBtn) connectBtn.classList.add('hidden');
             } else {
               if (oauthPill) {
-                oauthPill.innerText = '⚠️ Connect Account for Auto-Delete';
-                oauthPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800';
+                oauthPill.innerText = '⚠️ Connect Google for Cloud Upload & Auto-Delete';
+                oauthPill.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 animate-pulse';
               }
               if (connectBtn) connectBtn.classList.remove('hidden');
             }
@@ -2109,6 +2109,10 @@
           ? '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-purple-950 text-purple-400 border border-purple-800">✓ Posted</span>'
           : '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">Ready</span>';
 
+        const storageBadge = v.isLocalFallback
+          ? '<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-amber-950/80 text-amber-400 border border-amber-800/60 ml-1" title="Staged in local engine storage. Connect Google Account to upload directly to drive.google.com.">💾 Local</span>'
+          : '<span class="px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 ml-1" title="Stored in Google Drive cloud folder">☁️ Drive</span>';
+
         const viewBtn = '<a href="' + videoUrl + '" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[10px] font-bold border border-slate-700 transition inline-flex items-center gap-0.5" title="View / play video in Google Drive"><span>View</span> <span class="text-emerald-400">↗</span></a>';
 
         const publishBtn = v.isPosted
@@ -2126,7 +2130,7 @@
             '<div class="text-[9px] font-mono text-slate-500 truncate">' + escapeHtml(v.name) + '</div>' +
           '</td>' +
           '<td class="py-2 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
-          '<td class="py-2 px-2">' + statusBadge + '</td>' +
+          '<td class="py-2 px-2">' + statusBadge + storageBadge + '</td>' +
           '<td class="py-2 px-3 text-right whitespace-nowrap">' + viewBtn + publishBtn + deleteBtn + '</td>' +
         '</tr>';
       }).join('');
