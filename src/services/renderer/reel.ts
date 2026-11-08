@@ -395,9 +395,15 @@ export class ReelVideoRenderer {
       theme = 'viral-gradient';
     }
 
-    const isVertical = theme === 'vertical-916' || input.height === 1920;
-    const width = isVertical ? 1080 : (input.width || 1080);
-    const height = isVertical ? 1920 : (input.height || 1080);
+    const isVertical = theme === 'vertical-916' || input.height === 1920 || input.height === 1280 || Boolean(input.height && input.width && input.height > input.width);
+    // Standardize all reels to 720p HD: 720x1280 (vertical 9:16) or 720x720 (square 1:1)
+    const width = 720;
+    const height = isVertical ? 1280 : 720;
+
+    const refWidth = 1080;
+    const refHeight = isVertical ? 1920 : 1080;
+    const scaleX = width / refWidth;
+    const scaleY = height / refHeight;
 
     let articleImg: any = null;
     if (input.imageUrl) {
@@ -410,7 +416,12 @@ export class ReelVideoRenderer {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    this.renderFrameByTheme(theme, ctx, width, height, 0.4, 8, articleImg, logoImg, headline, category, website, isEnglish);
+    ctx.save();
+    if (scaleX !== 1 || scaleY !== 1) {
+      ctx.scale(scaleX, scaleY);
+    }
+    this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 8, articleImg, logoImg, headline, category, website, isEnglish);
+    ctx.restore();
     return canvas.toBuffer('image/jpeg', 92);
   }
 
@@ -454,9 +465,16 @@ export class ReelVideoRenderer {
       theme = 'viral-gradient';
     }
 
-    const isVertical = theme === 'vertical-916' || input.height === 1920;
-    const width = isVertical ? 1080 : (input.width || 1080);
-    const height = isVertical ? 1920 : (input.height || 1080);
+    const isVertical = theme === 'vertical-916' || input.height === 1920 || input.height === 1280 || Boolean(input.height && input.width && input.height > input.width);
+    // Standardize all reels to 720p HD: 720x1280 (vertical 9:16) or 720x720 (square 1:1)
+    const width = 720;
+    const height = isVertical ? 1280 : 720;
+
+    const refWidth = 1080;
+    const refHeight = isVertical ? 1920 : 1080;
+    const scaleX = width / refWidth;
+    const scaleY = height / refHeight;
+    const needsScale = scaleX !== 1 || scaleY !== 1;
 
     const durationSeconds = input.durationSeconds || 18; // 18 seconds (optimal 15-20s duration)
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
@@ -596,7 +614,14 @@ export class ReelVideoRenderer {
       const progress = f / totalFrames; // 0.0 -> 1.0
 
       ctx.clearRect(0, 0, width, height);
-      this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
+      if (needsScale) {
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
+        ctx.restore();
+      } else {
+        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
+      }
 
       // Write frame to ffmpeg stdin safely with flow control
       const frameBuffer = canvas.toBuffer('image/jpeg', 80);
