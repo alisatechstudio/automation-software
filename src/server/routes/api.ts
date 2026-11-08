@@ -58,6 +58,17 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const youtubeCount = await db.collection('youtube_upload_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
+    const youtubeChannelsCount = await db.collection('youtube_channels').countDocuments();
+    let gdriveChannelsCount = 0;
+    try {
+      const gdriveChannels = await gdriveReelService.getAllChannels();
+      gdriveChannelsCount = gdriveChannels.length;
+    } catch {
+      // fallback
+    }
+    const tiktokCount = await db.collection('tiktok_upload_logs').countDocuments({
+      status: { $in: ['success', 'dry_run'] },
+    });
     const successfulPosts = await db.collection('post_logs').countDocuments({
       status: { $in: ['success', 'dry_run'] },
     });
@@ -73,6 +84,9 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
       reelsCount,
       storiesCount,
       youtubeCount,
+      youtubeChannelsCount,
+      gdriveChannelsCount,
+      tiktokCount,
       successfulPosts,
       dryRun: config.DRY_RUN,
     });

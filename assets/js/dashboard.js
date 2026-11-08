@@ -425,9 +425,19 @@
         if (res.ok && res.data) {
           const data = res.data;
           animateValue('stat-pending', data.reelsInDrive !== undefined ? data.reelsInDrive : (data.queue?.pending || 0));
-          animateValue('stat-published', data.successfulPosts || 0);
+          animateValue('stat-reels', data.reelsCount || 0);
+          animateValue('stat-youtube', data.youtubeCount || 0);
+          animateValue('stat-tiktok', data.tiktokCount || 0);
+
           animateValue('stat-sources', data.sourcesCount || 0);
           animateValue('stat-pages', data.pagesCount || 0);
+          animateValue('stat-yt-channels', data.youtubeChannelsCount || 0);
+          animateValue('stat-drive-channels', data.gdriveChannelsCount || 0);
+
+          animateValue('stat-stories', data.storiesCount || 0);
+          animateValue('stat-groups', data.groupsCount || 0);
+          animateValue('stat-shares', data.groupSharesCount || 0);
+          animateValue('stat-articles', data.articlesCount || 0);
 
           const badge = document.getElementById('dry-run-badge');
           const radar = document.getElementById('status-pulse-radar');

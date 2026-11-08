@@ -206,14 +206,14 @@
     <!-- 1. OVERVIEW TAB -->
     <div id="tab-overview" class="tab-content space-y-4">
       
-      <!-- 4 Stat Cards Grid -->
+      <!-- KPI Row 1: Production & Publishing Metrics (4 Cards) -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         <!-- Card 1: Drive Staged Reels -->
-        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-amber-500/20 hover:border-amber-500/40 transition">
           <div class="flex items-center justify-between">
             <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400 font-mono">Drive Staged Reels</span>
-            <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             </div>
           </div>
@@ -224,180 +224,268 @@
           </div>
         </div>
 
-        <!-- Card 2: Published Successfully -->
-        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+        <!-- Card 2: Facebook Reels Published -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-rose-500/20 hover:border-rose-500/40 transition">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">Published Live</span>
-            <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-rose-400 font-mono">Facebook Reels</span>
+            <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
             </div>
           </div>
-          <div id="stat-published" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div id="stat-reels" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
           <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Live on Facebook
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+            9:16 Video Feed
           </div>
         </div>
 
-        <!-- Card 3: Active RSS Feeds -->
-        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+        <!-- Card 3: YouTube Shorts Uploaded -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-red-500/20 hover:border-red-500/40 transition">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 font-mono">Active Feeds</span>
-            <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-red-400 font-mono">YouTube Shorts</span>
+            <div class="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+          </div>
+          <div id="stat-youtube" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
+            Shorts Live
+          </div>
+        </div>
+
+        <!-- Card 4: TikTok Videos Published -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-cyan-500/20 hover:border-cyan-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 font-mono">TikTok Posts</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <span class="text-sm">🎵</span>
+            </div>
+          </div>
+          <div id="stat-tiktok" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            Content API v2
+          </div>
+        </div>
+
+      </div>
+
+      <!-- KPI Row 2: Ingestion & Channels (4 Cards) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        <!-- Card 5: Active RSS Feeds -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-cyan-500/20 hover:border-cyan-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-400 font-mono">Active RSS Feeds</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
           </div>
           <div id="stat-sources" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
           <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-            RSS news sources
+            Ingestion Sources
           </div>
         </div>
 
-        <!-- Card 4: Connected Facebook Pages -->
-        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group">
+        <!-- Card 6: Connected Facebook Pages -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-purple-500/20 hover:border-purple-500/40 transition">
           <div class="flex items-center justify-between">
             <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400 font-mono">Connected Pages</span>
-            <div class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             </div>
           </div>
           <div id="stat-pages" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
           <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-            Target Facebook Pages
+            Target Meta Pages
+          </div>
+        </div>
+
+        <!-- Card 7: Connected YouTube Channels -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-emerald-500/20 hover:border-emerald-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 font-mono">YouTube Channels</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </div>
+          </div>
+          <div id="stat-yt-channels" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            OAuth Channels
+          </div>
+        </div>
+
+        <!-- Card 8: Monitored Drive Folders -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-teal-500/20 hover:border-teal-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-teal-400 font-mono">Drive Folders</span>
+            <div class="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            </div>
+          </div>
+          <div id="stat-drive-channels" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+            Cloud Staging Queues
           </div>
         </div>
 
       </div>
 
-      <!-- Engine Specs & Pipeline Overview Grid -->
+      <!-- KPI Row 3: Reach, Engagement & Content (4 Cards) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        <!-- Card 9: Facebook Stories Published -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-violet-500/20 hover:border-violet-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-violet-400 font-mono">Facebook Stories</span>
+            <div class="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400">
+              <span class="text-sm">📸</span>
+            </div>
+          </div>
+          <div id="stat-stories" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-violet-400"></span>
+            24h Visual Cards
+          </div>
+        </div>
+
+        <!-- Card 10: Target Facebook Groups -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-green-500/20 hover:border-green-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-green-400 font-mono">Target Groups</span>
+            <div class="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center text-green-400">
+              <span class="text-sm">👥</span>
+            </div>
+          </div>
+          <div id="stat-groups" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400"></span>
+            Auto-Share Groups
+          </div>
+        </div>
+
+        <!-- Card 11: Total Group Auto-Shares -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-lime-500/20 hover:border-lime-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-lime-400 font-mono">Group Shares</span>
+            <div class="w-8 h-8 rounded-lg bg-lime-500/10 border border-lime-500/30 flex items-center justify-center text-lime-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            </div>
+          </div>
+          <div id="stat-shares" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-lime-400"></span>
+            Community Shares
+          </div>
+        </div>
+
+        <!-- Card 12: Total Articles Ingested -->
+        <div class="glass-panel rounded-xl p-3.5 sm:p-4 relative overflow-hidden group border border-orange-500/20 hover:border-orange-500/40 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-orange-400 font-mono">Articles Processed</span>
+            <div class="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            </div>
+          </div>
+          <div id="stat-articles" class="text-2xl sm:text-3xl font-extrabold mt-2 text-white font-mono">0</div>
+          <div class="mt-1 text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+            Zero-Queue Processed
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Operations Trigger Cards (2 Cards Grid - "Keep Card Only") -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        <!-- Engine Status -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Engine Specifications
-            </h3>
-            <span class="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60">Operational</span>
-          </div>
-
-          <div class="space-y-2 text-xs text-slate-300">
-            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
-              <span class="text-slate-400">Renderer:</span>
-              <span class="font-mono text-[11px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40">Playwright Chromium + Canva</span>
-            </div>
-            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
-              <span class="text-slate-400">Bangla Typography:</span>
-              <span class="text-emerald-400 font-medium">Noto Sans Bengali & Hind Siliguri</span>
-            </div>
-            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
-              <span class="text-slate-400">Database:</span>
-              <span class="text-purple-400 font-mono text-[11px]">MongoDB Atlas Serverless</span>
-            </div>
-            <div class="flex justify-between items-center py-1.5 border-b border-slate-800/60">
-              <span class="text-slate-400">Anti-Spam Jitter:</span>
-              <span class="text-amber-300 font-mono text-[11px]">Dynamic Jitter Enabled</span>
-            </div>
-            <div class="flex justify-between items-center py-1.5">
-              <span class="text-slate-400">Meta Compliance:</span>
-              <a href="/privacy" target="_blank" class="text-rose-400 hover:text-rose-300 font-mono text-[11px] underline">/privacy (Live Compliant) ↗</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2-Stage Automation Pipeline Architecture Blueprint -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-slate-800">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-              Simple Automation Architecture (cron-job.org)
-            </h3>
+        <!-- Card 13: Stage 1 Input Operations Card -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-cyan-500/30 bg-slate-950/40 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
             <div class="flex items-center gap-2">
-              <button onclick="scrollManualTo('man-architecture')" class="text-[10px] text-amber-400 hover:text-amber-300 underline font-semibold">User Manual ↗</button>
-              <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">2 Webhooks</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Stage 1: Input Automation Trigger</h3>
+            </div>
+            <span class="text-[10px] font-mono text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60">Instant Reel</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-xs font-mono text-slate-400 shrink-0">Webhook:</span>
+              <code data-cron-path="/api/cron/input" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-cyan-800/60 text-cyan-300 font-mono truncate">/api/cron/input</code>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="copyCronUrl('/api/cron/input', this)" class="text-[10px] font-semibold text-cyan-300 hover:text-white px-2 py-1 rounded bg-cyan-950 hover:bg-cyan-800 border border-cyan-700/60 transition">📋 Copy</button>
+              <button onclick="triggerInputCronNow()" class="text-[10px] font-bold text-white px-3 py-1 rounded bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 transition active:scale-95 shadow">⚡ Run Input</button>
             </div>
           </div>
 
-          <div class="space-y-3">
-            <!-- Stage 1 Box -->
-            <div class="p-3 rounded-lg bg-cyan-950/20 border border-cyan-500/30 space-y-2">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-cyan-900/30">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-cyan-300">📥 STAGE 1: INPUT CRON</span>
-                  <code data-cron-path="/api/cron/input" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-cyan-800/60 text-cyan-300 font-mono">/api/cron/input</code>
-                </div>
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <button onclick="copyCronUrl('/api/cron/input', this)" class="text-[10px] font-semibold text-cyan-300 hover:text-white px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-800 border border-cyan-700/60 transition" title="Copy full URL for cron-job.org">📋 Copy URL</button>
-                  <button onclick="triggerInputCronNow()" class="text-[10px] font-semibold text-white px-2.5 py-0.5 rounded bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 transition active:scale-95 shadow">⚡ Run Input</button>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-cyan-400 font-bold font-mono">1.</span>
-                  <span>Fetch data from RSS source</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-cyan-400 font-bold font-mono">2.</span>
-                  <span>Create 9:16 reels with templates</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-cyan-400 font-bold font-mono">3.</span>
-                  <span>Save reels into linked Drive folder</span>
-                </div>
-              </div>
-
-              <!-- Split Input Webhooks for Multiple Feeds -->
-              <div class="pt-2 border-t border-cyan-900/40 space-y-1.5">
-                <div class="flex items-center justify-between text-[10px]">
-                  <span class="font-bold text-cyan-300">⚡ Split Input Webhooks (Feed + Drive Folder Wise)</span>
-                  <span class="text-slate-400">Prevents timeouts by running 1 feed per webhook in cron-job.org</span>
-                </div>
-                <div id="split-input-crons-list" class="space-y-1"></div>
-              </div>
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[10px] text-slate-400">
+              <span class="font-bold text-slate-300">Dedicated Source Webhooks:</span>
+              <span>1 Feed Per Request</span>
             </div>
-
-            <!-- Stage 2 Box -->
-            <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 space-y-2">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-emerald-900/30">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-emerald-300">📤 STAGE 2: OUTPUT CRON</span>
-                  <code data-cron-path="/api/cron/output" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-emerald-800/60 text-emerald-300 font-mono">/api/cron/output</code>
-                </div>
-                <div class="flex items-center gap-1.5 shrink-0">
-                  <button onclick="copyCronUrl('/api/cron/output', this)" class="text-[10px] font-semibold text-emerald-300 hover:text-white px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-700/60 transition" title="Copy full URL for cron-job.org">📋 Copy URL</button>
-                  <button onclick="triggerOutputCronNow()" class="text-[10px] font-semibold text-white px-2.5 py-0.5 rounded bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 shadow">⚡ Run Output</button>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-emerald-400 font-bold font-mono">1.</span>
-                  <span>Scan Drive & get oldest reel</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-emerald-400 font-bold font-mono">2.</span>
-                  <span>Post to FB, YouTube & TikTok</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-slate-950/60 p-2 rounded border border-slate-800">
-                  <span class="text-rose-400 font-bold font-mono">3.</span>
-                  <span>Delete reel from Drive folder</span>
-                </div>
-              </div>
-
-              <!-- Split Output Webhooks for Multiple Folders -->
-              <div class="pt-2 border-t border-emerald-900/40 space-y-1.5">
-                <div class="flex items-center justify-between text-[10px]">
-                  <span class="font-bold text-emerald-300">⚡ Split Output Webhooks (Folder Wise)</span>
-                  <span class="text-slate-400">Picks oldest video from specific Drive folder</span>
-                </div>
-                <div id="split-output-crons-list" class="space-y-1"></div>
-              </div>
-            </div>
+            <div id="split-input-crons-list" class="space-y-1 max-h-48 overflow-y-auto"></div>
           </div>
         </div>
 
+        <!-- Card 14: Stage 2 Output Operations Card -->
+        <div class="glass-panel rounded-xl p-4 sm:p-5 relative overflow-hidden border border-emerald-500/30 bg-slate-950/40 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider font-mono">Stage 2: Output Automation Trigger</h3>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/60">Multi-Channel</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-xs font-mono text-slate-400 shrink-0">Webhook:</span>
+              <code data-cron-path="/api/cron/output" class="text-[10px] px-2 py-0.5 rounded bg-slate-950 border border-emerald-800/60 text-emerald-300 font-mono truncate">/api/cron/output</code>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="copyCronUrl('/api/cron/output', this)" class="text-[10px] font-semibold text-emerald-300 hover:text-white px-2 py-1 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-700/60 transition">📋 Copy</button>
+              <button onclick="triggerOutputCronNow()" class="text-[10px] font-bold text-slate-950 px-3 py-1 rounded bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 font-black transition active:scale-95 shadow">⚡ Run Output</button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[10px] text-slate-400">
+              <span class="font-bold text-slate-300">Dedicated Folder Webhooks:</span>
+              <span>1 Folder Per Request</span>
+            </div>
+            <div id="split-output-crons-list" class="space-y-1 max-h-48 overflow-y-auto"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Engine Live Specs Card (Card Only) -->
+      <div class="glass-panel rounded-xl p-3.5 sm:p-4 border border-slate-800 bg-slate-950/40">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
+            <span class="text-[10px] uppercase font-mono text-slate-400">Renderer Engine</span>
+            <div class="font-bold text-cyan-300 truncate">Playwright Chromium + Canva</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
+            <span class="text-[10px] uppercase font-mono text-slate-400">Bangla Typography</span>
+            <div class="font-bold text-emerald-300 truncate">Noto Sans & Hind Siliguri</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
+            <span class="text-[10px] uppercase font-mono text-slate-400">Database Storage</span>
+            <div class="font-bold text-purple-300 truncate">MongoDB Atlas (Zero-Queue)</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 space-y-0.5">
+            <span class="text-[10px] uppercase font-mono text-slate-400">Anti-Spam Jitter</span>
+            <div class="font-bold text-amber-300 truncate">5-10s Dynamic Protection</div>
+          </div>
+        </div>
       </div>
 
     </div>
