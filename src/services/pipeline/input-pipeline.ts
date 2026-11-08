@@ -153,6 +153,7 @@ export class InputPipelineService {
     pageId?: string;
     force?: boolean;
     maxArticlesPerSource?: number;
+    limit?: number;
     allSources?: boolean;
   }): Promise<InputCronResult> {
     const startTime = Date.now();
@@ -259,7 +260,7 @@ export class InputPipelineService {
 
       const now = new Date();
       const cutoffTime = new Date(now.getTime() - maxAgeHours * 60 * 60 * 1000);
-      const maxPerSource = options?.maxArticlesPerSource || 1;
+      const maxPerSource = options?.limit || options?.maxArticlesPerSource || 1;
 
       // Safe execution time budget: 50s on Vercel (60s timeout); 240s elsewhere
       const MAX_EXECUTION_MS = process.env.VERCEL ? 50000 : 240000;
@@ -280,7 +281,8 @@ export class InputPipelineService {
 
         let fetchedItems: any[] = [];
         try {
-          fetchedItems = await this.parserService.fetchAndParse(source.url);
+          const parseLimit = options?.limit || (maxPerSource === 1 ? 15 : undefined);
+          fetchedItems = await this.parserService.fetchAndParse(source.url, parseLimit);
         } catch (fetchErr: any) {
           console.error(`[InputCron] Error fetching RSS from "${source.name}":`, fetchErr.message);
           sourceResults.push({
@@ -298,8 +300,6 @@ export class InputPipelineService {
           });
           continue;
         }
-
-        grandTotalFetched += fetchedItems.length;
 
         // Sort items NEWEST FIRST (most recent first - instant processing)
         fetchedItems.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
@@ -497,11 +497,17 @@ export class InputPipelineService {
           );
         } catch {}
 
+        const effectiveFetchedCount = targetItems.length > 0
+          ? targetItems.length
+          : (skippedDuplicate > 0 ? 1 : Math.min(fetchedItems.length, maxPerSource));
+
+        grandTotalFetched += effectiveFetchedCount;
+
         sourceResults.push({
           sourceId: source._id,
           sourceName: source.name,
           folderId,
-          totalFetched: fetchedItems.length,
+          totalFetched: effectiveFetchedCount,
           newArticlesFound,
           reelsCreated,
           uploadedToDrive,

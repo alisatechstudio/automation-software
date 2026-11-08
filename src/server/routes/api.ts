@@ -1279,7 +1279,8 @@ async function executeInputCron(req: Request, res: Response) {
     const targetPageId = (req.query.pageId as string) || (req.query.page as string);
     const allParam = req.query.all === 'true' || req.query.allSources === 'true';
     const force = req.query.force === 'true';
-    const maxArticles = parseInt((req.query.max as string) || '1', 10) || 1;
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const maxArticles = parseInt((req.query.max as string) || (req.query.limit as string) || '1', 10) || 1;
 
     console.log(`[Input Cron] 📥 Starting Split Input Pipeline (sourceId: ${targetSourceId || 'auto-round-robin'}, folderId: ${targetFolderId || 'auto'}, pageId: ${targetPageId || 'all'})...`);
     const inputResult = await inputPipeline.runInputCron({
@@ -1289,6 +1290,7 @@ async function executeInputCron(req: Request, res: Response) {
       allSources: allParam,
       force,
       maxArticlesPerSource: maxArticles,
+      limit: limitParam,
     });
 
     res.json({

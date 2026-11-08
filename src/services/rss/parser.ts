@@ -53,12 +53,15 @@ export class RssParserService {
     });
   }
 
-  public async fetchAndParse(feedUrl: string): Promise<ParsedArticle[]> {
+  public async fetchAndParse(feedUrl: string, limit?: number): Promise<ParsedArticle[]> {
     try {
       const feed = await this.parser.parseURL(feedUrl);
       const items: ParsedArticle[] = [];
+      const feedItems = typeof limit === 'number' && limit > 0
+        ? (feed.items || []).slice(0, limit)
+        : (feed.items || []);
 
-      for (const item of feed.items || []) {
+      for (const item of feedItems) {
         const link = (item.link || '').trim();
         const guid = (item.guid || item.id || link).trim();
         if (!link && !guid) continue;
