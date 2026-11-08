@@ -7,6 +7,7 @@ import { RssParserService } from '../rss/parser.js';
 import { ReelVideoRenderer } from '../renderer/reel.js';
 import { CanvasCardRenderer } from '../renderer/canvas.js';
 import { GDriveReelService } from '../gdrive/service.js';
+import { getNextRollingReelTheme } from '../queue/worker.js';
 import {
   generateTrendingNewsHashtags,
   generateViralReelHashtags,
@@ -374,7 +375,11 @@ export class InputPipelineService {
           }
 
           const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
-          const targetTheme = source.reelTheme || source.templateId || 'auto-category';
+          let targetTheme = source.reelTheme || source.templateId || 'auto-category';
+          if (targetTheme === 'rolling') {
+            targetTheme = await getNextRollingReelTheme(db);
+            console.log(`[InputCron] 🔄 Rolling Rotation selected next theme: "${targetTheme}" for "${item.title}"`);
+          }
           const reelDuration = source.reelDuration || 15;
 
           // Lazy-load cover image on-demand for this single target article if not present in RSS

@@ -15,27 +15,28 @@ import { config } from '../../config/env.js';
  * Resolves the next theme in the round-robin sequence across available visual themes
  */
 export async function getNextRollingReelTheme(db: any): Promise<string> {
-  const rollingCandidates = REEL_THEME_KEYS.filter((k) => k !== 'auto-category' && k !== 'rolling');
+  const rollingCandidates = [
+    'breaking-bold',
+    'dark-cinema',
+    'studio-red',
+    'viral-gradient',
+    'auto-category',
+  ];
   try {
-    const lastReel = await db.collection('reel_logs').findOne(
-      { theme: { $exists: true, $in: rollingCandidates as any } },
-      { sort: { createdAt: -1 } }
+    const setting = await db.collection('settings').findOne({ _id: 'LAST_ROLLING_THEME' });
+    const lastTheme = setting?.value || '';
+    const lastIndex = rollingCandidates.indexOf(lastTheme);
+    const nextIndex = lastIndex === -1 ? 0 : (lastIndex + 1) % rollingCandidates.length;
+    const nextTheme = rollingCandidates[nextIndex];
+    await db.collection('settings').updateOne(
+      { _id: 'LAST_ROLLING_THEME' },
+      { $set: { value: nextTheme, updatedAt: new Date() } },
+      { upsert: true }
     );
-
-    if (!lastReel || !lastReel.theme) {
-      return rollingCandidates[0];
-    }
-
-    const lastIndex = rollingCandidates.indexOf(lastReel.theme as any);
-    if (lastIndex === -1) {
-      return rollingCandidates[0];
-    }
-
-    const nextIndex = (lastIndex + 1) % rollingCandidates.length;
-    return rollingCandidates[nextIndex];
+    return nextTheme;
   } catch (err: any) {
     console.warn('[RollingReels] Failed to determine next rolling theme:', err.message);
-    return rollingCandidates[0];
+    return 'breaking-bold';
   }
 }
 
