@@ -129,7 +129,8 @@ export class YouTubeClient {
    */
   public async exchangeCodeForTokens(
     code: string,
-    redirectUri: string
+    redirectUri: string,
+    options?: { persistSetting?: boolean; settingKey?: string }
   ): Promise<{ refreshToken: string; accessToken: string }> {
     const tokenUrl = 'https://oauth2.googleapis.com/token';
     const params = new URLSearchParams({
@@ -153,15 +154,18 @@ export class YouTubeClient {
 
     if (data.refresh_token) {
       this.refreshToken = data.refresh_token;
-      try {
-        const db = getDatabase();
-        await db.collection<Setting>('settings').updateOne(
-          { _id: 'YOUTUBE_REFRESH_TOKEN' },
-          { $set: { value: data.refresh_token, updatedAt: new Date() } },
-          { upsert: true }
-        );
-      } catch (err) {
-        console.warn('Could not persist refresh token to database:', err);
+      if (options?.persistSetting !== false) {
+        try {
+          const settingKey = options?.settingKey || 'YOUTUBE_REFRESH_TOKEN';
+          const db = getDatabase();
+          await db.collection<Setting>('settings').updateOne(
+            { _id: settingKey as any },
+            { $set: { value: data.refresh_token, updatedAt: new Date() } },
+            { upsert: true }
+          );
+        } catch (err) {
+          console.warn('Could not persist refresh token to database:', err);
+        }
       }
     }
 

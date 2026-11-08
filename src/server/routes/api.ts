@@ -2568,21 +2568,38 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
   const host = req.get('host');
   const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
   const db = getDatabase();
-  const sId = await db.collection<Setting>('settings').findOne({
-    _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any },
-  });
-  const clientId =
-    sId?.value ||
-    process.env.GOOGLE_CLIENT_ID ||
-    process.env.GDRIVE_CLIENT_ID ||
-    process.env.YOUTUBE_CLIENT_ID ||
-    '';
   const originParam = (req.query.origin as string) || (req.path.includes('gdrive') ? 'gdrive' : 'youtube');
+
+  // Look for service-specific client ID first, then generic GOOGLE_CLIENT_ID
+  const preferredKeys = originParam === 'gdrive'
+    ? ['GDRIVE_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'YOUTUBE_CLIENT_ID']
+    : ['YOUTUBE_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID'];
+
+  let clientId = '';
+  for (const key of preferredKeys) {
+    const s = await db.collection<Setting>('settings').findOne({ _id: key as any });
+    if (s?.value && s.value.trim()) {
+      clientId = s.value.trim();
+      break;
+    }
+  }
+
+  if (!clientId) {
+    clientId = originParam === 'gdrive'
+      ? (process.env.GDRIVE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID || '').trim()
+      : (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || process.env.GDRIVE_CLIENT_ID || '').trim();
+  }
+
   const targetPageId = (req.query.targetPageId as string) || '';
   const targetPageName = (req.query.targetPageName as string) || '';
   const language = (req.query.language as string) || '';
 
-  const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive');
+  // Crucial: Separate scopes! YouTube Brand Accounts/channels cannot authorize Google Drive scopes.
+  // Requesting Google Drive scopes on a YouTube Brand Account identity triggers Google's
+  // "Service unavailable: You tried to access a service that isn't available for your account" error.
+  const scope = originParam === 'gdrive'
+    ? encodeURIComponent('https://www.googleapis.com/auth/drive')
+    : encodeURIComponent('https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
 
   const statePayload = {
     origin: originParam,
@@ -2630,7 +2647,10 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
     const redirectUri = `${protocol}://${host}/api/youtube/auth/callback`;
 
     await ytClient.initCredentials();
-    const tokenResult = await ytClient.exchangeCodeForTokens(code, redirectUri);
+    const tokenResult = await ytClient.exchangeCodeForTokens(code, redirectUri, {
+      persistSetting: statePayload.origin === 'youtube',
+      settingKey: statePayload.origin === 'gdrive' ? 'GDRIVE_REFRESH_TOKEN' : 'YOUTUBE_REFRESH_TOKEN',
+    });
 
     const db = getDatabase();
     if (tokenResult.refreshToken && statePayload.origin === 'gdrive') {
@@ -2663,13 +2683,20 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
         channelRefreshToken = existingRef?.value || '';
       }
 
-      const sId = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_ID' });
-      const sSec = await db.collection<Setting>('settings').findOne({ _id: 'YOUTUBE_CLIENT_SECRET' });
+      const sId = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['YOUTUBE_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID'] as any }
+      });
+      const sSec = await db.collection<Setting>('settings').findOne({
+        _id: { $in: ['YOUTUBE_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET'] as any }
+      });
+
+      const effectiveClientId = sId?.value || process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
+      const effectiveClientSecret = sSec?.value || process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || '';
 
       // Create client with new token to inspect channel
       const chClient = new YouTubeClient(
-        sId?.value || process.env.YOUTUBE_CLIENT_ID,
-        sSec?.value || process.env.YOUTUBE_CLIENT_SECRET,
+        effectiveClientId,
+        effectiveClientSecret,
         channelRefreshToken
       );
       const profile = await chClient.getChannelProfile();
@@ -2689,6 +2716,8 @@ apiRouter.get('/youtube/auth/callback', async (req: Request, res: Response) => {
         subscriberCount: profile.subscriberCount,
         videoCount: profile.videoCount,
         refreshToken: channelRefreshToken,
+        clientId: effectiveClientId || undefined,
+        clientSecret: effectiveClientSecret || undefined,
         targetPageId: statePayload.targetPageId || 'all',
         targetPageName: pageName || 'All Pages',
         language: statePayload.language || (statePayload.targetPageId === '1526917347161119' ? 'en' : 'bn'),
