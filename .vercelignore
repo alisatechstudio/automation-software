@@ -1,0 +1,11 @@
+# Exclude Docker files from Vercel deployment so Vercel deploys as a standard Node.js serverless app
+Dockerfile
+Dockerfile.local
+.dockerignore
+docker-compose.yml
+.git
+.github
+data
+test
+tmp
+*.md

@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "framework": null,
   "functions": {
     "api/index.ts": {
       "includeFiles": "assets/**,src/templates/**",
@@ -14,12 +15,6 @@
     {
       "source": "/(.*)",
       "destination": "/api/index"
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 0 * * *"
     }
   ]
 }
