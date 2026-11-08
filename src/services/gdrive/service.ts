@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import cron, { ScheduledTask } from 'node-cron';
 import { getDatabase } from '../../db/index.js';
 import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel, RssSource } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
@@ -46,7 +45,6 @@ export class GDriveReelService {
   private ytClient: YouTubeClient;
   private tikTokClient: TikTokClient;
   private groupShareService: GroupShareService;
-  private cronTask: ScheduledTask | null = null;
   private publishingChannels = new Set<string>();
 
   constructor() {
@@ -1523,38 +1521,18 @@ export class GDriveReelService {
   }
 
   /**
-   * Starts background scheduler
+   * Scheduler methods: All internal crons have been completely removed.
+   * Execution is 100% driven by external scheduler (cron-job.org) via /api/cron/output.
    */
   public async startScheduler(): Promise<void> {
-    if (this.cronTask) {
-      this.cronTask.stop();
-      this.cronTask = null;
-    }
-
-    if (process.env.ENABLE_INTERNAL_CRON !== 'true') {
-      console.log('[GDriveReelService] ℹ️ Internal 10m cron disabled. Output Cron is driven externally via cron-job.org (/api/cron/output).');
-      return;
-    }
-
-    // Runs every 10 minutes to check if any active channel is due (only when explicitly enabled)
-    this.cronTask = cron.schedule('*/10 * * * *', async () => {
-      try {
-        await this.publishAllDueChannels();
-      } catch (err: any) {
-        console.error('[GDriveReelService - Scheduler Error]:', err.message);
-      }
-    });
+    console.log('[GDriveReelService] ℹ️ Zero internal crons active. Output Cron is driven externally via cron-job.org (/api/cron/output).');
   }
 
   public async restartScheduler(): Promise<void> {
-    this.stopScheduler();
-    await this.startScheduler();
+    console.log('[GDriveReelService] ℹ️ Zero internal crons active. External cron-job.org triggers only.');
   }
 
   public stopScheduler(): void {
-    if (this.cronTask) {
-      this.cronTask.stop();
-      this.cronTask = null;
-    }
+    // No-op: zero internal crons
   }
 }

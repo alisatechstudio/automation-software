@@ -70,12 +70,13 @@ async function runArchitectureTests() {
   assert.strictEqual(foundVideo?.isPosted, false, 'Video must be marked unposted');
   console.log(`✓ Folder-wise scanning verified: Found ${scanResult.totalVideos} videos (${scanResult.pendingCount} pending)`);
 
-  // Test 4: PipelineCoordinator Status & Methods
-  console.log('\n[Test 4] Testing Pipeline Coordinator Status...');
+  // Test 4: PipelineCoordinator Status & Methods (Zero Internal Cron)
+  console.log('\n[Test 4] Testing Pipeline Coordinator Status (Zero Internal Crons)...');
   const coordinator = new PipelineCoordinator();
   const status = coordinator.getStatus();
-  assert.ok(status.inputCronSchedule, 'Coordinator must provide input cron schedule');
-  console.log('✓ Pipeline Coordinator status verified:', status);
+  assert.ok(status.inputCronSchedule, 'Coordinator must provide input cron schedule info');
+  assert.strictEqual(status.inputCronActive, false, 'Internal cron must be completely inactive / deleted');
+  console.log('✓ Pipeline Coordinator status verified (100% External Webhook Driven):', status);
 
   // Clean up test file
   if (fs.existsSync(stagedLocalPath)) {

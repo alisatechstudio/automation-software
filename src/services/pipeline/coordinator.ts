@@ -1,4 +1,3 @@
-import cron, { ScheduledTask } from 'node-cron';
 import { InputPipelineService, InputCronResult } from './input-pipeline.js';
 import { QueueWorker } from '../queue/worker.js';
 import { GDriveReelService } from '../gdrive/service.js';
@@ -9,7 +8,6 @@ export class PipelineCoordinator {
   private inputPipeline: InputPipelineService;
   private worker: QueueWorker;
   private gdriveReelService: GDriveReelService;
-  private inputCronTask: ScheduledTask | null = null;
   private lastInputRun: Date | null = null;
   private lastOutputRun: Date | null = null;
 
@@ -29,48 +27,18 @@ export class PipelineCoordinator {
 
   public getStatus() {
     return {
-      inputCronActive: !!this.inputCronTask,
-      inputCronSchedule: config.POLL_INTERVAL_CRON,
+      inputCronActive: false,
+      inputCronSchedule: 'External Webhook (cron-job.org: /api/cron/input)',
+      outputCronSchedule: 'External Webhook (cron-job.org: /api/cron/output)',
       lastInputRun: this.lastInputRun,
       lastOutputRun: this.lastOutputRun,
-      workerRunning: true,
+      workerRunning: false,
     };
   }
 
   public async start(): Promise<void> {
-    console.log('[Coordinator] 🚀 Initializing 2-Stage Automation Pipeline (Input Cron -> Google Drive -> Output Cron)...');
-
-    // 1. Stage 2: Output Cron (Folder-wise Google Drive -> Facebook + YouTube + TikTok)
-    try {
-      await this.gdriveReelService.startScheduler();
-      console.log('[Coordinator] ✓ Stage 2 (Output Cron - Folder-wise) scheduler active.');
-    } catch (gErr: any) {
-      console.warn('[Coordinator] Note starting Google Drive Output Reel scheduler:', gErr.message);
-    }
-
-    // 2. Stage 1: Optional Internal Cron Scheduler (only if explicitly enabled; otherwise driven by cron-job.org)
-    if (process.env.ENABLE_INTERNAL_CRON === 'true') {
-      const cronExpr = config.POLL_INTERVAL_CRON || '0 * * * *';
-      if (cron.validate(cronExpr)) {
-        this.inputCronTask = cron.schedule(cronExpr, async () => {
-          console.log(`[Coordinator - Input Cron] Running scheduled Input Pipeline at ${new Date().toISOString()}`);
-          try {
-            if (!isMongoConnected()) {
-              await initMongoDb();
-            }
-            if (isMongoConnected()) {
-              this.lastInputRun = new Date();
-              await this.inputPipeline.runInputCron();
-            }
-          } catch (err) {
-            console.error('[Coordinator - Input Cron] Error during scheduled input run:', err);
-          }
-        });
-        console.log(`[Coordinator] ✓ Stage 1 (Input Cron) scheduled with internal cron: "${cronExpr}"`);
-      }
-    } else {
-      console.log('[Coordinator] ℹ️ Internal crons disabled. Pipeline is 100% driven by external scheduler (cron-job.org).');
-    }
+    console.log('[Coordinator] 🚀 2-Stage Automation Pipeline Ready (External Crons via cron-job.org).');
+    console.log('[Coordinator] ℹ️ All internal crons deleted. Triggers are 100% external webhooks (/api/cron/input & /api/cron/output).');
   }
 
   /**
@@ -94,12 +62,6 @@ export class PipelineCoordinator {
   }
 
   public stop(): void {
-    if (this.inputCronTask) {
-      this.inputCronTask.stop();
-      this.inputCronTask = null;
-    }
-    this.gdriveReelService.stopScheduler();
-    this.worker.stop();
     console.log('[Coordinator] Automation pipeline coordinator stopped cleanly.');
   }
 }
