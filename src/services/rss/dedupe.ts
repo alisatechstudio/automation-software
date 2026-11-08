@@ -123,7 +123,7 @@ export class ArticleDedupeService {
       };
 
       await articlesCol.insertOne(articleDoc as any);
-      await jobsCol.insertOne(jobDoc as any);
+      // Zero-queue architecture: do NOT create or insert jobs into database
 
       newArticlesIngested++;
       queuedJobs++;

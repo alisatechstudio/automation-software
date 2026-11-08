@@ -1531,7 +1531,12 @@ export class GDriveReelService {
       this.cronTask = null;
     }
 
-    // Runs every 10 minutes to check if any active channel is due
+    if (process.env.ENABLE_INTERNAL_CRON !== 'true') {
+      console.log('[GDriveReelService] ℹ️ Internal 10m cron disabled. Output Cron is driven externally via cron-job.org (/api/cron/output).');
+      return;
+    }
+
+    // Runs every 10 minutes to check if any active channel is due (only when explicitly enabled)
     this.cronTask = cron.schedule('*/10 * * * *', async () => {
       try {
         await this.publishAllDueChannels();

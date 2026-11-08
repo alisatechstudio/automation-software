@@ -48,39 +48,28 @@ export class PipelineCoordinator {
       console.warn('[Coordinator] Note starting Google Drive Output Reel scheduler:', gErr.message);
     }
 
-    // 3. Stage 1: Input Cron Scheduler (RSS -> Render Reel -> Save to Linked Drive Folder)
-    const cronExpr = config.POLL_INTERVAL_CRON || '0 * * * *';
-    if (cron.validate(cronExpr)) {
-      this.inputCronTask = cron.schedule(cronExpr, async () => {
-        console.log(`[Coordinator - Input Cron] Running scheduled Input Pipeline at ${new Date().toISOString()}`);
-        try {
-          if (!isMongoConnected()) {
-            await initMongoDb();
+    // 2. Stage 1: Optional Internal Cron Scheduler (only if explicitly enabled; otherwise driven by cron-job.org)
+    if (process.env.ENABLE_INTERNAL_CRON === 'true') {
+      const cronExpr = config.POLL_INTERVAL_CRON || '0 * * * *';
+      if (cron.validate(cronExpr)) {
+        this.inputCronTask = cron.schedule(cronExpr, async () => {
+          console.log(`[Coordinator - Input Cron] Running scheduled Input Pipeline at ${new Date().toISOString()}`);
+          try {
+            if (!isMongoConnected()) {
+              await initMongoDb();
+            }
+            if (isMongoConnected()) {
+              this.lastInputRun = new Date();
+              await this.inputPipeline.runInputCron();
+            }
+          } catch (err) {
+            console.error('[Coordinator - Input Cron] Error during scheduled input run:', err);
           }
-          if (isMongoConnected()) {
-            this.lastInputRun = new Date();
-            await this.inputPipeline.runInputCron();
-          }
-        } catch (err) {
-          console.error('[Coordinator - Input Cron] Error during scheduled input run:', err);
-        }
-      });
-      console.log(`[Coordinator] ✓ Stage 1 (Input Cron) scheduled with cron: "${cronExpr}"`);
+        });
+        console.log(`[Coordinator] ✓ Stage 1 (Input Cron) scheduled with internal cron: "${cronExpr}"`);
+      }
     } else {
-      console.warn(`[Coordinator] Invalid cron expression "${cronExpr}". Scheduled polling disabled.`);
-    }
-
-    // 4. Initial execution on startup if database is ready
-    if (isMongoConnected()) {
-      console.log('[Coordinator] Database ready. Triggering initial Input Cron check in background...');
-      setTimeout(() => {
-        this.inputPipeline
-          .runInputCron()
-          .then(() => {
-            this.lastInputRun = new Date();
-          })
-          .catch((err) => console.warn('[Coordinator] Initial Input Cron note:', err.message));
-      }, 5000);
+      console.log('[Coordinator] ℹ️ Internal crons disabled. Pipeline is 100% driven by external scheduler (cron-job.org).');
     }
   }
 

@@ -1848,27 +1848,19 @@ apiRouter.get('/preview/card.jpg', async (req: Request, res: Response) => {
   }
 });
 
-// 7. Manual trigger: Poll RSS Now & Process Next Job
+// 7. Manual trigger: Run Input Cron (Direct 1 Most Recent RSS -> Reel -> Drive Folder)
 apiRouter.post('/poll-now', async (req: Request, res: Response) => {
   try {
-    const results = await dedupeService.pollAllActiveSources();
-    const job = await queue.fetchNextJob();
-    let publishedPostId: string | null = null;
-
-    if (job) {
-      console.log(`[Manual Poll] Immediate worker execution for job ${job._id}...`);
-      await worker.processJob(job);
-      publishedPostId = job.articleId || null;
-    }
-
+    const inputResult = await inputPipeline.runInputCron({ force: true, maxArticlesPerSource: 1 });
     res.json({
-      success: true,
-      results,
-      processedJob: !!job,
-      jobId: job ? job._id : null,
+      success: inputResult.success,
+      job: 'input_cron',
+      results: inputResult.results,
+      totalReelsCreated: inputResult.totalReelsCreated,
+      totalUploadedToDrive: inputResult.totalUploadedToDrive,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -2000,124 +1992,90 @@ apiRouter.post('/tiktok/settings', async (req: Request, res: Response) => {
   }
 });
 
-// 7b. Manual trigger: Publish Next Available Article immediately
+// 7b. Manual trigger: Stage 2 Output Cron (Get oldest reel from Drive -> Post to FB, YT, TikTok)
 apiRouter.post('/queue/publish-next', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const articlesCol = db.collection<NewsArticle>('news_articles');
-    const pagesCol = db.collection<FacebookPage>('facebook_pages');
-    const jobsCol = db.collection<Job>('jobs');
-
-    const page = await pagesCol.findOne({ isActive: true });
-    if (!page) {
-      res.status(400).json({ error: 'No active Facebook page connected' });
-      return;
-    }
-
-    // Find the latest article that hasn't been published yet
-    let article = await articlesCol.findOne({ status: { $ne: 'published' } }, { sort: { createdAt: -1 } });
-    if (!article) {
-      // If all are marked published, check if there are articles whose post_logs failed or have no fbPostId
-      const failedLog = await db.collection<PostLog>('post_logs').findOne(
-        { $or: [{ fbPostId: { $in: [null, ''] } }, { status: 'failed' }] },
-        { sort: { createdAt: -1 } }
-      );
-      if (failedLog?.articleId) {
-        article = await articlesCol.findOne({ _id: failedLog.articleId });
-      }
-    }
-    if (!article) {
-      article = await articlesCol.findOne({}, { sort: { createdAt: -1 } });
-    }
-
-    if (!article) {
-      res.status(404).json({ error: 'No news articles available. Please Poll RSS first.' });
-      return;
-    }
-
-    const jobId = crypto.randomUUID();
-    const jobDoc: Job = {
-      _id: jobId,
-      type: 'process_article',
-      articleId: article._id,
-      pageId: page._id,
-      payload: {
-        articleId: article._id,
-        sourceId: article.sourceId,
-        pageId: page._id,
-        templateId: 'template-canva-bdnews',
-      },
-      status: 'pending',
-      attempts: 0,
-      maxAttempts: 3,
-      runAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await jobsCol.insertOne(jobDoc as any);
-    console.log(`[PublishNext] Created immediate job ${jobId} for article "${article.title}". Executing worker...`);
-
-    await worker.processJob(jobDoc);
-
-    const logsCol = db.collection<PostLog>('post_logs');
-    const latestLog = await logsCol.findOne({ articleId: article._id }, { sort: { createdAt: -1 } });
-    const isSuccess = latestLog?.status === 'success' || latestLog?.status === 'dry_run';
-
-    res.json({
-      success: isSuccess,
-      articleTitle: article.title,
-      pageName: page.name,
-      pageId: page._id,
-      log: latestLog,
-      error: !isSuccess ? (latestLog?.errorMessage || 'Facebook Reel failed to publish (no post ID generated)') : undefined,
-    });
+    const result = await gdriveReelService.publishAllDueChannels({ force: true });
+    res.json(result);
   } catch (err: any) {
     console.error('[PublishNext] Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 7c. Reset unposted articles whose logs falsely said success with empty fbPostId
+// 7c. Reset unposted articles
 apiRouter.post('/queue/reset-unposted', async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: 'Zero-queue architecture active. Staging is managed directly in Google Drive folders.',
+    count: 0,
+  });
+});
+
+// 7d. Maintenance: Permanently Clear Database (Jobs, Logs, and Articles)
+apiRouter.post(['/maintenance/clear-database', '/system/clear-legacy-data'], async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    // Find all post_logs where fbPostId is null/empty and status is 'success'
-    const unpostedLogs = await db.collection<PostLog>('post_logs').find({
-      $and: [
-        { status: 'success' },
-        { $or: [{ fbPostId: null }, { fbPostId: '' }] },
-      ],
-    }).toArray();
+    const clearArticles = req.body?.clearArticles !== false;
+    const clearJobs = req.body?.clearJobs !== false;
+    const clearLogs = req.body?.clearLogs !== false;
 
-    const articleIds = Array.from(new Set(unpostedLogs.map((l: PostLog) => l.articleId).filter(Boolean)));
+    const report: Record<string, number> = {};
 
-    if (unpostedLogs.length > 0) {
-      await db.collection('post_logs').updateMany(
-        { _id: { $in: unpostedLogs.map((l) => l._id) as any } },
-        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
-      );
-      await db.collection('reel_logs').updateMany(
-        { fbPostId: { $in: [null, ''] }, status: 'success' },
-        { $set: { status: 'failed', errorMessage: 'Reel was not uploaded to Facebook (empty post ID)' } }
-      );
+    if (clearJobs) {
+      try {
+        const r = await db.collection('jobs').deleteMany({});
+        report.jobs = r?.deletedCount ?? 0;
+      } catch {}
     }
 
-    if (articleIds.length > 0) {
-      await db.collection('news_articles').updateMany(
-        { _id: { $in: articleIds as any } },
-        { $set: { status: 'pending' } }
-      );
+    if (clearLogs) {
+      const logCols = [
+        'post_logs',
+        'reel_logs',
+        'group_share_logs',
+        'story_logs',
+        'youtube_upload_logs',
+        'tiktok_upload_logs',
+      ];
+      for (const colName of logCols) {
+        try {
+          const r = await db.collection(colName).deleteMany({});
+          report[colName] = r?.deletedCount ?? 0;
+        } catch {}
+      }
     }
 
+    if (clearArticles) {
+      try {
+        const r = await db.collection('news_articles').deleteMany({});
+        report.newsArticles = r?.deletedCount ?? 0;
+      } catch {}
+
+      // Clean local rendered cache files
+      const renderedDir = path.join(config.DATA_DIR, 'rendered');
+      try {
+        if (fs.existsSync(renderedDir)) {
+          const files = fs.readdirSync(renderedDir);
+          for (const f of files) {
+            try {
+              fs.unlinkSync(path.join(renderedDir, f));
+            } catch {}
+          }
+          report.renderedFilesDeleted = files.length;
+        }
+      } catch {}
+    }
+
+    console.log('[Maintenance] 🧹 Database purge complete:', report);
     res.json({
       success: true,
-      message: `Reset ${articleIds.length} unposted articles back to pending queue`,
-      count: articleIds.length,
+      message: 'Successfully purged legacy jobs, logs, and unposted articles from database.',
+      cleared: report,
     });
   } catch (err: any) {
-    console.error('[ResetUnposted] Error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('[Maintenance] Error clearing database:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

@@ -488,6 +488,26 @@
       }
     }
 
+    async function clearDatabaseData() {
+      if (!confirm('Are you sure you want to permanently delete all legacy jobs, logs, and unposted articles from the database? This will give you a completely clean state.')) {
+        return;
+      }
+      showToast('🧹 Purging database jobs, logs, and articles...');
+      const res = await safeFetchJson('/api/maintenance/clear-database', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearArticles: true, clearJobs: true, clearLogs: true })
+      });
+      if (res.ok && res.data?.success) {
+        showToast('✓ Database cleaned! Removed jobs & logs successfully.');
+        loadOverview();
+        if (typeof loadSources === 'function') loadSources();
+        if (typeof refreshGDriveChannels === 'function') refreshGDriveChannels();
+      } else {
+        showToast(res.data?.error || res.error || 'Clean failed', true);
+      }
+    }
+
     async function triggerPollNow() {
       showToast('Polling RSS feeds...');
       const res = await safeFetchJson('/api/poll-now', { method: 'POST' });
