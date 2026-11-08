@@ -143,12 +143,17 @@ export class InputPipelineService {
    * 1. Fetches data from RSS source
    * 2. Creates reels/video with RSS data using predefined templates
    * 3. Saves the reels video in source-wise linked Google Drive folder
+   *
+   * Supports split execution by sourceId, folderId, pageId, or auto round-robin
+   * (1 feed per execution when multiple feeds exist, preventing serverless timeouts).
    */
   public async runInputCron(options?: {
     sourceId?: string;
+    folderId?: string;
     pageId?: string;
     force?: boolean;
     maxArticlesPerSource?: number;
+    allSources?: boolean;
   }): Promise<InputCronResult> {
     const startTime = Date.now();
     if (this.isRunning && !options?.force) {
@@ -191,13 +196,39 @@ export class InputPipelineService {
         return act !== false && act !== 0 && act !== '0' && act !== 'false';
       });
 
+      // Filter by specific source, folder, or page
       if (options?.sourceId) {
         activeSources = activeSources.filter((s) => s._id === options.sourceId);
+      } else if (options?.folderId) {
+        const cleanTarget = this.gdriveService.extractFolderId(options.folderId);
+        let folderMatched = activeSources.filter((s: any) => {
+          const directFid = this.gdriveService.extractFolderId(s.gdriveFolderId || s.gdriveFolderUrlOrId || s.gdrive_folder_url);
+          return directFid && directFid === cleanTarget;
+        });
+        if (folderMatched.length === 0) {
+          const allChannels = await this.gdriveService.getAllChannels();
+          const matchingPageIds = allChannels
+            .filter((c) => this.gdriveService.extractFolderId(c.folderUrlOrId || c.folderId) === cleanTarget)
+            .map((c) => c.pageId);
+          folderMatched = activeSources.filter((s: any) => matchingPageIds.includes(s.pageId || s.page_id));
+        }
+        activeSources = folderMatched;
       } else if (options?.pageId && options.pageId !== 'all') {
         activeSources = activeSources.filter((s: any) => {
           const pid = s.pageId || s.page_id;
           return pid === options.pageId;
         });
+      } else if (!options?.allSources && activeSources.length > 1) {
+        // Smart Staggered Round-Robin: If no specific feed is targeted, process exactly 1 feed
+        // (the one that hasn't run for the longest time) to prevent timeouts & CPU overload.
+        activeSources.sort((a: any, b: any) => {
+          const timeA = a.lastPolledAt ? new Date(a.lastPolledAt).getTime() : 0;
+          const timeB = b.lastPolledAt ? new Date(b.lastPolledAt).getTime() : 0;
+          return timeA - timeB;
+        });
+        const chosen = activeSources[0];
+        console.log(`[InputCron] 🔄 Split-Mode: Selected feed "${chosen.name}" (1 of ${allSources.length} active feeds) for this execution to prevent timeouts.`);
+        activeSources = [chosen];
       }
 
       console.log(`[InputCron] 📥 Input Cron started! Evaluating ${activeSources.length} active RSS sources...`);
@@ -431,6 +462,20 @@ export class InputPipelineService {
             status: articleDoc.status,
           });
         }
+
+        try {
+          await sourcesCol.updateOne(
+            { _id: source._id },
+            {
+              $set: {
+                lastPolledAt: new Date(),
+                lastReelsCreated: reelsCreated,
+                lastUploadedToDrive: uploadedToDrive,
+                updatedAt: new Date(),
+              },
+            }
+          );
+        } catch {}
 
         sourceResults.push({
           sourceId: source._id,

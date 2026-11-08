@@ -1357,11 +1357,12 @@ export class GDriveReelService {
 
   /**
    * Evaluates active channels and publishes the next video.
-   * Supports targeting a specific channelId, pageId, or forcing immediate publish.
+   * Supports targeting a specific channelId, folderId, pageId, or forcing immediate publish.
    */
   public async publishAllDueChannels(options?: {
     force?: boolean;
     channelId?: string;
+    folderId?: string;
     pageId?: string;
   }): Promise<{
     totalChannels: number;
@@ -1380,6 +1381,9 @@ export class GDriveReelService {
 
     if (options?.channelId) {
       active = channels.filter((c) => c._id === options.channelId);
+    } else if (options?.folderId) {
+      const cleanFid = this.extractFolderId(options.folderId);
+      active = channels.filter((c) => this.extractFolderId(c.folderUrlOrId || c.folderId) === cleanFid);
     } else if (options?.pageId) {
       active = channels.filter((c) => c.pageId === options.pageId);
     } else {
@@ -1387,18 +1391,18 @@ export class GDriveReelService {
     }
 
     const processed: any[] = [];
-    const isExplicitTrigger = Boolean(options?.force || options?.channelId || options?.pageId);
+    const isExplicitTrigger = Boolean(options?.force || options?.channelId || options?.folderId || options?.pageId);
 
-    if (active.length === 0 && (options?.channelId || options?.pageId)) {
+    if (active.length === 0 && (options?.channelId || options?.folderId || options?.pageId)) {
       return {
         totalChannels: channels.length,
         activeChannels: 0,
         processed: [{
-          channelId: options.channelId || 'unknown',
+          channelId: options.channelId || options.folderId || 'unknown',
           channelName: 'Channel',
           pageName: options.pageId || 'Unknown Page',
           status: 'failed',
-          reason: `No Google Drive channel found matching ${options.channelId ? `channel ID "${options.channelId}"` : `page ID "${options.pageId}"`}. Please configure a channel in the Google Drive tab.`,
+          reason: `No Google Drive channel found matching target filter. Please configure a channel in the Google Drive tab.`,
         }],
       };
     }

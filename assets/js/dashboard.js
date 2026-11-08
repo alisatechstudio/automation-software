@@ -152,7 +152,7 @@
         }
       });
 
-      // Update auth status badge
+      // Update auth status badge and split webhooks
       try {
         const res = await safeFetchJson('/api/cron');
         const badge = document.getElementById('cron-auth-badge');
@@ -161,6 +161,56 @@
             badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span class="text-emerald-300 font-semibold">CRON_SECRET Active (Protected)</span>';
           } else {
             badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span><span class="text-cyan-300">Open Access (No Secret Required)</span>';
+          }
+        }
+
+        // Render split input crons list in overview
+        const splitInputList = document.getElementById('split-input-crons-list');
+        if (splitInputList && res.ok && Array.isArray(res.data?.splitInputCrons)) {
+          if (res.data.splitInputCrons.length === 0) {
+            splitInputList.innerHTML = '<div class="text-[10px] text-slate-500 font-mono py-1">No active RSS sources configured yet. Add sources in the RSS Sources tab.</div>';
+          } else {
+            splitInputList.innerHTML = res.data.splitInputCrons.map(s => (
+              '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded bg-slate-950/70 border border-cyan-950/80 hover:border-cyan-800/60 transition">' +
+                '<div class="min-w-0 pr-2">' +
+                  '<div class="text-[11px] font-bold text-slate-200 flex items-center gap-1.5 truncate">' +
+                    '<span>' + s.sourceName + '</span>' +
+                    '<span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">📁 ' + s.folderName + '</span>' +
+                    '<span class="text-[9px] text-slate-400">(' + s.targetPageName + ')</span>' +
+                  '</div>' +
+                  '<div class="text-[9px] text-slate-400 font-mono truncate mt-0.5">' + s.fullUrl + '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-1 shrink-0 self-end sm:self-auto">' +
+                  '<button data-path="' + s.path + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-900 transition" title="Copy dedicated webhook URL for cron-job.org">📋 Copy</button>' +
+                  '<button onclick="triggerSourceInputCron(\'' + s.sourceId + '\')" class="text-[9px] px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition active:scale-95 shadow">⚡ Run</button>' +
+                '</div>' +
+              '</div>'
+            )).join('');
+          }
+        }
+
+        // Render split output crons list in overview
+        const splitOutputList = document.getElementById('split-output-crons-list');
+        if (splitOutputList && res.ok && Array.isArray(res.data?.splitOutputCrons)) {
+          if (res.data.splitOutputCrons.length === 0) {
+            splitOutputList.innerHTML = '<div class="text-[10px] text-slate-500 font-mono py-1">No active Google Drive channels configured yet. Configure channels in Google Drive Reels tab.</div>';
+          } else {
+            splitOutputList.innerHTML = res.data.splitOutputCrons.map(c => (
+              '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded bg-slate-950/70 border border-emerald-950/80 hover:border-emerald-800/60 transition">' +
+                '<div class="min-w-0 pr-2">' +
+                  '<div class="text-[11px] font-bold text-slate-200 flex items-center gap-1.5 truncate">' +
+                    '<span>' + c.channelName + '</span>' +
+                    '<span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">📁 ' + c.folderId + '</span>' +
+                    '<span class="text-[9px] text-slate-400">(' + c.targetPageName + ')</span>' +
+                  '</div>' +
+                  '<div class="text-[9px] text-slate-400 font-mono truncate mt-0.5">' + c.fullUrl + '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-1 shrink-0 self-end sm:self-auto">' +
+                  '<button data-path="' + c.path + '" onclick="copyCronUrl(this.dataset.path, this)" class="text-[9px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-900 transition" title="Copy dedicated webhook URL for cron-job.org">📋 Copy</button>' +
+                  '<button onclick="triggerChannelPublishNow(\'' + c.channelId + '\')" class="text-[9px] px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold transition active:scale-95 shadow">⚡ Run</button>' +
+                '</div>' +
+              '</div>'
+            )).join('');
           }
         }
       } catch (e) {}
@@ -407,6 +457,21 @@
       }
     }
 
+    async function triggerSourceInputCron(sourceId) {
+      showToast('📥 Starting isolated Input Cron for feed ' + sourceId + '...');
+      const res = await safeFetchJson('/api/cron/input?sourceId=' + encodeURIComponent(sourceId) + '&force=true');
+      if (res.ok && res.data?.success) {
+        const created = res.data.totalReelsCreated || 0;
+        const uploaded = res.data.totalUploadedToDrive || 0;
+        showToast('✓ Feed Input Complete! Created ' + created + ' reels, uploaded ' + uploaded + ' to Drive!');
+        loadOverview();
+        if (typeof loadSources === 'function') loadSources();
+        if (typeof refreshGDriveChannels === 'function') refreshGDriveChannels();
+      } else {
+        showToast(res.data?.error || res.error || 'Feed input failed', true);
+      }
+    }
+
     async function triggerOutputCronNow() {
       showToast('📤 Starting Output Cron: Getting oldest videos from Drive ➔ Broadcasting to FB, YouTube, TikTok...');
       const res = await safeFetchJson('/api/pipeline/run-output', {
@@ -650,17 +715,29 @@
           ? '📁 Drive: ' + (s.gdrive_folder_id || s.gdrive_folder_url.slice(0, 20))
           : '📁 Drive: Page Default';
         const themeLabel = s.reel_theme || 'auto-category';
-        return '<div class="flex items-center justify-between p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition">' +
-          '<div class="min-w-0 flex-1 pr-3">' +
-            '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5 truncate">' +
-              '<span>' + s.name + '</span>' +
-              '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>' +
-              '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">' + driveLabel + '</span>' +
+        return '<div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition space-y-2">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="min-w-0 flex-1 pr-3">' +
+              '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5 truncate">' +
+                '<span>' + s.name + '</span>' +
+                '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>' +
+                '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">' + driveLabel + '</span>' +
+              '</div>' +
+              '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
+              '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | Theme: ' + themeLabel + ' | Template: ' + s.template_id + '</div>' +
             '</div>' +
-            '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
-            '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | Theme: ' + themeLabel + ' | Template: ' + s.template_id + '</div>' +
+            '<button data-id="' + s.id + '" onclick="deleteSource(this.dataset.id)" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition shrink-0">Delete</button>' +
           '</div>' +
-          '<button data-id="' + s.id + '" onclick="deleteSource(this.dataset.id)" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition">Delete</button>' +
+          '<div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 text-[10px]">' +
+            '<div class="flex items-center gap-1.5 min-w-0">' +
+              '<span class="font-bold text-cyan-400 shrink-0">📥 Dedicated Webhook:</span>' +
+              '<code class="px-1.5 py-0.5 rounded bg-slate-900 text-cyan-300 font-mono border border-slate-800 truncate">/api/cron/input?sourceId=' + s.id + '</code>' +
+            '</div>' +
+            '<div class="flex items-center gap-1 shrink-0">' +
+              '<button data-path="/api/cron/input?sourceId=' + s.id + '" onclick="copyCronUrl(this.dataset.path, this)" class="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition" title="Copy dedicated webhook URL for cron-job.org">📋 Copy URL</button>' +
+              '<button onclick="triggerSourceInputCron(\'' + s.id + '\')" class="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition active:scale-95 shadow">⚡ Run Feed</button>' +
+            '</div>' +
+          '</div>' +
         '</div>';
       }).join('');
 
@@ -1852,6 +1929,13 @@
           '<div class="flex items-center gap-2 pt-2">' +
             '<button data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)" class="flex-1 py-1.5 px-2.5 rounded-lg text-[10px] font-semibold border transition ' + (isSelected ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800') + '">' + (isSelected ? '📁 Viewing Videos' : '📁 View Videos') + '</button>' +
             '<button data-id="' + c._id + '" onclick="publishNextForGDriveChannel(this.dataset.id)" class="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-[10px] transition active:scale-95 shadow shrink-0">⚡ Post Now</button>' +
+          '</div>' +
+          '<div class="pt-2 border-t border-slate-900/80 flex flex-wrap items-center justify-between gap-1 text-[10px]">' +
+            '<div class="flex items-center gap-1 min-w-0">' +
+              '<span class="font-bold text-emerald-400 shrink-0">📤 Output Webhook:</span>' +
+              '<code class="px-1.5 py-0.5 rounded bg-slate-900 text-emerald-300 font-mono border border-slate-800 truncate">/api/cron/output?channelId=' + c._id + '</code>' +
+            '</div>' +
+            '<button data-path="/api/cron/output?channelId=' + c._id + '" onclick="copyCronUrl(this.dataset.path, this)" class="px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition" title="Copy dedicated webhook URL for cron-job.org">📋 Copy</button>' +
           '</div>' +
         '</div>';
       }).join('');

@@ -148,12 +148,74 @@ async function testInputPipeline() {
   assert.strictEqual(recoveredDoc?.status, 'uploaded_to_drive', 'Recovered article must now be uploaded_to_drive');
   assert.ok(recoveredDoc?.gdriveFileId, 'Recovered article must have gdriveFileId');
 
+  // Test 5: Split Input Cron (Feed + Drive Folder Wise)
+  console.log('\n[Test 5] Testing Split Input Cron across multiple feeds & Drive folders...');
+  const testFolderId2 = '2SecondFolderIdABC456';
+  const testSourceId2 = 'src_test_news_2';
+
+  // Seed second RSS source with its own dedicated folder
+  await testDb.collection<RssSource>('rss_sources').insertOne({
+    _id: testSourceId2,
+    name: 'BBC World News',
+    url: 'https://feeds.bbci.co.uk/news/world/rss.xml',
+    gdriveFolderUrlOrId: `https://drive.google.com/drive/folders/${testFolderId2}`,
+    gdriveFolderId: testFolderId2,
+    pageId: '1302276172975819',
+    isActive: true,
+    reelDuration: 3,
+    reelTheme: 'headline-card',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  // 5A: Dedicated Split Run for Source 2
+  console.log('5A: Running isolated Input Cron specifically for Source 2 (feed-wise)...');
+  const splitResSource2 = await pipeline.runInputCron({
+    sourceId: testSourceId2,
+    force: true,
+    maxArticlesPerSource: 1,
+  });
+
+  assert.strictEqual(splitResSource2.success, true, 'Split cron for Source 2 must succeed');
+  assert.strictEqual(splitResSource2.sourcesProcessed, 1, 'Must process ONLY the targeted Source 2');
+  assert.strictEqual(splitResSource2.results[0].sourceId, testSourceId2, 'Processed source must be Source 2');
+  assert.strictEqual(splitResSource2.results[0].folderId, testFolderId2, 'Must upload to Source 2 dedicated folder');
+  console.log('✓ Verified isolated execution for Source 2 -> Folder 2:', splitResSource2.results[0].folderId);
+
+  // 5B: Dedicated Split Run by Folder ID
+  console.log('5B: Running isolated Input Cron by Folder ID (folder-wise)...');
+  const splitResFolder1 = await pipeline.runInputCron({
+    folderId: testFolderId,
+    force: true,
+    maxArticlesPerSource: 1,
+  });
+  assert.strictEqual(splitResFolder1.success, true, 'Split cron for Folder 1 must succeed');
+  assert.strictEqual(splitResFolder1.sourcesProcessed, 1, 'Must process ONLY source linked to Folder 1');
+  assert.strictEqual(splitResFolder1.results[0].folderId, testFolderId, 'Target folder must match Folder 1');
+  console.log('✓ Verified isolated execution by Folder ID:', splitResFolder1.results[0].folderId);
+
+  // 5C: Auto Round-Robin Single-Feed Mode (when no source is specified among multiple feeds)
+  console.log('5C: Testing Auto Round-Robin single feed execution to prevent timeouts...');
+  const roundRobinRes = await pipeline.runInputCron({
+    force: true,
+    maxArticlesPerSource: 1,
+  });
+  assert.strictEqual(roundRobinRes.success, true, 'Round-robin run must succeed');
+  assert.strictEqual(roundRobinRes.sourcesProcessed, 1, 'Generic run must process exactly 1 feed at a time to prevent serverless timeout!');
+  console.log('✓ Verified safe single-feed round-robin execution:', roundRobinRes.results[0].sourceName);
+
   // Cleanup test files
   try {
     for (const f of stagedFiles) {
       fs.unlinkSync(path.join(stagedDir, f));
     }
     fs.rmdirSync(stagedDir);
+    const stagedDir2 = path.join(config.DATA_DIR, 'gdrive_folders', testFolderId2);
+    if (fs.existsSync(stagedDir2)) {
+      const files2 = fs.readdirSync(stagedDir2);
+      for (const f of files2) fs.unlinkSync(path.join(stagedDir2, f));
+      fs.rmdirSync(stagedDir2);
+    }
     fs.rmSync(testDbDir, { recursive: true, force: true });
   } catch {}
 

@@ -1252,18 +1252,23 @@ function safeWaitUntil(promise: Promise<any>): void {
 }
 
 // Handler: 1. Input Cron (Stage 1: RSS Ingestion -> Video Reels -> Save to Linked Drive Folder)
+// Supports split execution by sourceId, folderId, pageId, or auto-round-robin
 async function executeInputCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
+    const targetSourceId = (req.params.sourceId as string) || (req.query.sourceId as string) || (req.query.source as string) || (req.query.feed as string);
+    const targetFolderId = (req.query.folderId as string) || (req.query.folder as string);
     const targetPageId = (req.query.pageId as string) || (req.query.page as string);
-    const targetSourceId = (req.query.sourceId as string) || (req.query.source as string);
+    const allParam = req.query.all === 'true' || req.query.allSources === 'true';
     const force = req.query.force !== 'false';
-    const maxArticles = parseInt((req.query.max as string) || '5', 10) || 5;
+    const maxArticles = parseInt((req.query.max as string) || '3', 10) || 3;
 
-    console.log(`[Input Cron] 📥 Starting Input Pipeline (pageId: ${targetPageId || 'all'}, sourceId: ${targetSourceId || 'all'})...`);
+    console.log(`[Input Cron] 📥 Starting Split Input Pipeline (sourceId: ${targetSourceId || 'auto-round-robin'}, folderId: ${targetFolderId || 'auto'}, pageId: ${targetPageId || 'all'})...`);
     const inputResult = await inputPipeline.runInputCron({
-      pageId: targetPageId,
       sourceId: targetSourceId,
+      folderId: targetFolderId,
+      pageId: targetPageId,
+      allSources: allParam,
       force,
       maxArticlesPerSource: maxArticles,
     });
@@ -1272,8 +1277,9 @@ async function executeInputCron(req: Request, res: Response) {
       ...inputResult,
       job: 'input_cron',
       stage: '1_input_ingest_render_drive',
+      sourceId: targetSourceId || inputResult.results[0]?.sourceId || 'auto',
+      folderId: targetFolderId || inputResult.results[0]?.folderId || 'auto',
       pageId: targetPageId || 'all',
-      sourceId: targetSourceId || 'all',
     });
   } catch (err: any) {
     console.error('[Input Cron] Error:', err);
@@ -1285,14 +1291,16 @@ async function executeInputCron(req: Request, res: Response) {
 async function executeOutputCron(req: Request, res: Response) {
   const startTime = Date.now();
   try {
+    const channelId = (req.params.channelId as string) || (req.query.channelId as string) || (req.query.channel as string);
+    const folderId = (req.query.folderId as string) || (req.query.folder as string);
     const pageId = (req.query.pageId as string) || (req.query.page as string);
-    const channelId = (req.query.channelId as string) || (req.query.channel as string);
     const force = req.query.force !== 'false';
 
-    console.log(`[Output Cron] 📤 Starting Output Pipeline (folder-wise -> FB + YouTube + TikTok)...`);
+    console.log(`[Output Cron] 📤 Starting Output Pipeline (channelId: ${channelId || 'all'}, folderId: ${folderId || 'auto'}, pageId: ${pageId || 'all'})...`);
     const result = await gdriveReelService.publishAllDueChannels({
       force,
       channelId,
+      folderId,
       pageId,
     });
 
@@ -1300,8 +1308,9 @@ async function executeOutputCron(req: Request, res: Response) {
       success: true,
       job: 'output_cron',
       stage: '2_output_drive_post_social_networks',
-      pageId: pageId || 'all',
       channelId: channelId || 'all',
+      folderId: folderId || 'all',
+      pageId: pageId || 'all',
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - startTime,
       result,
@@ -1312,23 +1321,100 @@ async function executeOutputCron(req: Request, res: Response) {
   }
 }
 
+// Helper to generate full catalog of universal and split crons
+async function buildCronCatalog(baseUrl: string, secretSuffix: string) {
+  const db = getDatabase();
+  const rawSources = await db.collection<RssSource>('rss_sources').find({}).toArray();
+  const pages = await db.collection<FacebookPage>('facebook_pages').find({}).toArray();
+  const pageMap = new Map(pages.map((p) => [p._id, p.name]));
+  const channels = await gdriveReelService.getAllChannels();
+
+  const activeSources = rawSources.filter((s: any) => {
+    const act = s.isActive ?? s.is_active ?? true;
+    return act !== false && act !== 0 && act !== '0' && act !== 'false';
+  });
+
+  const splitInputCrons = await Promise.all(
+    activeSources.map(async (s) => {
+      const folderInfo = await inputPipeline.resolveDriveFolderForSource(s);
+      const pageName = pageMap.get(s.pageId || (s as any).page_id) || 'Connected Page';
+      return {
+        sourceId: s._id,
+        sourceName: s.name,
+        feedUrl: s.url,
+        targetPageId: s.pageId || (s as any).page_id,
+        targetPageName: pageName,
+        folderId: folderInfo.folderId,
+        folderName: folderInfo.folderName || 'Google Drive Folder',
+        path: `/api/cron/input?sourceId=${encodeURIComponent(s._id)}`,
+        fullUrl: `${baseUrl}/api/cron/input?sourceId=${encodeURIComponent(s._id)}${secretSuffix}`,
+        directPath: `/api/cron/input/${encodeURIComponent(s._id)}`,
+        directFullUrl: `${baseUrl}/api/cron/input/${encodeURIComponent(s._id)}${secretSuffix}`,
+      };
+    })
+  );
+
+  const splitOutputCrons = channels
+    .filter((c) => c.isActive && (c.folderUrlOrId || c.folderId))
+    .map((c) => ({
+      channelId: c._id,
+      channelName: c.name,
+      targetPageId: c.pageId,
+      targetPageName: c.pageName || pageMap.get(c.pageId) || 'Connected Page',
+      folderId: c.folderId,
+      folderUrl: c.folderUrlOrId,
+      path: `/api/cron/output?channelId=${encodeURIComponent(c._id)}`,
+      fullUrl: `${baseUrl}/api/cron/output?channelId=${encodeURIComponent(c._id)}${secretSuffix}`,
+      directPath: `/api/cron/output/${encodeURIComponent(c._id)}`,
+      directFullUrl: `${baseUrl}/api/cron/output/${encodeURIComponent(c._id)}${secretSuffix}`,
+    }));
+
+  return {
+    splitInputCrons,
+    splitOutputCrons,
+  };
+}
+
 // -------------------------------------------------------------
-// AUTOMATION CRON ENDPOINTS (INPUT & OUTPUT CRONS ONLY)
+// AUTOMATION CRON ENDPOINTS (SPLIT FEED + DRIVE FOLDER WISE)
 // -------------------------------------------------------------
 
-// 1. Stage 1: Input Cron (Fetch RSS -> Render Video Reels -> Save to Linked Drive Folder)
-apiRouter.all('/cron/input', async (req: Request, res: Response) => {
+// 1. Stage 1: Input Cron (Supports optional :sourceId param or ?sourceId= / ?folderId= query)
+apiRouter.all(['/cron/input', '/cron/input/:sourceId'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeInputCron(req, res);
 });
 
-// 2. Stage 2: Output Cron (Folder-wise Get Oldest from Drive -> Post to FB, YouTube, TikTok -> Drive Cleanup)
-apiRouter.all('/cron/output', async (req: Request, res: Response) => {
+// 2. Stage 2: Output Cron (Supports optional :channelId param or ?channelId= / ?folderId= query)
+apiRouter.all(['/cron/output', '/cron/output/:channelId'], async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
   await executeOutputCron(req, res);
 });
 
-// 3. Universal Gateway Endpoint (/api/cron)
+// 3. Dynamic Cron Catalog Endpoint (/api/cron/catalog)
+apiRouter.get('/cron/catalog', async (req: Request, res: Response) => {
+  try {
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+    const cronSecret = process.env.CRON_SECRET;
+    const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+    const catalog = await buildCronCatalog(baseUrl, secretSuffix);
+
+    res.json({
+      success: true,
+      baseUrl,
+      cronSecretConfigured: Boolean(cronSecret),
+      universalInputUrl: `${baseUrl}/api/cron/input${secretSuffix}`,
+      universalOutputUrl: `${baseUrl}/api/cron/output${secretSuffix}`,
+      ...catalog,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Universal Gateway Endpoint (/api/cron)
 apiRouter.all('/cron', async (req: Request, res: Response) => {
   if (!verifyCronAuth(req, res)) return;
 
@@ -1340,39 +1426,82 @@ apiRouter.all('/cron', async (req: Request, res: Response) => {
     return executeOutputCron(req, res);
   }
 
-  // If GET without a specific job, return clean catalog showing only input and output
+  // If GET without a specific job, return full catalog with split feed & folder webhooks
   if (req.method === 'GET') {
     const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.get('host') || 'localhost:3000';
     const baseUrl = `${protocol}://${host}`;
     const cronSecret = process.env.CRON_SECRET;
     const secretSuffix = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+    let splitInputCrons: any[] = [];
+    let splitOutputCrons: any[] = [];
+    try {
+      const catalog = await buildCronCatalog(baseUrl, secretSuffix);
+      splitInputCrons = catalog.splitInputCrons;
+      splitOutputCrons = catalog.splitOutputCrons;
+    } catch {}
 
     return res.json({
       status: 'active',
-      name: 'BD News 24/7 Automation Pipeline (Two-Stage Architecture)',
+      name: 'BD News 24/7 Automation Pipeline (Split Feed + Drive Folder Architecture)',
       timestamp: new Date().toISOString(),
       cronSecretConfigured: Boolean(cronSecret),
       authInstructions: cronSecret
         ? 'Pass "Authorization: Bearer <secret>" or "x-cron-secret: <secret>" header, or append "?secret=<secret>" to URLs.'
         : 'CRON_SECRET is not set in environment; webhooks are open for triggers.',
+      universal: {
+        input: {
+          slug: 'input',
+          title: 'Stage 1: Universal Auto-Rotating Input Cron (1 feed per tick)',
+          path: '/api/cron/input',
+          fullUrl: `${baseUrl}/api/cron/input${secretSuffix}`,
+          method: 'GET / POST',
+          desc: 'Polls active RSS feeds one-by-one round-robin to prevent timeouts, creates vertical news reels, and saves them to linked Google Drive folders.',
+        },
+        output: {
+          slug: 'output',
+          title: 'Stage 2: Universal Output Cron (all due channels)',
+          path: '/api/cron/output',
+          fullUrl: `${baseUrl}/api/cron/output${secretSuffix}`,
+          method: 'GET / POST',
+          desc: 'Fetches the oldest reel from Google Drive folders, publishes to Facebook Pages, YouTube Shorts, and TikTok, then deletes the processed video from Drive.',
+        },
+      },
+      splitInputCrons,
+      splitOutputCrons,
       endpoints: [
         {
           slug: 'input',
-          title: 'Stage 1: Input Cron (RSS Ingestion -> Reel Generation -> Google Drive)',
+          title: 'Stage 1: Universal Input Cron (Auto-rotates feeds)',
           path: '/api/cron/input',
           fullUrl: `${baseUrl}/api/cron/input${secretSuffix}`,
           method: 'GET / POST',
           desc: 'Polls active RSS feeds, creates vertical news reels with dynamic templates, and uploads to linked Google Drive folders.',
         },
+        ...splitInputCrons.map((s) => ({
+          slug: `input_${s.sourceId}`,
+          title: `Stage 1 Input: ${s.sourceName} -> ${s.folderName}`,
+          path: s.path,
+          fullUrl: s.fullUrl,
+          method: 'GET / POST',
+          desc: `Isolated input cron for RSS feed "${s.sourceName}" (${s.feedUrl}). Uploads reels directly to Drive folder "${s.folderId}".`,
+        })),
         {
           slug: 'output',
-          title: 'Stage 2: Output Cron (Google Drive -> Facebook Page / YouTube / TikTok -> Drive Cleanup)',
+          title: 'Stage 2: Universal Output Cron',
           path: '/api/cron/output',
           fullUrl: `${baseUrl}/api/cron/output${secretSuffix}`,
           method: 'GET / POST',
           desc: 'Fetches the oldest reel from Google Drive folder, publishes to Facebook Pages, YouTube Shorts, and TikTok, then deletes the processed video folder from Drive.',
         },
+        ...splitOutputCrons.map((c) => ({
+          slug: `output_${c.channelId}`,
+          title: `Stage 2 Output: ${c.channelName} -> ${c.targetPageName}`,
+          path: c.path,
+          fullUrl: c.fullUrl,
+          method: 'GET / POST',
+          desc: `Isolated output cron for channel "${c.channelName}" (Drive folder "${c.folderId}"). Broadcasts oldest reel to FB, YouTube & TikTok.`,
+        })),
       ],
     });
   }
@@ -1742,10 +1871,11 @@ apiRouter.post('/poll-now', async (req: Request, res: Response) => {
 // 7a. Dedicated Automation Architecture Endpoints (Input Cron & Output Cron)
 apiRouter.post('/pipeline/run-input', async (req: Request, res: Response) => {
   try {
-    const { sourceId, pageId, force, maxArticles } = req.body || {};
+    const { sourceId, folderId, pageId, force, maxArticles } = req.body || {};
     console.log('[API] 📥 Manual trigger: Running Input Cron (RSS -> Reels -> Drive Folder)...');
     const result = await inputPipeline.runInputCron({
       sourceId,
+      folderId,
       pageId,
       force: force !== false,
       maxArticlesPerSource: maxArticles || 5,
@@ -1758,11 +1888,12 @@ apiRouter.post('/pipeline/run-input', async (req: Request, res: Response) => {
 
 apiRouter.post('/pipeline/run-output', async (req: Request, res: Response) => {
   try {
-    const { channelId, pageId } = req.body || {};
+    const { channelId, folderId, pageId } = req.body || {};
     console.log('[API] 📤 Manual trigger: Running Output Cron (Folder-wise Drive -> FB, YT, TikTok)...');
     const result = await gdriveReelService.publishAllDueChannels({
       force: true,
       channelId,
+      folderId,
       pageId,
     });
     res.json({ success: true, result });

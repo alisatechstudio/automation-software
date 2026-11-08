@@ -331,6 +331,15 @@
                   <span>Save reels into linked Drive folder</span>
                 </div>
               </div>
+
+              <!-- Split Input Webhooks for Multiple Feeds -->
+              <div class="pt-2 border-t border-cyan-900/40 space-y-1.5">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="font-bold text-cyan-300">⚡ Split Input Webhooks (Feed + Drive Folder Wise)</span>
+                  <span class="text-slate-400">Prevents timeouts by running 1 feed per webhook in cron-job.org</span>
+                </div>
+                <div id="split-input-crons-list" class="space-y-1"></div>
+              </div>
             </div>
 
             <!-- Stage 2 Box -->
@@ -358,6 +367,15 @@
                   <span class="text-rose-400 font-bold font-mono">3.</span>
                   <span>Delete reel from Drive folder</span>
                 </div>
+              </div>
+
+              <!-- Split Output Webhooks for Multiple Folders -->
+              <div class="pt-2 border-t border-emerald-900/40 space-y-1.5">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="font-bold text-emerald-300">⚡ Split Output Webhooks (Folder Wise)</span>
+                  <span class="text-slate-400">Picks oldest video from specific Drive folder</span>
+                </div>
+                <div id="split-output-crons-list" class="space-y-1"></div>
               </div>
             </div>
           </div>
