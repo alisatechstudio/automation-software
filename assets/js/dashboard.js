@@ -1821,6 +1821,14 @@
         const catBadge = '<span class="text-slate-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono">' + (catMap[c.category] || '🌟 Auto') + '</span>';
         const pageBadge = '<span class="text-slate-300 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono truncate max-w-[130px]" title="' + escapeHtml(c.pageName || c.pageId || 'All Pages') + '">📄 ' + escapeHtml(c.pageName || c.pageId || 'All Pages') + '</span>';
 
+        const folderTarget = (c.folderUrlOrId || c.folderId || '').trim();
+        const folderLink = folderTarget
+          ? (folderTarget.startsWith('http') ? folderTarget : 'https://drive.google.com/drive/folders/' + folderTarget)
+          : '';
+        const folderBadge = folderLink
+          ? '<a href="' + folderLink + '" target="_blank" class="text-slate-400 hover:text-emerald-400 text-[10px] font-mono flex items-center gap-1 transition truncate max-w-[150px]" title="Open Google Drive folder in new tab">📁 Drive Folder ↗</a>'
+          : '<span class="text-amber-400/80 text-[10px] font-mono">⚠️ No folder linked</span>';
+
         return '<div class="glass-panel p-3.5 rounded-xl border transition-all duration-200 ' + (isSelected ? 'border-emerald-500/80 bg-slate-900/90 shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-500/30' : 'border-slate-800/80 bg-slate-950/60 hover:border-slate-700 hover:bg-slate-900/40') + '">' +
           '<div class="flex items-start justify-between gap-2 mb-2">' +
             '<div class="min-w-0 flex-1">' +
@@ -1829,7 +1837,7 @@
                 '<h4 class="text-xs font-bold text-white truncate cursor-pointer hover:text-emerald-400 transition" data-id="' + c._id + '" onclick="selectGDriveChannel(this.dataset.id)">' + escapeHtml(c.name || 'Channel') + '</h4>' +
                 '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full ' + (c.isActive ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-400') + '">' + (c.isActive ? 'Active' : 'Paused') + '</span>' +
               '</div>' +
-              '<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">' + pageBadge + catBadge + '</div>' +
+              '<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">' + pageBadge + catBadge + folderBadge + '</div>' +
             '</div>' +
             '<div class="flex items-center gap-1 shrink-0">' +
               '<button data-id="' + c._id + '" onclick="editGDriveChannel(this.dataset.id)" class="w-6 h-6 rounded flex items-center justify-center bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 transition text-[11px]" title="Edit Channel">✎</button>' +
@@ -1851,6 +1859,9 @@
       renderPagination('gdrive-channels-pagination', page, totalPages, total, 'changeGDriveChannelsPage', GDRIVE_CHANNELS_PAGE_SIZE);
     }
 
+    let lastGDriveScanError = null;
+    let lastGDriveChannelObj = null;
+
     async function selectGDriveChannel(id) {
       activeGDriveChannelId = id;
       renderGDriveChannelsPage(gdriveChannelsPage);
@@ -1859,21 +1870,54 @@
       const badgeEl = document.getElementById('gdrive-explorer-page-badge');
       const descEl = document.getElementById('gdrive-explorer-desc');
       const tbody = document.getElementById('gdrive-channel-videos-table-body');
+      const openDriveBtn = document.getElementById('gdrive-explorer-open-drive');
 
       if (titleEl) titleEl.innerText = 'Scanning...';
       if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">Scanning Drive files...</td></tr>';
+      lastGDriveScanError = null;
 
       try {
         const res = await safeFetchJson('/api/gdrive-reels/channels/' + id);
-        if (!res.ok || !res.data) return;
+        if (!res.ok || !res.data) {
+          const errMsg = res.error || res.data?.error || 'Failed to scan Google Drive folder';
+          lastGDriveScanError = errMsg;
+          if (titleEl) titleEl.innerText = 'Folder Scan Notice';
+          if (descEl) descEl.innerText = '⚠️ ' + errMsg;
+          if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-400 font-mono text-xs"><div class="font-bold mb-1">⚠️ Scan Error</div><div class="text-slate-400 text-[11px] mb-2">' + escapeHtml(errMsg) + '</div><button onclick="selectGDriveChannel(\'' + id + '\')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold">↻ Retry Scan</button></td></tr>';
+          }
+          if (openDriveBtn) openDriveBtn.classList.add('hidden');
+          return;
+        }
 
-        const channel = res.data.channel;
+        const channel = res.data.channel || {};
         const scan = res.data.scan || {};
+        lastGDriveChannelObj = channel;
         cachedGDriveVideos = scan.videos || [];
+        lastGDriveScanError = scan.error || null;
 
         if (titleEl) titleEl.innerText = channel.name || 'Channel Videos';
         if (badgeEl) badgeEl.innerText = 'Page: ' + (channel.pageName || channel.pageId || 'Default');
-        if (descEl) descEl.innerText = '✓ ' + scan.totalVideos + ' videos (' + scan.pendingCount + ' ready, ' + scan.postedCount + ' posted)';
+
+        // Set Open Folder link button in header
+        const folderTarget = (channel.folderUrlOrId || scan.folderId || channel.folderId || '').trim();
+        if (openDriveBtn) {
+          if (folderTarget) {
+            const driveUrl = folderTarget.startsWith('http') ? folderTarget : 'https://drive.google.com/drive/folders/' + folderTarget;
+            openDriveBtn.href = driveUrl;
+            openDriveBtn.classList.remove('hidden');
+            openDriveBtn.classList.add('inline-flex');
+          } else {
+            openDriveBtn.classList.add('hidden');
+            openDriveBtn.classList.remove('inline-flex');
+          }
+        }
+
+        if (scan.error) {
+          if (descEl) descEl.innerText = '⚠️ ' + scan.error;
+        } else {
+          if (descEl) descEl.innerText = '✓ ' + scan.totalVideos + ' videos (' + scan.pendingCount + ' ready, ' + scan.postedCount + ' posted)';
+        }
 
         if (document.getElementById('stat-gdrive-pending-videos')) {
           document.getElementById('stat-gdrive-pending-videos').innerText = scan.pendingCount || 0;
@@ -1881,7 +1925,11 @@
 
         gdriveVideoPage = 1;
         renderGDriveVideoPage(1);
-      } catch (e) {}
+      } catch (e) {
+        lastGDriveScanError = e.message;
+        if (titleEl) titleEl.innerText = 'Folder Scan Error';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-400 font-mono text-xs">Error: ' + escapeHtml(e.message) + '</td></tr>';
+      }
     }
 
     function changeGDriveVideoPage(newPage) {
@@ -1899,31 +1947,44 @@
       const pageVideos = cachedGDriveVideos.slice(start, start + GDRIVE_PAGE_SIZE);
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 font-mono text-xs">No video files (.mp4 / .mov) found in folder.</td></tr>';
+        if (lastGDriveScanError) {
+          tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-amber-400 font-mono text-xs"><div class="font-bold mb-1">⚠️ Google Drive Folder Notice</div><div class="text-slate-400 text-[11px] mb-2">' + escapeHtml(lastGDriveScanError) + '</div><div class="text-slate-500 text-[10px]">Tip: Ensure the folder is shared ("Anyone with the link can view") or save your Google Drive API Key.</div></td></tr>';
+        } else if (lastGDriveChannelObj && !lastGDriveChannelObj.folderUrlOrId && !lastGDriveChannelObj.folderId) {
+          tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-amber-400 font-mono text-xs"><div class="font-bold mb-1">⚠️ No Google Drive Folder Linked</div><div class="text-slate-400 text-[11px] mb-2">Click "✎ Edit" on the channel card to link your Google Drive folder.</div><button onclick="editGDriveChannel(\'' + activeGDriveChannelId + '\')" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs shadow">Link Drive Folder</button></td></tr>';
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400 font-mono text-xs"><div class="mb-1">📂 No video files (.mp4 / .mov) found in folder.</div><div class="text-slate-500 text-[10px]">Upload videos to your Google Drive folder or run the Input Cron to generate reels.</div></td></tr>';
+        }
         renderPagination('gdrive-videos-pagination', 1, 0, 0, 'changeGDriveVideoPage', GDRIVE_PAGE_SIZE);
         return;
       }
 
       tbody.innerHTML = pageVideos.map((v, pageIdx) => {
         const globalIdx = start + pageIdx;
+        const videoUrl = v.webViewLink || (v.id.startsWith('local_') ? ('/api/gdrive-reels/files/' + encodeURIComponent(v.id) + '/preview') : ('https://drive.google.com/file/d/' + encodeURIComponent(v.id) + '/view'));
+
         const statusBadge = v.isPosted
           ? '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-purple-950 text-purple-400 border border-purple-800">✓ Posted</span>'
           : '<span class="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">Ready</span>';
 
+        const viewBtn = '<a href="' + videoUrl + '" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-[10px] font-bold border border-slate-700 transition inline-flex items-center gap-0.5" title="View / play video in Google Drive"><span>View</span> <span class="text-emerald-400">↗</span></a>';
+
         const publishBtn = v.isPosted
-          ? '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold">Re-Post</button>'
-          : '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black shadow">Post</button>';
+          ? '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold ml-1">Re-Post</button>'
+          : '<button onclick="onGDriveVideoActionClick(' + globalIdx + ')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[10px] font-black shadow ml-1">Post</button>';
 
         const deleteBtn = '<button onclick="onGDriveVideoDeleteClick(' + globalIdx + ')" class="p-1 rounded bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-900/50 transition ml-1" title="Delete / Trash from Drive">🗑️</button>';
 
         return '<tr class="hover:bg-slate-900/60 transition">' +
           '<td class="py-2 px-3 max-w-[200px] truncate">' +
-            '<div class="font-bold text-slate-200 text-xs truncate" title="' + v.cleanTitle + '">' + v.cleanTitle + '</div>' +
-            '<div class="text-[9px] font-mono text-slate-500 truncate">' + v.name + '</div>' +
+            '<a href="' + videoUrl + '" target="_blank" class="font-bold text-slate-200 text-xs hover:text-emerald-400 transition inline-flex items-center gap-1 group truncate" title="View video in Google Drive">' +
+              '<span class="truncate">' + escapeHtml(v.cleanTitle) + '</span>' +
+              '<span class="text-[9px] text-slate-500 group-hover:text-emerald-400">↗</span>' +
+            '</a>' +
+            '<div class="text-[9px] font-mono text-slate-500 truncate">' + escapeHtml(v.name) + '</div>' +
           '</td>' +
           '<td class="py-2 px-2 font-mono text-slate-400 text-xs">' + v.sizeMb + ' MB</td>' +
           '<td class="py-2 px-2">' + statusBadge + '</td>' +
-          '<td class="py-2 px-3 text-right whitespace-nowrap">' + publishBtn + deleteBtn + '</td>' +
+          '<td class="py-2 px-3 text-right whitespace-nowrap">' + viewBtn + publishBtn + deleteBtn + '</td>' +
         '</tr>';
       }).join('');
 

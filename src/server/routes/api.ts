@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { waitUntil } from '@vercel/functions';
@@ -963,6 +965,46 @@ apiRouter.get('/gdrive-reels/channels/:id', async (req: Request, res: Response) 
     res.json({ success: true, channel, scan });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 3b. Stream or preview a video file (Google Drive redirect or local file streaming)
+apiRouter.get('/gdrive-reels/files/:fileId/preview', async (req: Request, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const folderId = (req.query.folderId as string) || '';
+
+    if (fileId.startsWith('local_')) {
+      const rawName = fileId.replace(/^local_/, '');
+      const candidatePaths = [
+        folderId ? path.join(config.DATA_DIR, 'gdrive_folders', folderId, rawName) : '',
+        path.join(config.DATA_DIR, 'rendered', rawName),
+      ].filter(Boolean);
+
+      const baseDir = path.join(config.DATA_DIR, 'gdrive_folders');
+      if (fs.existsSync(baseDir)) {
+        try {
+          const subdirs = fs.readdirSync(baseDir);
+          for (const sub of subdirs) {
+            candidatePaths.push(path.join(baseDir, sub, rawName));
+          }
+        } catch {}
+      }
+
+      const foundPath = candidatePaths.find((p) => p && fs.existsSync(p));
+      if (foundPath) {
+        res.setHeader('Content-Type', 'video/mp4');
+        const stream = fs.createReadStream(foundPath);
+        stream.pipe(res);
+        return;
+      }
+      res.status(404).send('Video file not found in local storage.');
+      return;
+    }
+
+    res.redirect(`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`);
+  } catch (err: any) {
+    res.status(500).send(`Error previewing file: ${err.message}`);
   }
 });
 

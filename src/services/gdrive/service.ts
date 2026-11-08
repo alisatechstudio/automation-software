@@ -3,13 +3,14 @@ import path from 'path';
 import crypto from 'crypto';
 import cron, { ScheduledTask } from 'node-cron';
 import { getDatabase } from '../../db/index.js';
-import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel } from '../../db/schema.js';
+import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel, RssSource } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient } from '../youtube/client.js';
 import { TikTokClient } from '../tiktok/client.js';
 import { GroupShareService } from '../facebook/group-share.js';
 import { generateGDriveReelHashtags, generateViralReelHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
+import { getDbSetting, setDbSetting } from '../settings.js';
 
 export interface GDriveVideoItem {
   id: string;
@@ -21,6 +22,8 @@ export interface GDriveVideoItem {
   modifiedTime: Date;
   isPosted: boolean;
   isLocalFallback?: boolean;
+  webViewLink?: string;
+  thumbnailLink?: string;
 }
 
 export interface GDriveScanResult {
@@ -64,15 +67,25 @@ export class GDriveReelService {
     const trimmed = (input || '').trim();
     if (!trimmed) return '';
 
-    // Match /folders/ID
-    const folderMatch = trimmed.match(/\/folders\/([a-zA-Z0-9_\-]+)/i);
-    if (folderMatch && folderMatch[1]) return folderMatch[1];
+    // If input is a web URL
+    if (/^(https?:\/\/|www\.|drive\.google\.com)/i.test(trimmed)) {
+      // 1. Match /folders/ID
+      const folderMatch = trimmed.match(/\/folders\/([a-zA-Z0-9_\-]+)/i);
+      if (folderMatch && folderMatch[1]) return folderMatch[1];
 
-    // Match ?id=ID or &id=ID
-    const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_\-]+)/i);
-    if (idParamMatch && idParamMatch[1]) return idParamMatch[1];
+      // 2. Match /d/ID
+      const dMatch = trimmed.match(/\/d\/([a-zA-Z0-9_\-]+)/i);
+      if (dMatch && dMatch[1]) return dMatch[1];
 
-    // Clean raw alphanumeric string (typical GDrive IDs are 25-45 chars)
+      // 3. Match ?id=ID or &id=ID
+      const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_\-]+)/i);
+      if (idParamMatch && idParamMatch[1]) return idParamMatch[1];
+
+      // If it is a URL but doesn't match any Drive folder/file pattern, return empty
+      return '';
+    }
+
+    // Direct alphanumeric string (Google Drive folder IDs are typically 15-45 characters)
     const cleanId = trimmed.replace(/[^a-zA-Z0-9_\-]/g, '');
     return cleanId || trimmed;
   }
@@ -114,15 +127,25 @@ export class GDriveReelService {
    */
   public async getGlobalApiKey(): Promise<string> {
     try {
+      const s1 = await getDbSetting('GDRIVE_API_KEY');
+      if (s1 && s1.trim()) return s1.trim();
+
+      const s2 = await getDbSetting('GOOGLE_DRIVE_API_KEY');
+      if (s2 && s2.trim()) return s2.trim();
+
+      const s3 = await getDbSetting('GDRIVE_GLOBAL_API_KEY');
+      if (s3 && s3.trim()) return s3.trim();
+
       const db = getDatabase();
-      const setting = await db.collection('settings').findOne({ _id: 'gdrive_settings' as any });
-      if (setting && setting.apiKey) {
-        return (setting.apiKey as string).trim();
+      const setting = await db.collection<any>('settings').findOne({ _id: 'gdrive_settings' as any });
+      if (setting) {
+        const val = (setting.apiKey || setting.value || '').trim();
+        if (val) return val;
       }
     } catch {
       // Fallback gracefully to env variable if DB is not connected
     }
-    return (process.env.GOOGLE_DRIVE_API_KEY || '').trim();
+    return (process.env.GOOGLE_DRIVE_API_KEY || process.env.GDRIVE_API_KEY || '').trim();
   }
 
   /**
@@ -131,10 +154,12 @@ export class GDriveReelService {
   public async setGlobalApiKey(key: string): Promise<string> {
     const cleanKey = (key || '').trim();
     try {
+      await setDbSetting('GDRIVE_API_KEY', cleanKey);
+      await setDbSetting('GOOGLE_DRIVE_API_KEY', cleanKey);
       const db = getDatabase();
       await db.collection('settings').updateOne(
         { _id: 'gdrive_settings' as any },
-        { $set: { apiKey: cleanKey, updatedAt: new Date() } },
+        { $set: { apiKey: cleanKey, value: cleanKey, updatedAt: new Date() } },
         { upsert: true }
       );
     } catch (err: any) {
@@ -463,10 +488,49 @@ export class GDriveReelService {
       };
     }
 
+    // Auto-link folder from RSS source if channel folder is not configured
+    if (!channel.folderUrlOrId && !channel.folderId && channel.pageId) {
+      try {
+        const db = getDatabase();
+        const src = await db.collection<RssSource>('rss_sources').findOne({
+          pageId: channel.pageId,
+          $or: [
+            { gdriveFolderUrlOrId: { $exists: true, $ne: '' } },
+            { gdriveFolderId: { $exists: true, $ne: '' } },
+          ],
+        });
+        if (src && (src.gdriveFolderUrlOrId || src.gdriveFolderId)) {
+          channel.folderUrlOrId = src.gdriveFolderUrlOrId || src.gdriveFolderId || '';
+          channel.folderId = this.extractFolderId(channel.folderUrlOrId);
+          await db.collection<GDriveReelConfig>('gdrive_reel_configs').updateOne(
+            { _id: channel._id },
+            { $set: { folderUrlOrId: channel.folderUrlOrId, folderId: channel.folderId, updatedAt: new Date() } }
+          );
+        }
+      } catch (err: any) {
+        console.warn('[GDriveReelService] Note auto-linking folder from RSS source:', err.message);
+      }
+    }
+
+    const folderTarget = (channel.folderUrlOrId || channel.folderId || '').trim();
+    if (!folderTarget) {
+      return {
+        channelId: channel._id,
+        channelName: channel.name,
+        folderId: '',
+        folderUrl: '',
+        totalVideos: 0,
+        postedCount: 0,
+        pendingCount: 0,
+        videos: [],
+        error: `No Google Drive folder linked to "${channel.name}". Click "✎ Edit" to add a Google Drive folder URL.`,
+      };
+    }
+
     const globalKey = await this.getGlobalApiKey();
     const apiKey = (channel.apiKey || globalKey || '').trim();
 
-    const scan = await this.scanFolderDirect(channel.folderUrlOrId || channel.folderId, apiKey, channel);
+    const scan = await this.scanFolderDirect(folderTarget, apiKey, channel);
     scan.channelId = channel._id;
     scan.channelName = channel.name;
     return scan;
@@ -503,93 +567,135 @@ export class GDriveReelService {
     const videoList: GDriveVideoItem[] = [];
     let remoteError: string | undefined;
 
-    // 1. Try scanning Google Drive API if apiKey or OAuth token is available
-    if (apiKey || oauthToken) {
+    // 1. Build Drive API query with modern attributes
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+    const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime,webViewLink,thumbnailLink)');
+    const baseApiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+
+    let driveRes: Response | null = null;
+
+    // A. Try OAuth token first if available
+    if (oauthToken) {
       try {
-        const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-        const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime)');
-        let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000`;
-        const fetchHeaders: Record<string, string> = {};
-
-        if (oauthToken) {
-          fetchHeaders['Authorization'] = `Bearer ${oauthToken}`;
-        } else if (apiKey) {
-          apiUrl += `&key=${apiKey}`;
-        }
-
-        const res = await fetch(apiUrl, { headers: fetchHeaders });
+        const res = await fetch(baseApiUrl, {
+          headers: { Authorization: `Bearer ${oauthToken}` },
+        });
         if (res.ok) {
-          const data = (await res.json()) as any;
-          const rawFiles: any[] = data.files || [];
-
-          for (const f of rawFiles) {
-            const isVideoMime = (f.mimeType || '').startsWith('video/');
-            const ext = f.name ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase() : '';
-            const isVideoExt = VIDEO_EXTENSIONS.includes(ext);
-
-            if (isVideoMime || isVideoExt) {
-              const sizeNum = parseInt(f.size || '0', 10);
-              const isPosted = postedIdSet.has(f.id) || postedNameSet.has((f.name || '').toLowerCase());
-
-              videoList.push({
-                id: f.id,
-                name: f.name || 'Untitled Video',
-                cleanTitle: this.cleanVideoTitle(f.name || 'Untitled Video'),
-                sizeBytes: sizeNum,
-                sizeMb: sizeNum > 0 ? (sizeNum / (1024 * 1024)).toFixed(2) : 'N/A',
-                mimeType: f.mimeType || 'video/mp4',
-                modifiedTime: new Date(f.modifiedTime || f.createdTime || Date.now()),
-                isPosted,
-                isLocalFallback: false,
-              });
-            }
-          }
+          driveRes = res;
         } else {
           const errorData = (await res.json().catch(() => ({}))) as any;
-          remoteError = errorData.error?.message || `Google Drive API error (${res.status} ${res.statusText})`;
+          remoteError = errorData.error?.message || `Google Drive OAuth API error (${res.status} ${res.statusText})`;
         }
       } catch (err: any) {
-        remoteError = `Google Drive scan note: ${err.message}`;
+        remoteError = `Google Drive OAuth network error: ${err.message}`;
       }
-    } else {
-      remoteError = 'Google Drive API Key or OAuth token is not configured.';
     }
 
-    // 2. Scan local fallback storage directory (data/gdrive_folders/<folderId>)
-    const localDir = path.join(config.DATA_DIR, 'gdrive_folders', folderId);
-    if (fs.existsSync(localDir)) {
+    // B. If OAuth did not succeed or was missing, and API key is available, try API Key!
+    if (!driveRes && apiKey) {
       try {
-        const localFiles = fs.readdirSync(localDir);
-        for (const localFile of localFiles) {
-          const ext = path.extname(localFile).toLowerCase();
-          if (VIDEO_EXTENSIONS.includes(ext)) {
-            const alreadyInList = videoList.some((v) => v.name.toLowerCase() === localFile.toLowerCase());
-            if (!alreadyInList) {
-              const filePath = path.join(localDir, localFile);
-              const stat = fs.statSync(filePath);
-              const isPosted = postedIdSet.has(`local_${localFile}`) || postedNameSet.has(localFile.toLowerCase());
+        const keyUrl = `${baseApiUrl}&key=${apiKey}`;
+        const keyRes = await fetch(keyUrl);
+        if (keyRes.ok) {
+          driveRes = keyRes;
+          remoteError = undefined; // Cleared because API key query succeeded!
+        } else {
+          const errorData = (await keyRes.json().catch(() => ({}))) as any;
+          const keyErr = errorData.error?.message || `Google Drive API error (${keyRes.status} ${keyRes.statusText})`;
+          remoteError = remoteError ? `${remoteError} | API Key error: ${keyErr}` : keyErr;
+        }
+      } catch (err: any) {
+        const netErr = `Google Drive API Key network error: ${err.message}`;
+        remoteError = remoteError ? `${remoteError} | ${netErr}` : netErr;
+      }
+    }
 
-              videoList.push({
-                id: `local_${localFile}`,
-                name: localFile,
-                cleanTitle: this.cleanVideoTitle(localFile),
-                sizeBytes: stat.size,
-                sizeMb: (stat.size / (1024 * 1024)).toFixed(2),
-                mimeType: 'video/mp4',
-                modifiedTime: new Date(stat.mtime),
-                isPosted,
-                isLocalFallback: true,
-              });
-            }
+    if (!driveRes && !apiKey && !oauthToken) {
+      remoteError = 'Google Drive API Key is not configured. Please enter your Google Drive API Key in the box above.';
+    }
+
+    // Parse files if drive query succeeded
+    if (driveRes && driveRes.ok) {
+      try {
+        const data = (await driveRes.json()) as any;
+        const rawFiles: any[] = data.files || [];
+
+        for (const f of rawFiles) {
+          const isVideoMime = (f.mimeType || '').startsWith('video/');
+          const ext = f.name ? f.name.substring(f.name.lastIndexOf('.')).toLowerCase() : '';
+          const isVideoExt = VIDEO_EXTENSIONS.includes(ext);
+
+          if (isVideoMime || isVideoExt) {
+            const sizeNum = parseInt(f.size || '0', 10);
+            const isPosted = postedIdSet.has(f.id) || postedNameSet.has((f.name || '').toLowerCase());
+
+            videoList.push({
+              id: f.id,
+              name: f.name || 'Untitled Video',
+              cleanTitle: this.cleanVideoTitle(f.name || 'Untitled Video'),
+              sizeBytes: sizeNum,
+              sizeMb: sizeNum > 0 ? (sizeNum / (1024 * 1024)).toFixed(2) : 'N/A',
+              mimeType: f.mimeType || 'video/mp4',
+              modifiedTime: new Date(f.modifiedTime || f.createdTime || Date.now()),
+              isPosted,
+              isLocalFallback: false,
+              webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+              thumbnailLink: f.thumbnailLink,
+            });
           }
         }
-      } catch (fsScanErr: any) {
-        console.warn('[GDriveReelService] Local folder scan note:', fsScanErr.message);
+      } catch (parseErr: any) {
+        console.warn('[GDriveReelService] Note parsing drive response:', parseErr.message);
       }
     }
 
-    // If local files exist, clear remote error so user can proceed seamlessly
-    if (videoList.length > 0 && remoteError) {
+    // 2. Scan local fallback storage directory
+    const localDirCandidates = [
+      path.join(config.DATA_DIR, 'gdrive_folders', folderId),
+    ];
+    if (channelCtx?._id) {
+      localDirCandidates.push(path.join(config.DATA_DIR, 'gdrive_folders', `folder_${channelCtx._id.slice(0, 8)}`));
+    }
+    if (channelCtx?.pageId) {
+      localDirCandidates.push(path.join(config.DATA_DIR, 'gdrive_folders', `folder_${channelCtx.pageId.slice(0, 8)}`));
+    }
+
+    for (const localDir of localDirCandidates) {
+      if (fs.existsSync(localDir)) {
+        try {
+          const localFiles = fs.readdirSync(localDir);
+          for (const localFile of localFiles) {
+            const ext = path.extname(localFile).toLowerCase();
+            if (VIDEO_EXTENSIONS.includes(ext)) {
+              const alreadyInList = videoList.some((v) => v.name.toLowerCase() === localFile.toLowerCase());
+              if (!alreadyInList) {
+                const filePath = path.join(localDir, localFile);
+                const stat = fs.statSync(filePath);
+                const isPosted = postedIdSet.has(`local_${localFile}`) || postedNameSet.has(localFile.toLowerCase());
+
+                videoList.push({
+                  id: `local_${localFile}`,
+                  name: localFile,
+                  cleanTitle: this.cleanVideoTitle(localFile),
+                  sizeBytes: stat.size,
+                  sizeMb: (stat.size / (1024 * 1024)).toFixed(2),
+                  mimeType: 'video/mp4',
+                  modifiedTime: new Date(stat.mtime),
+                  isPosted,
+                  isLocalFallback: true,
+                  webViewLink: `/api/gdrive-reels/files/${encodeURIComponent(`local_${localFile}`)}/preview?folderId=${encodeURIComponent(path.basename(localDir))}`,
+                });
+              }
+            }
+          }
+        } catch (fsScanErr: any) {
+          console.warn('[GDriveReelService] Local folder scan note:', fsScanErr.message);
+        }
+      }
+    }
+
+    // If local or remote files exist, clear remote error so user can proceed seamlessly
+    if (videoList.length > 0) {
       remoteError = undefined;
     }
 
@@ -796,27 +902,47 @@ export class GDriveReelService {
 
     try {
       // 1. Obtain video buffer (from local staged folder or Google Drive API)
-      let videoBuffer: Buffer;
+      let videoBuffer: Buffer | null = null;
       const cleanFolderId = this.extractFolderId(conf.folderUrlOrId || conf.folderId);
-      const localFilePath = path.join(config.DATA_DIR, 'gdrive_folders', cleanFolderId, video.name);
+      
+      const candidatePaths = [
+        cleanFolderId ? path.join(config.DATA_DIR, 'gdrive_folders', cleanFolderId, video.name) : '',
+        path.join(config.DATA_DIR, 'rendered', video.name),
+      ].filter(Boolean);
 
-      if (fs.existsSync(localFilePath)) {
-        console.log(`[GDriveReelService] 📂 Reading video from local folder storage: ${localFilePath}`);
-        videoBuffer = fs.readFileSync(localFilePath);
+      if (conf._id) {
+        candidatePaths.push(path.join(config.DATA_DIR, 'gdrive_folders', `folder_${conf._id.slice(0, 8)}`, video.name));
+      }
+      if (conf.pageId) {
+        candidatePaths.push(path.join(config.DATA_DIR, 'gdrive_folders', `folder_${conf.pageId.slice(0, 8)}`, video.name));
+      }
+
+      const existingLocalPath = candidatePaths.find((p) => p && fs.existsSync(p));
+
+      if (existingLocalPath) {
+        console.log(`[GDriveReelService] 📂 Reading video from local storage: ${existingLocalPath}`);
+        videoBuffer = fs.readFileSync(existingLocalPath);
       } else {
         const oauthToken = await this.getGoogleOAuthToken();
-        let downloadUrl = `https://www.googleapis.com/drive/v3/files/${video.id}?alt=media`;
-        const headers: Record<string, string> = {};
+        const baseDownloadUrl = `https://www.googleapis.com/drive/v3/files/${video.id}?alt=media&supportsAllDrives=true`;
+        let downloadRes: Response | null = null;
 
         if (oauthToken) {
-          headers['Authorization'] = `Bearer ${oauthToken}`;
-        } else if (apiKey) {
-          downloadUrl += `&key=${apiKey}`;
+          try {
+            const res = await fetch(baseDownloadUrl, { headers: { Authorization: `Bearer ${oauthToken}` } });
+            if (res.ok) downloadRes = res;
+          } catch {}
         }
 
-        const downloadRes = await fetch(downloadUrl, { headers });
-        if (!downloadRes.ok) {
-          throw new Error(`Failed to download video from Google Drive (${downloadRes.status} ${downloadRes.statusText})`);
+        if (!downloadRes && apiKey) {
+          try {
+            const res = await fetch(`${baseDownloadUrl}&key=${apiKey}`);
+            if (res.ok) downloadRes = res;
+          } catch {}
+        }
+
+        if (!downloadRes || !downloadRes.ok) {
+          throw new Error(`Failed to download video from Google Drive (${downloadRes ? downloadRes.status + ' ' + downloadRes.statusText : 'Drive download error'})`);
         }
 
         const arrayBuffer = await downloadRes.arrayBuffer();
@@ -1003,10 +1129,11 @@ export class GDriveReelService {
 
       if (shouldDelete) {
         // Clean up local fallback copy if exists
-        if (fs.existsSync(localFilePath)) {
+        const localCleanPath = existingLocalPath || (cleanFolderId ? path.join(config.DATA_DIR, 'gdrive_folders', cleanFolderId, video.name) : '');
+        if (localCleanPath && fs.existsSync(localCleanPath)) {
           try {
-            fs.unlinkSync(localFilePath);
-            console.log(`✓ [GDriveReelService] Cleaned up local fallback file ${localFilePath}`);
+            fs.unlinkSync(localCleanPath);
+            console.log(`✓ [GDriveReelService] Cleaned up local fallback file ${localCleanPath}`);
           } catch {}
         }
 
