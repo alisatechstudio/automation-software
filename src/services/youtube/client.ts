@@ -28,6 +28,92 @@ export interface YouTubeChannelProfile {
   videoCount?: string;
 }
 
+/**
+ * Strips category prefixes from headlines or filenames.
+ * Examples:
+ *   "International - US President Announces Major Policy" -> "US President Announces Major Policy"
+ *   "খেলাধুলা - বাংলাদেশ দলের প্রস্তুতি" -> "বাংলাদেশ দলের প্রস্তুতি"
+ *   "[World News] : Major Summit Begins" -> "Major Summit Begins"
+ *   "Breaking News - Massive Storm Approaching" -> "Massive Storm Approaching"
+ */
+export function stripCategoryFromTitle(rawTitle: string): string {
+  if (!rawTitle) return '';
+  let title = rawTitle.trim();
+
+  // 1. Strip bracketed or parenthesized tags at start: [Category], (Category)
+  title = title.replace(/^\[[^\]]+\]\s*[-–—:|•~]*\s*/i, '');
+  title = title.replace(/^\([^)]+\)\s*[-–—:|•~]*\s*/i, '');
+
+  const categoryNames = [
+    'international news', 'international', 'world news', 'world', 'breaking news', 'breaking', 'special report',
+    'national news', 'national', 'us politics', 'politics', 'political news', 'us news', 'usa news',
+    'economy news', 'economy', 'business news', 'business', 'finance news', 'finance', 'market update',
+    'technology news', 'technology', 'tech news', 'tech', 'entertainment news', 'entertainment', 'showbiz', 'hollywood',
+    'sports news', 'sports', 'football news', 'football', 'cricket news', 'cricket',
+    'lifestyle', 'health news', 'health', 'science news', 'science', 'opinion', 'editorial', 'education', 'general news', 'general',
+    'আন্তর্জাতিক সংবাদ', 'আন্তর্জাতিক', 'সারাদেশ', 'জাতীয় সংবাদ', 'জাতীয়', 'রাজনীতি সংবাদ', 'রাজনীতি', 'রাজনৈতিক খবর',
+    'অর্থনীতি সংবাদ', 'অর্থনীতি', 'বাণিজ্য সংবাদ', 'বাণিজ্য', 'শেয়ারবাজার', 'খেলাধুলা সংবাদ', 'খেলাধুলা', 'খেলা', 'আজকের খেলা',
+    'তথ্যপ্রযুক্তি সংবাদ', 'তথ্যপ্রযুক্তি', 'প্রযুক্তি সংবাদ', 'প্রযুক্তি', 'বিনোদন সংবাদ', 'বিনোদন',
+    'মতামত', 'কলাম', 'জীবনযাপন', 'স্বাস্থ্য সংবাদ', 'স্বাস্থ্য', 'শিক্ষা সংবাদ', 'শিক্ষা', 'চাকরি সংবাদ', 'চাকরি', 'ধর্ম',
+    'ব্রেকিং নিউজ', 'ব্রেকিং', 'সাধারণ সংবাদ', 'সাধারণ', 'জরুরি সংবাদ', 'জরুরি', 'বাংলাদেশ সংবাদ', 'বাংলাদেশ'
+  ];
+
+  const escapedCategories = categoryNames.map((c) => c.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+  // Match category when followed by a separator (- : | • ~)
+  const catWithSeparator = new RegExp('^(?:' + escapedCategories + ')\\s*[-–—:|•~]+\\s*', 'i');
+  title = title.replace(catWithSeparator, '');
+
+  // Fallback: any 2-25 char prefix ending in separator: e.g. 'Some Prefix - '
+  title = title.replace(/^[A-Za-z\u0980-\u09FF\s&]{2,25}\s*[-–—:|•~]\s+/i, '');
+
+  return title.trim() || rawTitle.trim();
+}
+
+/**
+ * Formats an engaging, viral YouTube Short title:
+ * - Strips category name / prefix from title
+ * - Cleans and formats headline
+ * - Appends maximum high-performing viral hashtags (#Shorts #Viral #Trending #News #FYP) within YouTube's 100-character limit
+ */
+export function formatYouTubeShortTitle(rawTitle: string, isEnglish: boolean = false): string {
+  let title = stripCategoryFromTitle(rawTitle);
+
+  // Strip existing hashtags from title so we control and format them cleanly
+  title = title.replace(/#[a-zA-Z0-9_\u0980-\u09FF]+/g, '').trim();
+
+  // Normalize whitespace and trailing punctuation
+  title = title.replace(/\s+/g, ' ').replace(/[-–—:|•\s]+$/, '').trim();
+
+  // High-velocity viral hashtags for YouTube Shorts
+  const viralTags = isEnglish
+    ? ['#Shorts', '#Viral', '#Trending', '#News', '#FYP', '#ShortsFeed']
+    : ['#Shorts', '#Viral', '#Trending', '#খবর', '#BDNews', '#সংবাদ'];
+
+  // Reserve space for tags: Title max length in YouTube Data API is 100 characters.
+  // Cap base title length to leave room for viral tags
+  if (title.length > 70) {
+    const truncated = title.substring(0, 68);
+    const lastSpace = truncated.lastIndexOf(' ');
+    title = (lastSpace > 40 ? truncated.substring(0, lastSpace) : truncated).trim() + '...';
+  }
+
+  let finalTitle = title;
+  for (const tag of viralTags) {
+    if ((finalTitle + ' ' + tag).length <= 100) {
+      finalTitle = finalTitle + ' ' + tag;
+    } else {
+      break;
+    }
+  }
+
+  // Ensure #Shorts is ALWAYS present
+  if (!finalTitle.includes('#Shorts')) {
+    finalTitle = `${finalTitle.substring(0, 92)} #Shorts`;
+  }
+
+  return finalTitle;
+}
+
 export class YouTubeClient {
   private clientId: string;
   private clientSecret: string;
@@ -296,15 +382,61 @@ export class YouTubeClient {
 
     const accessToken = await this.getAccessToken();
 
-    // Ensure title has #Shorts for automatic indexing
-    let cleanTitle = input.title.trim();
-    if (!cleanTitle.includes('#Shorts') && !cleanTitle.includes('#shorts')) {
-      cleanTitle = `${cleanTitle.substring(0, 88)} #Shorts`;
+    // 1. Remove category name and add multiple viral hashtags to the title (<100 chars)
+    const cleanTitle = formatYouTubeShortTitle(input.title, Boolean(input.isEnglish));
+
+    // 2. Comprehensive viral hashtags for description (20+ algorithm discovery tags)
+    const coreViralTags = input.isEnglish
+      ? '#Shorts #YouTubeShorts #Viral #Trending #FYP #Explore #ViralShorts #ShortsFeed #ShortsViral #Algorithm #BreakingNews #News #TrendingNews #USNews #WorldNews #DailyNews #Headlines #ViralVideo'
+      : '#Shorts #YouTubeShorts #Viral #Trending #FYP #ViralShorts #ShortsFeed #ShortsViral #খবর #সংবাদ #বাংলাখবর #ব্রেকিংনিউজ #বাংলাদেশ #BDNews #Bangladesh #BanglaNews #NewsUpdate #ViralVideo';
+
+    let finalDescription = (input.description || '').trim();
+    if (!finalDescription) {
+      finalDescription = coreViralTags;
+    } else {
+      const existingTagCount = (finalDescription.match(/#[a-zA-Z0-9_\u0980-\u09FF]+/g) || []).length;
+      if (existingTagCount < 10) {
+        finalDescription = `${finalDescription}\n\n${coreViralTags}`;
+      }
     }
 
+    // 3. High-traffic YouTube search keyword tags
     const defaultTags = input.isEnglish
-      ? ['Shorts', 'YouTubeShorts', 'TrendingNews', 'USNews', 'WorldNews', 'BreakingNews', 'NewsUpdate']
-      : ['Shorts', 'YouTubeShorts', 'BDNews', 'Bangladesh', 'BanglaNews', 'NewsUpdate'];
+      ? [
+          'Shorts',
+          'YouTubeShorts',
+          'Viral',
+          'Trending',
+          'FYP',
+          'ViralShorts',
+          'ShortsFeed',
+          'TrendingNews',
+          'USNews',
+          'WorldNews',
+          'BreakingNews',
+          'NewsUpdate',
+          'DailyNews',
+          'Headlines',
+          'ViralVideo',
+        ]
+      : [
+          'Shorts',
+          'YouTubeShorts',
+          'Viral',
+          'Trending',
+          'FYP',
+          'ViralShorts',
+          'ShortsFeed',
+          'BDNews',
+          'Bangladesh',
+          'BanglaNews',
+          'NewsUpdate',
+          'বাংলাখবর',
+          'ব্রেকিংনিউজ',
+          'খবর',
+          'সংবাদ',
+          'ViralVideo',
+        ];
 
     const tags = Array.from(
       new Set([
@@ -313,14 +445,10 @@ export class YouTubeClient {
       ])
     );
 
-    const defaultDescription = input.isEnglish
-      ? '#Shorts #TrendingNews #BreakingNews #NewsUpdate'
-      : '#Shorts #BDNews #Bangladesh #NewsUpdate';
-
     const metadata = {
       snippet: {
         title: cleanTitle,
-        description: input.description || defaultDescription,
+        description: finalDescription,
         tags,
         categoryId: '25', // News & Politics
       },

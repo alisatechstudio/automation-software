@@ -946,7 +946,7 @@ export const CORE_USA_NEWS_TAGS = [
  * Automatically tuned for USA Meta algorithm discovery (Facebook Feed & Reels).
  */
 export function generateTrendingNewsHashtags(options?: GenerateViralHashtagsOptions): string {
-  const targetCount = options?.targetCount ?? 12;
+  const targetCount = options?.targetCount ?? 20;
   const headline = (options?.headline || '').trim();
   const usaCategory = resolveUSACategory(options?.category, headline);
   const userTagsRaw = (options?.userTags || '').trim();
@@ -1029,7 +1029,7 @@ export function generateTrendingNewsHashtags(options?: GenerateViralHashtagsOpti
     pushTag(t);
   }
 
-  const finalLimit = Math.max(10, Math.min(14, targetCount));
+  const finalLimit = Math.max(10, Math.min(30, targetCount));
   return selectedTags.slice(0, finalLimit).join(' ');
 }
 
@@ -1143,7 +1143,7 @@ export function generateViralReelHashtags(options?: GenerateViralHashtagsOptions
  * Intelligent viral hashtag generator for YouTube Shorts
  */
 export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptions): string {
-  const targetCount = options?.targetCount ?? 8;
+  const targetCount = options?.targetCount ?? 22;
   const headline = (options?.headline || '').trim();
   const isEnglish = options?.isEnglish || isEnglishText(headline) || isEnglishText(options?.category);
   const categoryId = resolveCategoryTheme(options?.category);
@@ -1165,40 +1165,63 @@ export function generateViralShortsHashtags(options?: GenerateViralHashtagsOptio
     }
   };
 
-  // Core YouTube Shorts tags
+  // 1. Core YouTube Shorts high-velocity viral tags (Algorithm triggers)
   pushTag('#Shorts');
   pushTag('#YouTubeShorts');
   pushTag('#Viral');
   pushTag('#Trending');
+  pushTag('#FYP');
+  pushTag('#ViralShorts');
+  pushTag('#ShortsFeed');
+  pushTag('#ShortsViral');
+  pushTag('#Explore');
+  pushTag('#ViralVideo');
 
-  // Headline entities
+  // 2. Dynamic Headline Entities (Celebrities, Leaders, Locations)
   if (headline) {
     for (const entity of VIRAL_HEADLINE_ENTITIES) {
       if (entity.patterns.some((p) => (typeof p === 'string' ? headline.toLowerCase().includes(p.toLowerCase()) : p.test(headline)))) {
         if (entity.tags[0]) pushTag(entity.tags[0]);
+        if (entity.tags[1]) pushTag(entity.tags[1]);
       }
     }
   }
 
+  // 3. High-traffic News and Regional Viral Tags
   if (isEnglish) {
+    pushTag('#News');
+    pushTag('#BreakingNews');
+    pushTag('#TrendingNews');
+    pushTag('#WorldNews');
+    pushTag('#USNews');
+    pushTag('#DailyNews');
+    pushTag('#Headlines');
+    pushTag('#TrendingNewsWorld');
+
     const usaCategory = resolveUSACategory(options?.category, headline);
     const categoryTags = USA_CATEGORY_VIRAL_HASHTAGS[usaCategory] || USA_CATEGORY_VIRAL_HASHTAGS['general'];
-    for (const t of categoryTags.slice(0, 2)) {
+    for (const t of categoryTags) {
       pushTag(t);
     }
-    pushTag('#TrendingNewsWorld');
-    pushTag('#USNews');
   } else {
-    // Category tags
+    pushTag('#বাংলাখবর');
+    pushTag('#খবর');
+    pushTag('#সংবাদ');
+    pushTag('#ব্রেকিংনিউজ');
+    pushTag('#বাংলাদেশ');
+    pushTag('#BDNews');
+    pushTag('#Bangladesh');
+    pushTag('#BanglaNews');
+    pushTag('#NewsUpdate');
+    pushTag('#সরাসরি');
+
     const categoryTags = CATEGORY_VIRAL_HASHTAGS[categoryId] || [];
-    for (const t of categoryTags.slice(0, 2)) {
+    for (const t of categoryTags) {
       pushTag(t);
     }
-    pushTag('#BanglaNews');
-    pushTag('#Bangladesh');
   }
 
-  // User tags / News hooks
+  // 4. User tags / News hooks
   if (userTagsRaw) {
     for (const t of userTagsRaw.split(/\s+/).filter(Boolean)) {
       pushTag(t);

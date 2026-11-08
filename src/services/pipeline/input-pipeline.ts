@@ -419,8 +419,8 @@ export class InputPipelineService {
               : generateViralReelHashtags({ category: effectiveCategory, headline: item.title });
 
             const cleanHeadline = this.sanitizeFilename(item.title);
-            const firstTag = hashtags.split(' ')[0] || '#News';
-            filename = `${effectiveCategory} - ${cleanHeadline} ${firstTag}.mp4`;
+            const firstTag = hashtags.split(' ')[0] || '#Shorts';
+            filename = `${cleanHeadline} ${firstTag}.mp4`;
 
             // Cache locally in data/rendered
             const localRenderDir = path.join(config.DATA_DIR, 'rendered');

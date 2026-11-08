@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { getDatabase } from '../../db/index.js';
 import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel, RssSource } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
-import { YouTubeClient } from '../youtube/client.js';
+import { YouTubeClient, stripCategoryFromTitle } from '../youtube/client.js';
 import { TikTokClient } from '../tiktok/client.js';
 import { GroupShareService } from '../facebook/group-share.js';
 import { generateGDriveReelHashtags, generateViralReelHashtags, isEnglishText } from '../../config/constants.js';
@@ -111,6 +111,8 @@ export class GDriveReelService {
     title = title.replace(/#[a-zA-Z0-9_\u0980-\u09FF]+/g, '').trim();
     // Strip leading track numbers or dates (e.g. "01_", "2026-11-05_")
     title = title.replace(/^[\d\-_.]+\s*[-_.]*\s*/, '');
+    // Strip category prefixes (e.g. "International - ", "Breaking News - ", "খেলাধুলা - ", etc.)
+    title = stripCategoryFromTitle(title);
     // Replace separators with spaces
     title = title.replace(/[-_.]+/g, ' ').trim();
     // Capitalize words nicely if mostly lowercase
@@ -1043,6 +1045,7 @@ export class GDriveReelService {
             const ytRes = await ytClientForChannel.uploadShort({
               videoBuffer,
               title: video.cleanTitle,
+              description: hashtags,
               tags: fileTags,
               isEnglish: isEnglishChannel,
             }, config.DRY_RUN);
