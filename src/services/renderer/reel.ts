@@ -260,6 +260,7 @@ export interface ReelRenderInput {
   fps?: number;
   width?: number;
   height?: number;
+  aspectRatio?: '1:1' | '9:16';
   theme?: ReelTheme | string;
   isEnglish?: boolean;
   pageName?: string;
@@ -395,10 +396,26 @@ export class ReelVideoRenderer {
       theme = 'viral-gradient';
     }
 
-    const isVertical = theme === 'vertical-916' || input.height === 1920 || input.height === 1280 || Boolean(input.height && input.width && input.height > input.width);
-    // Standardize all reels to 720p HD: 720x1280 (vertical 9:16) or 720x720 (square 1:1)
-    const width = 720;
-    const height = isVertical ? 1280 : 720;
+    // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
+    // Enforce minimum resolution of AT LEAST 720p HD:
+    // Vertical 9:16: minimum 720 x 1280 (720p HD) or 1080 x 1920 (1080p Full HD)
+    // Square 1:1: minimum 720 x 720
+    const isExplicitlySquare = input.aspectRatio === '1:1' || Boolean(input.height && input.width && input.height === input.width && input.theme !== 'vertical-916');
+    const isVertical = !isExplicitlySquare;
+
+    const minWidth = 720;
+    const minHeight = isVertical ? 1280 : 720;
+
+    let width = input.width ? Math.max(minWidth, input.width) : minWidth;
+    let height = input.height ? Math.max(minHeight, input.height) : minHeight;
+
+    if (isVertical) {
+      if (width < 720) width = 720;
+      if (height < 1280) height = 1280;
+    } else {
+      if (width < 720) width = 720;
+      if (height < 720) height = 720;
+    }
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -465,10 +482,26 @@ export class ReelVideoRenderer {
       theme = 'viral-gradient';
     }
 
-    const isVertical = theme === 'vertical-916' || input.height === 1920 || input.height === 1280 || Boolean(input.height && input.width && input.height > input.width);
-    // Standardize all reels to 720p HD: 720x1280 (vertical 9:16) or 720x720 (square 1:1)
-    const width = 720;
-    const height = isVertical ? 1280 : 720;
+    // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
+    // Enforce minimum resolution of AT LEAST 720p HD:
+    // Vertical 9:16: minimum 720 x 1280 (720p HD) or 1080 x 1920 (1080p Full HD)
+    // Square 1:1: minimum 720 x 720
+    const isExplicitlySquare = input.aspectRatio === '1:1' || Boolean(input.height && input.width && input.height === input.width && input.theme !== 'vertical-916');
+    const isVertical = !isExplicitlySquare;
+
+    const minWidth = 720;
+    const minHeight = isVertical ? 1280 : 720;
+
+    let width = input.width ? Math.max(minWidth, input.width) : minWidth;
+    let height = input.height ? Math.max(minHeight, input.height) : minHeight;
+
+    if (isVertical) {
+      if (width < 720) width = 720;
+      if (height < 1280) height = 1280;
+    } else {
+      if (width < 720) width = 720;
+      if (height < 720) height = 720;
+    }
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -576,6 +609,7 @@ export class ReelVideoRenderer {
       '-shortest'
     );
 
+    ffmpegArgs.push('-movflags', '+faststart');
     ffmpegArgs.push(tempFile);
 
     const ffmpegProcess = spawn(ffmpegPath || 'ffmpeg', ffmpegArgs);
@@ -738,7 +772,7 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false
   ): void {
-    if (height === 1920 || theme === 'vertical-916') {
+    if (height >= 1280 || height > width || theme === 'vertical-916') {
       this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
@@ -803,7 +837,25 @@ export class ReelVideoRenderer {
     let ribbonBorder = '#ef4444';
     let ribbonText = '#ffffff';
 
-    if (theme === 'breaking-bold') {
+    const activeCategoryKey = theme === 'auto-category' ? resolveCategoryTheme(category) : (typeof theme === 'string' && theme.startsWith('cat-') ? theme : '');
+    const catStyle = activeCategoryKey ? CATEGORY_STYLES[activeCategoryKey] : null;
+
+    if (catStyle) {
+      bgColors = catStyle.gradientStops;
+      strapBg = catStyle.badgeBg;
+      strapAccent = catStyle.badgeDot || '#f59e0b';
+      strapText = isEnglish ? `${catStyle.id.replace('cat-', '').toUpperCase()} • SPECIAL DISPATCH` : `${catStyle.banglaName} | বিশেষ সংবাদ`;
+      deskColor = catStyle.badgeBg;
+      cardBorderColor = catStyle.cardBorder;
+      headlineColor = catStyle.headlineColor;
+      pillBg = catStyle.badgeBg;
+      pillText = catStyle.badgeText;
+      commentPillBg = catStyle.badgeBg;
+      commentPillText = catStyle.badgeText;
+      ribbonBg = catStyle.badgeBg;
+      ribbonBorder = catStyle.badgeDot || catStyle.badgeBg;
+      ribbonText = catStyle.badgeText;
+    } else if (theme === 'breaking-bold') {
       bgColors = ['#1e1b4b', '#0f172a', '#090d16', '#020617'];
       strapBg = '#f59e0b';
       strapAccent = '#fbbf24';
