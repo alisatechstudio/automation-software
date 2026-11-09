@@ -95,9 +95,10 @@ const baseConfig: AppConfig = {
   PUTER_AUTH_TOKEN: process.env.PUTER_AUTH_TOKEN || '',
   PUTER_TTS_PROVIDER: process.env.PUTER_TTS_PROVIDER || 'gemini',
   PUTER_TTS_MODEL: process.env.PUTER_TTS_MODEL || 'gemini-3.8-flash-tts',
-  PUTER_TTS_VOICE: process.env.PUTER_TTS_VOICE || 'Puck',
+  PUTER_TTS_VOICE: process.env.PUTER_TTS_VOICE || 'Charon',
   PUTER_TTS_INSTRUCTIONS:
-    process.env.PUTER_TTS_INSTRUCTIONS || 'Speak in a clear, engaging television news broadcast style.',
+    process.env.PUTER_TTS_INSTRUCTIONS ||
+    'Speak in a confident, authoritative, clear, and professional male television news broadcast voice.',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };

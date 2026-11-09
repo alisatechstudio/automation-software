@@ -63,7 +63,16 @@ export class PuterTtsService {
       config.PUTER_TTS_MODEL ||
       (provider === 'gemini' ? 'gemini-3.8-flash-tts' : provider === 'speechify' ? 'simba-3.2' : undefined);
 
-    const defaultVoice = provider === 'speechify' ? 'geffen_32' : provider === 'xai' ? 'eve' : 'Puck';
+    // Always default to professional male news voices across all providers
+    const defaultVoice =
+      provider === 'speechify'
+        ? 'hugh_32'
+        : provider === 'xai'
+        ? 'leo'
+        : provider === 'aws'
+        ? 'Matthew'
+        : 'Charon';
+
     const voice =
       options?.voice ||
       (await getDbSetting('PUTER_TTS_VOICE')) ||
@@ -74,7 +83,7 @@ export class PuterTtsService {
       options?.instructions ||
       (await getDbSetting('PUTER_TTS_INSTRUCTIONS')) ||
       config.PUTER_TTS_INSTRUCTIONS ||
-      'Speak in a clear, engaging television news broadcast style.';
+      'Speak in a confident, authoritative, clear, and professional male television news broadcast voice.';
 
     console.log(`[PuterTTS] 🎙️ Calling Puter.js TTS (Provider: ${provider}, Model: ${model || 'default'}, Voice: ${voice}) for: "${cleanText.substring(0, 40)}..."`);
 

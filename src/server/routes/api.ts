@@ -2249,7 +2249,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       PUTER_AUTH_TOKEN: config.PUTER_AUTH_TOKEN ? '••••••••' : '',
       PUTER_TTS_PROVIDER: config.PUTER_TTS_PROVIDER || 'gemini',
       PUTER_TTS_MODEL: config.PUTER_TTS_MODEL || 'gemini-3.8-flash-tts',
-      PUTER_TTS_VOICE: config.PUTER_TTS_VOICE || 'Puck',
+      PUTER_TTS_VOICE: config.PUTER_TTS_VOICE || 'Charon',
       PUTER_TTS_INSTRUCTIONS: config.PUTER_TTS_INSTRUCTIONS || '',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
