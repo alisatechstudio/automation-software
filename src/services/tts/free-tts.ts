@@ -31,7 +31,44 @@ export class FreeBroadcastTtsService {
     }
 
     if (!audioBuffers.length) return null;
-    return Buffer.concat(audioBuffers);
+    const concatenated = Buffer.concat(audioBuffers);
+    // Transform to natural male news anchor pitch
+    return this.shiftPitchToMale(concatenated);
+  }
+
+  /**
+   * Pitch-shifts audio down by 18% so the synthesized broadcast voice is always a deep, masculine news anchor.
+   */
+  private shiftPitchToMale(inputBuffer: Buffer): Buffer {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { spawnSync } = require('child_process');
+      let ffmpeg = 'ffmpeg';
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        ffmpeg = require('@ffmpeg-installer/ffmpeg').path || 'ffmpeg';
+      } catch (e) {}
+
+      const res = spawnSync(
+        ffmpeg,
+        [
+          '-y',
+          '-f', 'mp3',
+          '-i', 'pipe:0',
+          '-af', 'asetrate=44100*0.82,aresample=44100,volume=1.4',
+          '-f', 'mp3',
+          'pipe:1',
+        ],
+        { input: inputBuffer, maxBuffer: 15 * 1024 * 1024 }
+      );
+
+      if (res.status === 0 && res.stdout && res.stdout.length > 500) {
+        return res.stdout;
+      }
+    } catch (e) {
+      console.warn('[FreeBroadcastTTS] Pitch shift note:', e);
+    }
+    return inputBuffer;
   }
 
   private async fetchAudioChunk(text: string, lang: string): Promise<Buffer | null> {

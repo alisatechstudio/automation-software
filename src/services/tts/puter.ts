@@ -73,11 +73,15 @@ export class PuterTtsService {
         ? 'Matthew'
         : 'Charon';
 
-    const voice =
+    const voiceCandidate =
       options?.voice ||
       (await getDbSetting('PUTER_TTS_VOICE')) ||
       config.PUTER_TTS_VOICE ||
       defaultVoice;
+
+    // Filter out known female voices so an authoritative male voice is strictly guaranteed
+    const femaleVoices = ['Aoede', 'Kore', 'Leda', 'Callisto', 'eve', 'Joanna', 'Kendra', 'Kimberly', 'Salli', 'Amy'];
+    const voice = femaleVoices.includes(voiceCandidate) ? defaultVoice : voiceCandidate;
 
     const instructions =
       options?.instructions ||
