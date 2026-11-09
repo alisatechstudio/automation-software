@@ -39,27 +39,60 @@ apiRouter.get('/stats', async (req: Request, res: Response) => {
     const db = getDatabase();
     const queueStats = { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 };
 
-    const articlesCount = await db.collection('news_articles').countDocuments().catch(() => 0);
-    const reelsInDrive = await db.collection('news_articles').countDocuments({
-      status: 'uploaded_to_drive',
-    }).catch(() => 0);
-    const pagesCount = await db.collection('facebook_pages').countDocuments().catch(() => 0);
-    const sourcesCount = await db.collection('rss_sources').countDocuments().catch(() => 0);
-    const groupsCount = 0;
-    const groupSharesCount = 0;
-    const reelsCount = 0;
-    const storiesCount = 0;
-    const youtubeCount = 0;
-    const youtubeChannelsCount = await db.collection('youtube_channels').countDocuments().catch(() => 0);
-    let gdriveChannelsCount = 0;
-    try {
-      const gdriveChannels = await gdriveReelService.getAllChannels();
-      gdriveChannelsCount = gdriveChannels.length;
-    } catch {
-      // fallback
-    }
-    const tiktokCount = 0;
-    const successfulPosts = 0;
+    const [
+      articlesCount,
+      reelsInDriveArticles,
+      pagesCount,
+      sourcesCount,
+      youtubeChannels,
+      gdriveChannels,
+      reelLogsCount,
+      postLogsCount,
+      ytLogsCount,
+      tiktokCount,
+      storiesCount,
+      groupsCount,
+      groupSharesCount,
+      publishedArticlesCount,
+    ] = await Promise.all([
+      db.collection<NewsArticle>('news_articles').countDocuments().catch(() => 0),
+      db.collection<NewsArticle>('news_articles').countDocuments({ status: 'uploaded_to_drive' }).catch(() => 0),
+      db.collection<FacebookPage>('facebook_pages').countDocuments().catch(() => 0),
+      db.collection<RssSource>('rss_sources').countDocuments().catch(() => 0),
+      db.collection<YouTubeChannel>('youtube_channels').find({}).toArray().catch(() => []),
+      gdriveReelService.getAllChannels().catch(() => []),
+      db.collection<ReelLog>('reel_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+      db.collection<PostLog>('post_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+      db.collection<YouTubeUploadLog>('youtube_upload_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+      db.collection('tiktok_upload_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+      db.collection<StoryLog>('story_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+      db.collection<FacebookGroup>('facebook_groups').countDocuments({ isActive: { $ne: false } }).catch(() => 0),
+      db.collection<GroupShareLog>('group_share_logs').countDocuments({ status: { $in: ['success', 'dry_run'] } }).catch(() => 0),
+      db.collection<NewsArticle>('news_articles').countDocuments({ status: 'published' }).catch(() => 0),
+    ]);
+
+    const youtubeChannelsCount = (youtubeChannels as YouTubeChannel[]).length;
+    const gdriveChannelsCount = (gdriveChannels as GDriveReelConfig[]).length;
+
+    // Total Facebook Reels published: max of reel_logs count and cumulative postedVideoIds from GDrive channels
+    const gdrivePostedTotal = (gdriveChannels as GDriveReelConfig[]).reduce(
+      (sum, ch) => sum + (ch.postedVideoIds?.length || 0),
+      0
+    );
+    const reelsCount = Math.max(reelLogsCount, gdrivePostedTotal);
+
+    // Total YouTube Shorts uploaded: max of upload logs and cumulative videoCount on connected YouTube channels
+    const ytVideosTotal = (youtubeChannels as YouTubeChannel[]).reduce(
+      (sum, ch) => sum + (parseInt(ch.videoCount || '0', 10) || 0),
+      0
+    );
+    const youtubeCount = Math.max(ytLogsCount, ytVideosTotal);
+
+    // Standard Facebook Posts
+    const successfulPosts = Math.max(postLogsCount, publishedArticlesCount);
+
+    // Total staged reels in Drive
+    const reelsInDrive = reelsInDriveArticles;
 
     res.json({
       queue: queueStats,

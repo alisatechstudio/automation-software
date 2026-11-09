@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { getDatabase } from '../../db/index.js';
-import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel, RssSource } from '../../db/schema.js';
+import { GDriveReelConfig, FacebookPage, ReelLog, YouTubeChannel, RssSource, YouTubeUploadLog, TikTokUploadLog, NewsArticle } from '../../db/schema.js';
 import { FacebookGraphClient } from '../facebook/client.js';
 import { YouTubeClient, stripCategoryFromTitle } from '../youtube/client.js';
 import { TikTokClient } from '../tiktok/client.js';
@@ -1050,6 +1050,27 @@ export class GDriveReelService {
               isEnglish: isEnglishChannel,
             }, config.DRY_RUN);
             console.log(`✓ [GDriveReelService] YouTube Short uploaded successfully! Video ID: ${ytRes.videoId}`);
+            if (ytRes && ytRes.videoId) {
+              await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+                _id: crypto.randomUUID(),
+                articleId: `gdrive_${conf._id}_${video.id}`,
+                articleTitle: video.cleanTitle,
+                channelId: targetYt._id,
+                channelTitle: targetYt.title,
+                pageId: page._id,
+                ytVideoId: ytRes.videoId,
+                ytVideoUrl: ytRes.videoUrl || `https://youtube.com/shorts/${ytRes.videoId}`,
+                status: config.DRY_RUN ? 'dry_run' : 'success',
+                createdAt: new Date(),
+              });
+              try {
+                const currentCount = parseInt(targetYt.videoCount || '0', 10) || 0;
+                await db.collection('youtube_channels').updateOne(
+                  { _id: targetYt._id },
+                  { $set: { videoCount: String(currentCount + 1), updatedAt: new Date() } }
+                );
+              } catch {}
+            }
           } else {
             console.log(`[GDriveReelService] ℹ️ [2/4] No auto-upload YouTube Channel matched for page ${page.name}`);
           }
@@ -1073,6 +1094,16 @@ export class GDriveReelService {
           }, config.DRY_RUN);
           if (tikRes.success) {
             console.log(`✓ [GDriveReelService] TikTok video published! Publish ID: ${tikRes.publishId}`);
+            await db.collection<TikTokUploadLog>('tiktok_upload_logs').insertOne({
+              _id: crypto.randomUUID(),
+              videoTitle: video.cleanTitle,
+              channelId: conf._id,
+              channelName: conf.name,
+              gdriveFileId: video.id,
+              publishId: tikRes.publishId,
+              status: config.DRY_RUN ? 'dry_run' : 'success',
+              createdAt: new Date(),
+            });
           }
         } catch (tikErr: any) {
           console.warn(`[GDriveReelService] TikTok upload note:`, tikErr.message);
@@ -1132,6 +1163,29 @@ export class GDriveReelService {
         durationSeconds: 15,
         createdAt: now,
       });
+
+      // Synchronize article status in news_articles if originated from RSS
+      try {
+        await db.collection('news_articles').updateMany(
+          {
+            $or: [
+              { gdriveFileId: video.id },
+              { title: video.cleanTitle },
+              { title: video.name.replace(/\.[^/.]+$/, '') },
+            ],
+          },
+          {
+            $set: {
+              status: 'published',
+              fbVideoId: videoId,
+              fbPostId: postId,
+              updatedAt: now,
+            },
+          }
+        );
+      } catch (artErr: any) {
+        console.warn('[GDriveReelService] Could not update news_article status:', artErr.message);
+      }
 
       console.log(`✓ [GDriveReelService] Successfully published Reel "${video.name}" to all linked networks! Facebook Video ID: ${videoId}`);
 
