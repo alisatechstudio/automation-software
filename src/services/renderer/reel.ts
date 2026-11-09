@@ -859,14 +859,14 @@ export class ReelVideoRenderer {
       bgColors = ['#1e1b4b', '#0f172a', '#090d16', '#020617'];
       strapBg = '#f59e0b';
       strapAccent = '#fbbf24';
-      strapText = 'জরুরি সংবাদ | URGENT NEWS';
+      strapText = isEnglish ? 'URGENT NEWS • SPECIAL DISPATCH' : 'জরুরি সংবাদ | URGENT NEWS';
       deskColor = '#78350f';
       cardBg = '#0f172a';
       cardBorderColor = '#f59e0b';
       headlineColor = '#fef08a';
       pillBg = '#f59e0b';
       pillText = '#000000';
-      pillPrefix = 'জরুরি • ';
+      pillPrefix = isEnglish ? 'URGENT • ' : 'জরুরি • ';
       commentPillBg = '#f59e0b';
       commentPillText = '#000000';
       ribbonBg = 'rgba(245, 158, 11, 0.95)';
@@ -876,14 +876,14 @@ export class ReelVideoRenderer {
       bgColors = ['#09090b', '#18181b', '#0f172a', '#020617'];
       strapBg = '#10b981';
       strapAccent = '#34d399';
-      strapText = 'লাইভ বুলেটিন | LIVE BULLETIN';
+      strapText = isEnglish ? 'LIVE BULLETIN • WORLD EDITION' : 'লাইভ বুলেটিন | LIVE BULLETIN';
       deskColor = '#064e3b';
       cardBg = '#18181b';
       cardBorderColor = 'rgba(56, 189, 248, 0.4)';
       headlineColor = '#f8fafc';
       pillBg = '#10b981';
       pillText = '#ffffff';
-      pillPrefix = 'বুলেটিন • ';
+      pillPrefix = isEnglish ? 'BULLETIN • ' : 'বুলেটিন • ';
       commentPillBg = '#38bdf8';
       commentPillText = '#020617';
       ribbonBg = 'rgba(16, 185, 129, 0.95)';
@@ -893,14 +893,14 @@ export class ReelVideoRenderer {
       bgColors = ['#581c87', '#3b0764', '#1e1b4b', '#020617'];
       strapBg = '#ec4899';
       strapAccent = '#f472b6';
-      strapText = 'ভাইরাল আপডেট | VIRAL UPDATE';
+      strapText = isEnglish ? 'TRENDING UPDATE • VIRAL NOW' : 'ভাইরাল আপডেট | VIRAL UPDATE';
       deskColor = '#831843';
       cardBg = '#ffffff';
       cardBorderColor = 'rgba(236, 72, 153, 0.3)';
       headlineColor = '#4c1d95';
       pillBg = '#ec4899';
       pillText = '#ffffff';
-      pillPrefix = 'ভাইরাল • ';
+      pillPrefix = isEnglish ? 'VIRAL • ' : 'ভাইরাল • ';
       commentPillBg = '#ec4899';
       commentPillText = '#ffffff';
       ribbonBg = 'rgba(236, 72, 153, 0.95)';
@@ -927,10 +927,10 @@ export class ReelVideoRenderer {
       ctx.fillRect(0, 0, width, photoH);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 38px "Hind Siliguri", sans-serif';
+      ctx.font = isEnglish ? 'bold 38px sans-serif' : 'bold 38px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('BD News 24/7 • শীর্ষ সংবাদ', width / 2, photoH / 2);
+      ctx.fillText(isEnglish ? 'Trending News World • Top Headlines' : 'BD News 24/7 • শীর্ষ সংবাদ', width / 2, photoH / 2);
     }
 
     // Top subtle vignette for header bug contrast

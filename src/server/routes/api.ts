@@ -675,9 +675,11 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     let targetImageUrl = imageUrl;
     let finalArticleId = articleId;
     let targetTheme = theme;
+    const isEn = isEnglishText(targetHeadline || '') || isEnglishText(targetCategory || '') || (pageId === '1526917347161119');
+    const rotKey = isEn ? 'trending_news' : 'bd_news';
     if (!targetTheme || targetTheme === 'rolling') {
-      targetTheme = await getNextRollingReelTheme(db);
-      console.log(`[Reels API] 🔄 Rolling Rotation selected: "${targetTheme}"`);
+      targetTheme = await getNextRollingReelTheme(db, rotKey);
+      console.log(`[Reels API] 🔄 Rolling Rotation (${rotKey}) selected: "${targetTheme}"`);
     }
     const durationSeconds = parseInt(duration as string, 10) || 18;
 

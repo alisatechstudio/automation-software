@@ -188,6 +188,10 @@ export class InputPipelineService {
       // 1. Determine active sources to process
       let allSources: RssSource[] = [];
       try {
+        await sourcesCol.updateMany(
+          { name: { $regex: /bd news|trending news/i } },
+          { $set: { reelTheme: 'rolling' } }
+        );
         allSources = await sourcesCol.find({}).toArray();
       } catch (findErr: any) {
         console.error('[InputCron] Error fetching RSS sources:', findErr.message);
@@ -375,10 +379,15 @@ export class InputPipelineService {
           }
 
           const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+          const sourceName = source.name || 'default';
+          const isBdNews = sourceName.toLowerCase().includes('bd news');
+          const isTrendingNews = sourceName.toLowerCase().includes('trending') || isEnglish;
+
           let targetTheme = source.reelTheme || source.templateId || 'auto-category';
-          if (targetTheme === 'rolling') {
-            targetTheme = await getNextRollingReelTheme(db);
-            console.log(`[InputCron] 🔄 Rolling Rotation selected next theme: "${targetTheme}" for "${item.title}"`);
+          if (targetTheme === 'rolling' || isBdNews || isTrendingNews) {
+            const rotKey = isTrendingNews ? 'trending_news' : (isBdNews ? 'bd_news' : sourceName);
+            targetTheme = await getNextRollingReelTheme(db, rotKey);
+            console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
           }
           const reelDuration = source.reelDuration || 15;
 

@@ -14,7 +14,7 @@ import { config } from '../../config/env.js';
 /**
  * Resolves the next theme in the round-robin sequence across available visual themes
  */
-export async function getNextRollingReelTheme(db: any): Promise<string> {
+export async function getNextRollingReelTheme(db: any, sourceKey: string = 'global'): Promise<string> {
   const rollingCandidates = [
     'breaking-bold',
     'dark-cinema',
@@ -23,13 +23,15 @@ export async function getNextRollingReelTheme(db: any): Promise<string> {
     'auto-category',
   ];
   try {
-    const setting = await db.collection('settings').findOne({ _id: 'LAST_ROLLING_THEME' });
+    const cleanKey = (sourceKey || 'global').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const settingId = `LAST_ROLLING_THEME_${cleanKey}`;
+    const setting = await db.collection('settings').findOne({ _id: settingId });
     const lastTheme = setting?.value || '';
     const lastIndex = rollingCandidates.indexOf(lastTheme);
     const nextIndex = lastIndex === -1 ? 0 : (lastIndex + 1) % rollingCandidates.length;
     const nextTheme = rollingCandidates[nextIndex];
     await db.collection('settings').updateOne(
-      { _id: 'LAST_ROLLING_THEME' },
+      { _id: settingId },
       { $set: { value: nextTheme, updatedAt: new Date() } },
       { upsert: true }
     );
@@ -179,11 +181,6 @@ export class QueueWorker {
       const defaultDuration = 18; // 18s (optimal 15-20s range)
       const reelDuration = parseInt(reelDurationSetting?.value || String(defaultDuration), 10) || defaultDuration;
 
-      if (targetReelTheme === 'rolling') {
-        targetReelTheme = await getNextRollingReelTheme(db);
-        console.log(`[QueueWorker] 🔄 Rolling Rotation selected next theme: "${targetReelTheme}"`);
-      }
-
       const selectedTemplateId = templateId || source?.templateId || 'template-canva-bdnews';
       const targetJobPageId = job.pageId || job.payload?.pageId || '';
       const isEnglish =
@@ -191,9 +188,22 @@ export class QueueWorker {
         (targetJobPageId === '1526917347161119') ||
         Boolean((job as any).page_name && (job as any).page_name.includes('Trending')) ||
         Boolean(job.payload?.pageName && job.payload.pageName.includes('Trending')) ||
+        Boolean(source?.name && source.name.toLowerCase().includes('trending')) ||
         isEnglishText(article.title) ||
         isEnglishText(article.category) ||
         Boolean(article.link && article.link.includes('trendingnews'));
+
+      const isBdNews =
+        Boolean((job as any).page_name && (job as any).page_name.includes('BD News')) ||
+        Boolean(job.payload?.pageName && job.payload.pageName.includes('BD News')) ||
+        Boolean(source?.name && source.name.toLowerCase().includes('bd news')) ||
+        Boolean(article.link && article.link.includes('bdnews'));
+
+      if (targetReelTheme === 'rolling' || isEnglish || isBdNews) {
+        const rotKey = isEnglish ? 'trending_news' : (isBdNews ? 'bd_news' : 'global');
+        targetReelTheme = await getNextRollingReelTheme(db, rotKey);
+        console.log(`[QueueWorker] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetReelTheme}"`);
+      }
 
       let effectiveCategory = article.category;
       if (isEnglish) {
@@ -1074,18 +1084,23 @@ export class QueueWorker {
       throw new Error('No active Facebook Page found');
     }
 
-    let selectedTheme = theme || 'auto-category';
-    if (selectedTheme === 'rolling') {
-      selectedTheme = await getNextRollingReelTheme(db);
-      console.log(`[QueueWorker] 🔄 Rolling Rotation selected: "${selectedTheme}" for article: "${article.title}"`);
-    }
-
     const isEnglish =
       (page._id === '1526917347161119') ||
       Boolean(page.name && page.name.includes('Trending')) ||
       isEnglishText(article.title) ||
       isEnglishText(article.category) ||
       Boolean(article.link && article.link.includes('trendingnews'));
+
+    const isBdNews =
+      Boolean(page.name && page.name.includes('BD News')) ||
+      Boolean(article.link && article.link.includes('bdnews'));
+
+    let selectedTheme = theme || 'auto-category';
+    if (selectedTheme === 'rolling' || isEnglish || isBdNews) {
+      const rotKey = isEnglish ? 'trending_news' : (isBdNews ? 'bd_news' : 'global');
+      selectedTheme = await getNextRollingReelTheme(db, rotKey);
+      console.log(`[QueueWorker] 🔄 Rolling Rotation (${rotKey}) selected: "${selectedTheme}" for article: "${article.title}"`);
+    }
 
     let effectiveCategory = article.category;
     if (isEnglish) {
