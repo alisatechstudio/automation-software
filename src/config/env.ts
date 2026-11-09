@@ -28,6 +28,12 @@ export interface AppConfig {
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
+  TTS_PROVIDER: string;
+  PUTER_AUTH_TOKEN?: string;
+  PUTER_TTS_PROVIDER: string;
+  PUTER_TTS_MODEL: string;
+  PUTER_TTS_VOICE: string;
+  PUTER_TTS_INSTRUCTIONS: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
 }
@@ -85,6 +91,13 @@ const baseConfig: AppConfig = {
   DEFAULT_COMMENT_FORMAT:
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
+  TTS_PROVIDER: process.env.TTS_PROVIDER || 'auto',
+  PUTER_AUTH_TOKEN: process.env.PUTER_AUTH_TOKEN || '',
+  PUTER_TTS_PROVIDER: process.env.PUTER_TTS_PROVIDER || 'gemini',
+  PUTER_TTS_MODEL: process.env.PUTER_TTS_MODEL || 'gemini-3.8-flash-tts',
+  PUTER_TTS_VOICE: process.env.PUTER_TTS_VOICE || 'Puck',
+  PUTER_TTS_INSTRUCTIONS:
+    process.env.PUTER_TTS_INSTRUCTIONS || 'Speak in a clear, engaging television news broadcast style.',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };

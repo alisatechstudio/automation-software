@@ -416,6 +416,7 @@ export class InputPipelineService {
               isEnglish,
               pageName: source.name,
               pageId: source.pageId,
+              description: item.description || undefined,
             });
             reelsCreated++;
             grandTotalReelsCreated++;

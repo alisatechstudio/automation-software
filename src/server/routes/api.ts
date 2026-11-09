@@ -18,6 +18,7 @@ import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
 import { InputPipelineService } from '../../services/pipeline/input-pipeline.js';
 import { TikTokClient } from '../../services/tiktok/client.js';
+import { UnifiedTtsService } from '../../services/tts/index.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags, generateTrendingNewsHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -28,6 +29,7 @@ const renderer = new PlaywrightImageRenderer();
 const canvasRenderer = new CanvasCardRenderer();
 const reelRenderer = new ReelVideoRenderer();
 const ytClient = new YouTubeClient();
+const ttsService = new UnifiedTtsService();
 const dedupeService = new ArticleDedupeService();
 const gdriveReelService = new GDriveReelService();
 const inputPipeline = new InputPipelineService();
@@ -663,6 +665,8 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
     const theme = (req.query.theme as string) || 'auto-category';
     const durationSeconds = parseInt(req.query.duration as string, 10) || 18;
 
+    const description = (req.query.description as string) || headline;
+
     const videoBuffer = await reelRenderer.renderReel({
       headline,
       category,
@@ -670,6 +674,7 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
       theme,
       durationSeconds,
       fps: 24,
+      description,
     });
 
     res.setHeader('Content-Type', 'video/mp4');
@@ -771,6 +776,12 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     }
     const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
 
+    let targetDescription: string = (req.body.description || '').trim();
+    if (!targetDescription && finalArticleId) {
+      const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: finalArticleId });
+      targetDescription = art?.description || '';
+    }
+
     console.log(`[Reels API] Rendering ${durationSeconds}s MP4 Reel (${targetTheme}) for "${targetHeadline}"...`);
     const startTime = Date.now();
     const reelBuffer = await reelRenderer.renderReel({
@@ -784,6 +795,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       isEnglish: isEnglish,
       pageName: page.name,
       pageId: page._id,
+      description: targetDescription || undefined,
     });
 
     const fbClient = new FacebookGraphClient();
@@ -814,7 +826,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       config.DRY_RUN
     );
 
-    // News URL in First Comment
+    // Website / News URL in First Comment
     let commentId: string | null = null;
     let targetLink: string = (req.body.link || req.body.newsUrl || req.body.url || '').trim();
     if (!targetLink && finalArticleId) {
@@ -824,6 +836,16 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     if (!targetLink && targetHeadline) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ title: targetHeadline });
       if (art?.link) targetLink = art.link;
+    }
+
+    const defaultDomain = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+    const siteSetting = await db.collection<Setting>('settings').findOne({ _id: isEnglish ? 'WEBSITE_URL_EN' : 'WEBSITE_URL_BN' });
+    const siteUrl = siteSetting?.value?.trim() || defaultDomain;
+    const modeSetting = await db.collection<Setting>('settings').findOne({ _id: 'COMMENT_LINK_MODE' });
+    const mode = modeSetting?.value || 'website';
+
+    if (!targetLink || mode !== 'source') {
+      targetLink = (targetLink && (targetLink.includes('bdnews.site') || targetLink.includes('trendingnews.world'))) ? targetLink : siteUrl;
     }
 
     const commentTargetId = videoId || postId;
@@ -2223,6 +2245,12 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DISABLE_POSTER: 'true',
       REEL_DURATION_SECONDS: '18',
       DEFAULT_REEL_THEME: 'auto-category',
+      TTS_PROVIDER: config.TTS_PROVIDER || 'auto',
+      PUTER_AUTH_TOKEN: config.PUTER_AUTH_TOKEN ? '••••••••' : '',
+      PUTER_TTS_PROVIDER: config.PUTER_TTS_PROVIDER || 'gemini',
+      PUTER_TTS_MODEL: config.PUTER_TTS_MODEL || 'gemini-3.8-flash-tts',
+      PUTER_TTS_VOICE: config.PUTER_TTS_VOICE || 'Puck',
+      PUTER_TTS_INSTRUCTIONS: config.PUTER_TTS_INSTRUCTIONS || '',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
@@ -2233,6 +2261,42 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
     res.json(settingsMap);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Unified Text-to-Speech (Puter.js, Qwen3, Broadcast) Endpoints
+apiRouter.get('/tts/status', async (req: Request, res: Response) => {
+  try {
+    const result = await ttsService.testConnection();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ available: false, error: err.message });
+  }
+});
+
+apiRouter.post('/tts/test', async (req: Request, res: Response) => {
+  try {
+    const text = (req.body.text || 'This is a test of the automated text-to-speech news reader.').trim();
+    const isEnglish = req.body.isEnglish !== undefined ? Boolean(req.body.isEnglish) : isEnglishText(text);
+    const audio = await ttsService.synthesize(text, {
+      isEnglish,
+      voice: req.body.voice,
+      provider: req.body.provider,
+      model: req.body.model,
+      instructions: req.body.instructions,
+    });
+    if (!audio) {
+      res.status(503).json({
+        success: false,
+        error: 'TTS synthesis did not return audio. Please verify your TTS settings or network connection.',
+      });
+      return;
+    }
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', audio.length);
+    res.send(audio);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

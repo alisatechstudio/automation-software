@@ -12,4 +12,9 @@ startup-debug.log
 .DS_Store
 tmp/
 sftp.json
+public/*.mp4
+public/*.mp3
+public/*.wav
+public/*.aac
+
 

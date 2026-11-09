@@ -38,7 +38,7 @@ export class FacebookGraphClient {
   }
 
   /**
-   * Formats the first comment containing the news link
+   * Formats the first comment containing the news link with a high-CTR Call-To-Action (CTA)
    */
   public formatComment(
     newsUrl: string,
@@ -49,18 +49,24 @@ export class FacebookGraphClient {
 
     const isEnglish = cleanUrl.includes('trendingnews');
 
-    if (template && template.includes('{url}')) {
+    // If a custom template is provided (and is not just the legacy default placeholder)
+    if (template && (template.includes('{url}') || template.includes('{website}'))) {
       if (isEnglish && template.includes('বিস্তারিত')) {
-        return `Read the full story here: ${cleanUrl}`;
+        return `🌐 Read the full story & live updates here:\n👉 ${cleanUrl}`;
       }
-      return template.replace(/\{url\}/g, cleanUrl).trim();
+      return template
+        .replace(/\{url\}/g, cleanUrl)
+        .replace(/\{website\}/g, cleanUrl)
+        .trim();
     }
 
     if (isEnglish) {
-      return `Read the full story here: ${cleanUrl}`;
+      return `🌐 Read the full story & live updates here:\n👉 ${cleanUrl}`;
     }
 
-    return template ? `${template.trim()} ${cleanUrl}` : `বিস্তারিত পড়ুন: ${cleanUrl}`;
+    return template && template !== 'বিস্তারিত পড়ুন: {url}'
+      ? `${template.trim()}\n👉 ${cleanUrl}`
+      : `🌐 সম্পূর্ণ প্রতিবেদন ও লাইভ আপডেট পড়তে ভিজিট করুন:\n👉 ${cleanUrl}`;
   }
 
   /**
@@ -152,7 +158,8 @@ export class FacebookGraphClient {
     }
 
     let lastError: any = null;
-    const maxAttempts = 3;
+    const maxAttempts = 6;
+    const backoffSchedule = [3000, 5000, 7000, 10000, 12000, 15000];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       for (const candidateId of candidates) {
@@ -179,7 +186,14 @@ export class FacebookGraphClient {
           }
 
           lastError = data.error || { message: `HTTP ${response.status}: ${JSON.stringify(data)}` };
-          console.warn(`[FacebookClient] Comment attempt on ${candidateId} note: ${lastError.message || JSON.stringify(lastError)}`);
+          const errMsg = (data.error?.message || '').toLowerCase();
+          const isProcessing = errMsg.includes('unpublished video') || errMsg.includes('does not exist') || data.error?.code === 100;
+
+          if (isProcessing) {
+            console.log(`[FacebookClient] ⏳ Reel is still being processed/indexed by Meta on ${candidateId}. Waiting for video readiness...`);
+          } else {
+            console.warn(`[FacebookClient] Comment attempt on ${candidateId} note: ${lastError.message || JSON.stringify(lastError)}`);
+          }
         } catch (netErr: any) {
           lastError = netErr;
           console.warn(`[FacebookClient] Network error posting comment to ${candidateId}:`, netErr.message);
@@ -187,13 +201,13 @@ export class FacebookGraphClient {
       }
 
       if (attempt < maxAttempts) {
-        const waitMs = attempt * 3000;
-        console.log(`[FacebookClient] Waiting ${waitMs / 1000}s for Facebook Graph indexing before retrying comment...`);
+        const waitMs = backoffSchedule[attempt - 1] || 10000;
+        console.log(`[FacebookClient] Waiting ${waitMs / 1000}s for Meta video readiness before retrying comment (attempt ${attempt + 1}/${maxAttempts})...`);
         await new Promise((resolve) => setTimeout(resolve, waitMs));
       }
     }
 
-    this.handleGraphError(lastError, `Comment publish on ${targetPostId} failed after ${maxAttempts} attempts`);
+    console.warn(`[FacebookClient] First comment could not be confirmed on ${targetPostId} after ${maxAttempts} attempts:`, lastError?.message || JSON.stringify(lastError));
     return { commentId: '' };
   }
 

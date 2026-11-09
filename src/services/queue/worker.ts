@@ -79,6 +79,48 @@ export class QueueWorker {
     console.log('[QueueWorker] Stopped queue worker.');
   }
 
+  /**
+   * Resolves the destination link for the first comment.
+   * Prioritizes the publisher's portal (bdnews.site / trendingnews.world or custom configured website)
+   * so that viral traffic turns into website AdSense/AdX revenue.
+   */
+  public async resolveCommentUrl(article: NewsArticle, isEnglish: boolean, db: any): Promise<string> {
+    try {
+      const modeSetting = await db.collection('settings').findOne({ _id: 'COMMENT_LINK_MODE' });
+      const mode = modeSetting?.value || 'website'; // 'website' (default for monetization) | 'source'
+
+      const customSiteSetting = await db.collection('settings').findOne({
+        _id: isEnglish ? 'WEBSITE_URL_EN' : 'WEBSITE_URL_BN',
+      });
+      const defaultDomain = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+      const siteUrl = (customSiteSetting?.value || '').trim() || defaultDomain;
+
+      // If article link is already pointing to our own domain or news portal, use the direct article link
+      if (article.link) {
+        const cleanLink = article.link.toLowerCase();
+        if (cleanLink.includes('bdnews.site') || cleanLink.includes('trendingnews.world')) {
+          return article.link;
+        }
+        try {
+          const siteHost = new URL(siteUrl).hostname.toLowerCase();
+          if (cleanLink.includes(siteHost)) {
+            return article.link;
+          }
+        } catch {}
+      }
+
+      // If user explicitly configured 'source' mode, preserve the original third-party RSS link
+      if (mode === 'source' && article.link) {
+        return article.link;
+      }
+
+      // Default: Direct visitors to your monetized news website
+      return siteUrl;
+    } catch {
+      return isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+    }
+  }
+
   private scheduleNextTick(delayMs: number): void {
     if (!this.isRunning) return;
     this.loopTimeout = setTimeout(() => this.tick(), delayMs);
@@ -239,8 +281,9 @@ export class QueueWorker {
 
       const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
       const commentTemplate = commentFormatSetting?.value || (isEnglish ? 'Read the full story here: {url}' : config.DEFAULT_COMMENT_FORMAT);
+      const targetCommentUrl = await this.resolveCommentUrl(article, isEnglish, db);
       const commentText = this.fbClient.formatComment(
-        article.link,
+        targetCommentUrl,
         commentTemplate
       );
 
@@ -263,6 +306,7 @@ export class QueueWorker {
             isEnglish: isEnglish,
             pageName: (job as any).page_name || job.payload?.pageName,
             pageId: targetJobPageId || undefined,
+            description: article.description || undefined,
           });
         } catch (reelErr: any) {
           console.warn(`[QueueWorker] ⚠️ MP4 Reel video rendering failed (${reelErr.message}). Gracefully falling back to 1080x1080 JPG News Card...`);
@@ -332,16 +376,16 @@ export class QueueWorker {
             reelVideoId = res.videoId;
             reelPostId = res.postId;
 
-            if (article.link && (reelVideoId || reelPostId)) {
+            if (targetCommentUrl && (reelVideoId || reelPostId)) {
               try {
                 const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
                 const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-                const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+                const formattedReelComment = this.fbClient.formatComment(targetCommentUrl, commentTemplate);
                 const targetObjId = reelVideoId || reelPostId!;
                 const { commentId } = await this.fbClient.publishComment(
                   targetObjId,
                   page.accessToken,
-                  commentText,
+                  formattedReelComment,
                   config.DRY_RUN,
                   reelPostId || undefined
                 );
@@ -387,15 +431,15 @@ export class QueueWorker {
               reelError = null; // Fallback succeeded!
               console.log(`✓ [QueueWorker] Fallback News Card photo published successfully! Post ID: ${reelPostId}`);
 
-              if (article.link && reelPostId) {
+              if (targetCommentUrl && reelPostId) {
                 try {
                   const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
                   const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-                  const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+                  const fallbackComment = this.fbClient.formatComment(targetCommentUrl, commentTemplate);
                   const { commentId } = await this.fbClient.publishComment(
                     reelPostId,
                     page.accessToken,
-                    commentText,
+                    fallbackComment,
                     config.DRY_RUN
                   );
                   reelCommentId = commentId;
@@ -500,8 +544,8 @@ export class QueueWorker {
                       videoBuffer: reelBuffer,
                       title: article.title,
                       description: isChEnglish
-                        ? `${shortsHashtags}\n\nFull story: ${article.link}`
-                        : `${shortsHashtags}\n\nবিস্তারিত পড়ুন: ${article.link}`,
+                        ? `${shortsHashtags}\n\n🌐 Full story: ${targetCommentUrl}`
+                        : `${shortsHashtags}\n\n🌐 বিস্তারিত পড়ুন: ${targetCommentUrl}`,
                       isEnglish: isChEnglish,
                     },
                     config.DRY_RUN
@@ -510,10 +554,10 @@ export class QueueWorker {
                   ytVideoId = ytResult.videoId;
                   ytStatus = config.DRY_RUN ? 'dry_run' : 'success';
 
-                  if (article.link && ytVideoId && !config.DRY_RUN) {
+                  if (targetCommentUrl && ytVideoId && !config.DRY_RUN) {
                     const commentText = isChEnglish
-                      ? `Read the full story here: ${article.link}`
-                      : `বিস্তারিত খবর পড়ুন: ${article.link}`;
+                      ? `🌐 Read the full story & live updates here:\n👉 ${targetCommentUrl}`
+                      : `🌐 সম্পূর্ণ প্রতিবেদন ও লাইভ আপডেট পড়তে ভিজিট করুন:\n👉 ${targetCommentUrl}`;
                     await channelClient.addComment(ytVideoId, commentText);
                   }
 
@@ -746,6 +790,7 @@ export class QueueWorker {
                 isEnglish: isEnglish,
                 pageName: page.name,
                 pageId: page._id,
+                description: article.description || undefined,
               });
             } catch (rErr: any) {
               console.warn(`[QueueWorker] Reel render failed on shared host (${rErr.message}). Skipping reel for this article.`);
@@ -775,6 +820,25 @@ export class QueueWorker {
                 config.DRY_RUN
               );
 
+              // Auto First Comment on Sequential Reel
+              let seqReelCommentId: string | null = null;
+              if (targetCommentUrl && (reelVideoId || reelPostId)) {
+                try {
+                  const targetObjId = reelVideoId || reelPostId!;
+                  const { commentId } = await this.fbClient.publishComment(
+                    targetObjId,
+                    page.accessToken,
+                    commentText,
+                    config.DRY_RUN,
+                    reelPostId || undefined
+                  );
+                  seqReelCommentId = commentId;
+                  console.log(`✓ [QueueWorker] First comment posted to sequential Reel! (Comment ID: ${commentId})`);
+                } catch (ce: any) {
+                  console.warn(`[QueueWorker] Sequential Reel comment note:`, ce.message);
+                }
+              }
+
               await db.collection<ReelLog>('reel_logs').insertOne({
                 _id: crypto.randomUUID(),
                 articleId: article._id,
@@ -784,6 +848,7 @@ export class QueueWorker {
                 theme: targetReelTheme,
                 fbVideoId: reelVideoId,
                 fbPostId: reelPostId,
+                fbCommentId: seqReelCommentId,
                 durationMs: Date.now() - startTime,
                 status: config.DRY_RUN ? 'dry_run' : 'success',
                 createdAt: new Date(),
@@ -1128,6 +1193,7 @@ export class QueueWorker {
       isEnglish: isEnglish,
       pageName: page.name,
       pageId: page._id,
+      description: article.description || undefined,
     });
 
     // Caption: Intelligent viral hashtags optimized for Meta Reels discovery
@@ -1155,15 +1221,16 @@ export class QueueWorker {
         config.DRY_RUN
       );
 
-      // News URL in First Comment
-      if (article.link && (videoId || postId)) {
+      // Website URL in First Comment
+      const targetCommentUrl = await this.resolveCommentUrl(article, isEnglish, db);
+      if (targetCommentUrl && (videoId || postId)) {
         try {
           const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
           const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-          const commentText = this.fbClient.formatComment(article.link, commentTemplate);
+          const commentText = this.fbClient.formatComment(targetCommentUrl, commentTemplate);
           const targetObjId = videoId || postId;
           await this.fbClient.publishComment(targetObjId, page.accessToken, commentText, config.DRY_RUN, postId);
-          console.log(`✓ [QueueWorker] First comment with news URL posted to Reel ${targetObjId}!`);
+          console.log(`✓ [QueueWorker] First comment with website URL posted to Reel ${targetObjId}!`);
         } catch (cErr: any) {
           console.warn(`[QueueWorker] Could not post first comment on Reel:`, cErr.message);
         }
@@ -1376,6 +1443,7 @@ export class QueueWorker {
       fps: 24,
       website: effectiveWebsite,
       isEnglish: isEnglish,
+      description: article.description || undefined,
     });
 
     const hashtagSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_HASHTAGS' });
@@ -1406,10 +1474,11 @@ export class QueueWorker {
         config.DRY_RUN
       );
 
-      if (article.link && result.videoId && !config.DRY_RUN) {
+      const ytCommentUrl = await this.resolveCommentUrl(article, isEnglish, db);
+      if (ytCommentUrl && result.videoId && !config.DRY_RUN) {
         const commentText = isEnglish
-          ? `Read the full story here: ${article.link}`
-          : `বিস্তারিত খবর পড়ুন: ${article.link}`;
+          ? `🌐 Read the full story & live updates here:\n👉 ${ytCommentUrl}`
+          : `🌐 সম্পূর্ণ প্রতিবেদন ও লাইভ আপডেট পড়তে ভিজিট করুন:\n👉 ${ytCommentUrl}`;
         await channelClient.addComment(result.videoId, commentText);
       }
 

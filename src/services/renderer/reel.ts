@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
+import { UnifiedTtsService } from '../tts/index.js';
 
 let ffmpegPath: string = '';
 try {
@@ -265,13 +266,17 @@ export interface ReelRenderInput {
   isEnglish?: boolean;
   pageName?: string;
   pageId?: string;
+  description?: string;
+  voiceoverBuffer?: Buffer;
 }
 
 export class ReelVideoRenderer {
   private fontsRegistered: boolean = false;
+  private ttsService: UnifiedTtsService;
 
   constructor() {
     this.registerFonts();
+    this.ttsService = new UnifiedTtsService();
   }
 
   private registerFonts(): void {
@@ -558,6 +563,37 @@ export class ReelVideoRenderer {
     }
     const tempFile = path.join(tempOutputDir, `reel_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`);
 
+    // 3B. Synthesize voiceover reading the description (or headline if description is empty)
+    let voiceoverBuffer = input.voiceoverBuffer || null;
+    const textToSpeak = (input.description && input.description.trim()) ? input.description : headline;
+    if (!voiceoverBuffer && textToSpeak) {
+      const speechScript = this.ttsService.cleanDescription(textToSpeak, headline);
+      if (speechScript) {
+        try {
+          console.log(`[ReelVideoRenderer] 🎙️ Requesting speech voiceover for: "${speechScript.substring(0, 45)}..."`);
+          voiceoverBuffer = await this.ttsService.synthesize(speechScript, {
+            isEnglish,
+          });
+          if (voiceoverBuffer) {
+            console.log(`✓ [ReelVideoRenderer] Voiceover generated successfully (${voiceoverBuffer.length} bytes)!`);
+          }
+        } catch (ttsErr: any) {
+          console.warn('[ReelVideoRenderer] TTS note:', ttsErr.message);
+        }
+      }
+    }
+
+    let tempVoiceFile: string | null = null;
+    if (voiceoverBuffer && voiceoverBuffer.length > 500) {
+      tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp3`);
+      try {
+        fs.writeFileSync(tempVoiceFile, voiceoverBuffer);
+      } catch (e: any) {
+        console.warn('[ReelVideoRenderer] Could not write temporary voice file:', e.message);
+        tempVoiceFile = null;
+      }
+    }
+
     // 4. Configure FFmpeg spawn arguments (strictly 1 thread to respect shared hosting/CloudLinux limits)
     const ffmpegArgs = [
       '-y',
@@ -583,6 +619,13 @@ export class ReelVideoRenderer {
       );
     }
 
+    if (tempVoiceFile) {
+      ffmpegArgs.push(
+        '-thread_queue_size', '1',
+        '-i', tempVoiceFile
+      );
+    }
+
     ffmpegArgs.push(
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
@@ -596,7 +639,18 @@ export class ReelVideoRenderer {
       '-sc_threshold', '0'
     );
 
-    if (useAudioFilter && activeCategoryStyle?.audioFilter) {
+    if (tempVoiceFile) {
+      // Duck background audio to 10% volume while voiceover plays boosted at 220% volume with weights
+      const bgFilter = useAudioFilter && activeCategoryStyle?.audioFilter
+        ? `${activeCategoryStyle.audioFilter},volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000`
+        : 'volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000';
+      ffmpegArgs.push(
+        '-filter_complex',
+        `[1:a]${bgFilter}[bg];[2:a]volume=2.2,aformat=channel_layouts=stereo:sample_rates=48000[voice];[bg][voice]amix=inputs=2:duration=first:dropout_transition=2:weights=0.15 1[aout]`,
+        '-map', '0:v',
+        '-map', '[aout]'
+      );
+    } else if (useAudioFilter && activeCategoryStyle?.audioFilter) {
       ffmpegArgs.push('-af', activeCategoryStyle.audioFilter);
     }
 
@@ -727,6 +781,11 @@ export class ReelVideoRenderer {
       try {
         if (fs.existsSync(tempFile)) {
           fs.unlinkSync(tempFile);
+        }
+      } catch {}
+      try {
+        if (tempVoiceFile && fs.existsSync(tempVoiceFile)) {
+          fs.unlinkSync(tempVoiceFile);
         }
       } catch {}
     }

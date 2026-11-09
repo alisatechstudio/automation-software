@@ -1638,7 +1638,7 @@
       statusEl.classList.remove('hidden');
       statusEl.innerText = 'Rendering ' + dur + 's MP4 news reel...';
 
-      const params = new URLSearchParams({ headline, category, theme, duration: dur });
+      const params = new URLSearchParams({ headline, category, theme, duration: dur, description: headline });
       if (imageUrl) params.append('imageUrl', imageUrl);
 
       const streamUrl = '/api/reels/preview.mp4?' + params.toString();
