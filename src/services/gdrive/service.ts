@@ -1285,7 +1285,7 @@ export class GDriveReelService {
     if (oauthToken) {
       try {
         if (action === 'permanent') {
-          const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+          const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${oauthToken}` },
           });
@@ -1295,7 +1295,7 @@ export class GDriveReelService {
         }
 
         // Standard move to Trash (safest & instantly removes file from folder scan)
-        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${oauthToken}`,
@@ -1308,8 +1308,29 @@ export class GDriveReelService {
           return { success: true, action: 'trash' };
         }
 
-        // Fallback to permanent DELETE
-        const delFallback = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+        // Fallback 1: If user cannot trash (e.g. shared folder or not file owner), remove from parent folder
+        const cleanParentId = channelCtx?.folderId ? this.extractFolderId(channelCtx.folderId) : '';
+        if (cleanParentId) {
+          try {
+            const removeRes = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${fileId}?removeParents=${encodeURIComponent(cleanParentId)}&supportsAllDrives=true`,
+              {
+                method: 'PATCH',
+                headers: {
+                  Authorization: `Bearer ${oauthToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+              }
+            );
+            if (removeRes.ok) {
+              return { success: true, action: 'trash' };
+            }
+          } catch {}
+        }
+
+        // Fallback 2: Permanent DELETE
+        const delFallback = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${oauthToken}` },
         });
@@ -1331,7 +1352,7 @@ export class GDriveReelService {
     // 2. If only API Key is available
     if (apiKey) {
       try {
-        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}`, {
+        const patchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}&supportsAllDrives=true`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ trashed: true }),
@@ -1341,7 +1362,7 @@ export class GDriveReelService {
           return { success: true, action: 'trash' };
         }
 
-        const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}`, {
+        const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${apiKey}&supportsAllDrives=true`, {
           method: 'DELETE',
         });
 
