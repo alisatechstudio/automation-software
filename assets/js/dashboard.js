@@ -1438,7 +1438,7 @@
     function onReelThemeChanged() {
       const select = document.getElementById('reel-theme-select');
       const theme = select ? select.value : 'auto-category';
-      const dur = document.getElementById('reel-duration-select')?.value || '18';
+      const dur = document.getElementById('reel-duration-select')?.value || '30';
       const badgeEl = document.getElementById('reel-theme-badge');
       const durBadge = document.getElementById('reel-duration-badge');
 
@@ -1632,7 +1632,7 @@
       const spinner = document.getElementById('reel-player-spinner');
       const downloadLink = document.getElementById('reel-download-link');
       const statusEl = document.getElementById('reel-action-status');
-      const dur = document.getElementById('reel-duration-select')?.value || '18';
+      const dur = document.getElementById('reel-duration-select')?.value || '30';
 
       spinner.classList.remove('hidden');
       statusEl.classList.remove('hidden');
@@ -1676,7 +1676,7 @@
       const articleId = document.getElementById('reel-article-id-input')?.value.trim() || '';
       const pageId = document.getElementById('reel-page-select').value;
       const theme = document.getElementById('reel-theme-select').value || 'auto-category';
-      const dur = parseInt(document.getElementById('reel-duration-select')?.value || '18', 10) || 18;
+      const dur = parseInt(document.getElementById('reel-duration-select')?.value || '30', 10) || 30;
       const hashtags = document.getElementById('reel-hashtags-input')?.value.trim() || '';
 
       if (!headline) return showToast('Please enter a headline', true);

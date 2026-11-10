@@ -514,10 +514,9 @@ export class ReelVideoRenderer {
     const scaleY = height / refHeight;
     const needsScale = scaleX !== 1 || scaleY !== 1;
 
-    const durationSeconds = input.durationSeconds || 18; // 18 seconds (optimal 15-20s duration)
+    let durationSeconds = input.durationSeconds || 30; // 30 seconds default (for full description readout)
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = Math.max(24, input.fps || 24);
-    const totalFrames = durationSeconds * fps;
 
     // 1. Preload article image
     let articleImg: any = null;
@@ -585,6 +584,17 @@ export class ReelVideoRenderer {
 
     let tempVoiceFile: string | null = null;
     if (voiceoverBuffer && voiceoverBuffer.length > 500) {
+      // Estimate voice duration from audio buffer to ensure the reel plays out the full description
+      let estVoiceSecs = 0;
+      if (voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF') {
+        estVoiceSecs = voiceoverBuffer.length / 48000;
+      } else {
+        estVoiceSecs = voiceoverBuffer.length / 16000;
+      }
+      if (estVoiceSecs > 0) {
+        durationSeconds = Math.max(durationSeconds, Math.min(60, Math.ceil(estVoiceSecs + 1.5)));
+      }
+
       tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp3`);
       try {
         fs.writeFileSync(tempVoiceFile, voiceoverBuffer);
@@ -593,6 +603,8 @@ export class ReelVideoRenderer {
         tempVoiceFile = null;
       }
     }
+
+    const totalFrames = durationSeconds * fps;
 
     // 4. Configure FFmpeg spawn arguments (strictly 1 thread to respect shared hosting/CloudLinux limits)
     const ffmpegArgs = [

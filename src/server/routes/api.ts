@@ -135,7 +135,7 @@ apiRouter.get('/sources', async (req: Request, res: Response) => {
       gdrive_folder_url: s.gdriveFolderUrlOrId || s.gdrive_folder_url || s.gdriveFolderId || '',
       gdrive_folder_id: s.gdriveFolderId || s.gdrive_folder_id || '',
       reel_theme: s.reelTheme || s.reel_theme || 'auto-category',
-      reel_duration: s.reelDuration || s.reel_duration || 18,
+      reel_duration: s.reelDuration || s.reel_duration || 30,
       is_active: s.isActive !== undefined ? s.isActive : (s.is_active ?? true),
       created_at: s.createdAt || s.created_at || new Date(),
       page_name: pageMap.get(s.pageId || s.page_id) || 'Unknown Page',
@@ -169,7 +169,7 @@ apiRouter.post('/sources', async (req: Request, res: Response) => {
       gdriveFolderUrlOrId: folderUrlOrId,
       gdriveFolderId: folderId,
       reelTheme: reel_theme || req.body.reelTheme || 'auto-category',
-      reelDuration: parseInt(reel_duration || req.body.reelDuration || '18', 10) || 18,
+      reelDuration: parseInt(reel_duration || req.body.reelDuration || '30', 10) || 30,
       isActive: is_active !== undefined ? Boolean(is_active) : true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -663,7 +663,7 @@ apiRouter.get('/reels/preview.mp4', async (req: Request, res: Response) => {
     const category = (req.query.category as string) || 'বিশেষ খবর';
     const imageUrl = req.query.imageUrl as string | undefined;
     const theme = (req.query.theme as string) || 'auto-category';
-    const durationSeconds = parseInt(req.query.duration as string, 10) || 18;
+    const durationSeconds = parseInt(req.query.duration as string, 10) || 30;
 
     const description = (req.query.description as string) || headline;
 
@@ -719,7 +719,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       targetTheme = await getNextRollingReelTheme(db, rotKey);
       console.log(`[Reels API] 🔄 Rolling Rotation (${rotKey}) selected: "${targetTheme}"`);
     }
-    const durationSeconds = parseInt(duration as string, 10) || 18;
+    const durationSeconds = parseInt(duration as string, 10) || 30;
 
     if (articleId) {
       const art = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -923,7 +923,7 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
       autoPostReels: autoReel ? autoReel.value !== 'false' : true,
       disablePoster: disablePoster ? disablePoster.value !== 'false' : true, // Feed poster disabled, Reels-only active
       postPosterToStories: postStories ? postStories.value !== 'false' : true, // Stories poster enabled
-      reelDuration: parseInt(reelDuration?.value || '18', 10) || 18, // Default 18 seconds (15-20s range)
+      reelDuration: parseInt(reelDuration?.value || '30', 10) || 30, // Default 30 seconds (full description readout)
       reelTheme: reelTheme?.value || 'auto-category', // Default to auto-category matching
     });
   } catch (err: any) {
@@ -978,7 +978,7 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       autoPostReels: autoPostReels !== undefined ? Boolean(autoPostReels) : true,
       disablePoster: disablePoster !== undefined ? Boolean(disablePoster) : true,
       postPosterToStories: postPosterToStories !== undefined ? Boolean(postPosterToStories) : true,
-      reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 15,
+      reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 30,
       reelTheme: reelTheme || 'rolling',
     });
   } catch (err: any) {
@@ -2243,7 +2243,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DEFAULT_CAPTION_FORMAT: config.DEFAULT_CAPTION_FORMAT,
       DEFAULT_COMMENT_FORMAT: config.DEFAULT_COMMENT_FORMAT,
       DISABLE_POSTER: 'true',
-      REEL_DURATION_SECONDS: '18',
+      REEL_DURATION_SECONDS: '30',
       DEFAULT_REEL_THEME: 'auto-category',
       TTS_PROVIDER: config.TTS_PROVIDER || 'auto',
       PUTER_AUTH_TOKEN: config.PUTER_AUTH_TOKEN ? '••••••••' : '',

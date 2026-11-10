@@ -220,7 +220,7 @@ export class QueueWorker {
       const reelThemeSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_REEL_THEME' });
       const reelDurationSetting = await db.collection<Setting>('settings').findOne({ _id: 'REEL_DURATION_SECONDS' });
       let targetReelTheme = job.payload?.reelTheme || reelThemeSetting?.value || 'auto-category';
-      const defaultDuration = 18; // 18s (optimal 15-20s range)
+      const defaultDuration = 30; // 30s (full description readout)
       const reelDuration = parseInt(reelDurationSetting?.value || String(defaultDuration), 10) || defaultDuration;
 
       const selectedTemplateId = templateId || source?.templateId || 'template-canva-bdnews';
@@ -1130,7 +1130,7 @@ export class QueueWorker {
     articleId: string,
     targetPageId?: string,
     theme?: string,
-    durationSeconds: number = 18
+    durationSeconds: number = 30
   ): Promise<{ success: boolean; videoId?: string; postId?: string; error?: string }> {
     const db = getDatabase();
     const article = await db.collection<NewsArticle>('news_articles').findOne({ _id: articleId });
@@ -1439,7 +1439,7 @@ export class QueueWorker {
       category: effectiveCategory,
       imageUrl: article.imageUrl || undefined,
       theme: 'vertical-916', // YouTube Shorts prefers 9:16 vertical fullscreen
-      durationSeconds: 18, // 15-20s duration
+      durationSeconds: 30, // 30s duration (full description readout)
       fps: 24,
       website: effectiveWebsite,
       isEnglish: isEnglish,

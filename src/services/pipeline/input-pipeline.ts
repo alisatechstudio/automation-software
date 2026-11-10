@@ -389,7 +389,7 @@ export class InputPipelineService {
             targetTheme = await getNextRollingReelTheme(db, rotKey);
             console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
           }
-          const reelDuration = source.reelDuration || 15;
+          const reelDuration = source.reelDuration || 30;
 
           // Lazy-load cover image on-demand for this single target article if not present in RSS
           if (!item.imageUrl && item.link) {
