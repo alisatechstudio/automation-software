@@ -875,6 +875,7 @@ export class ReelVideoRenderer {
   /**
    * Broadcast-grade unified 9:16 vertical fullscreen Reel (1080x1920) with theme-specific
    * color schemes, typography, and live television studio graphics (Somoy TV / Jamuna TV / BBC style).
+   * Specifically tuned for mobile safe zones (Facebook / Instagram Reels / YouTube Shorts) & ultra-crisp display.
    */
   private renderVerticalFrameWithTheme(
     theme: ReelTheme | string,
@@ -897,16 +898,15 @@ export class ReelVideoRenderer {
     let strapText = isEnglish ? 'BREAKING NEWS • SPECIAL DISPATCH' : 'ব্রেকিং নিউজ | BREAKING NEWS';
     let deskColor = '#fecaca';
     let cardBg = '#ffffff';
-    let cardBorderColor = 'rgba(185, 28, 28, 0.3)';
-    let headlineColor = '#7f1d1d';
+    let cardBorderColor = 'rgba(185, 28, 28, 0.4)';
+    let headlineColor = '#0f172a';
     let pillBg = '#ef4444';
     let pillText = '#ffffff';
     let pillPrefix = isEnglish ? 'LIVE • ' : 'লাইভ • ';
-    let commentPillBg = '#ffffff';
-    let commentPillText = '#0f172a';
-    let ribbonBg = 'rgba(185, 28, 28, 0.95)';
-    let ribbonBorder = '#ef4444';
-    let ribbonText = '#ffffff';
+    let commentPillBg = '#b91c1c';
+    let commentPillText = '#ffffff';
+    let ambientOrb1 = 'rgba(239, 68, 68, 0.22)';
+    let ambientOrb2 = 'rgba(245, 158, 11, 0.18)';
 
     const activeCategoryKey = theme === 'auto-category' ? resolveCategoryTheme(category) : (typeof theme === 'string' && theme.startsWith('cat-') ? theme : '');
     const catStyle = activeCategoryKey ? CATEGORY_STYLES[activeCategoryKey] : null;
@@ -918,48 +918,45 @@ export class ReelVideoRenderer {
       strapText = isEnglish ? `${catStyle.id.replace('cat-', '').toUpperCase()} • SPECIAL DISPATCH` : `${catStyle.banglaName} | বিশেষ সংবাদ`;
       deskColor = catStyle.badgeBg;
       cardBorderColor = catStyle.cardBorder;
-      headlineColor = catStyle.headlineColor;
+      headlineColor = catStyle.headlineColor || '#0f172a';
       pillBg = catStyle.badgeBg;
       pillText = catStyle.badgeText;
       commentPillBg = catStyle.badgeBg;
       commentPillText = catStyle.badgeText;
-      ribbonBg = catStyle.badgeBg;
-      ribbonBorder = catStyle.badgeDot || catStyle.badgeBg;
-      ribbonText = catStyle.badgeText;
+      ambientOrb1 = catStyle.ambientOrbColor;
+      ambientOrb2 = catStyle.ambientOrb2Color;
     } else if (theme === 'breaking-bold') {
       bgColors = ['#1e1b4b', '#0f172a', '#090d16', '#020617'];
       strapBg = '#f59e0b';
       strapAccent = '#fbbf24';
       strapText = isEnglish ? 'URGENT NEWS • SPECIAL DISPATCH' : 'জরুরি সংবাদ | URGENT NEWS';
       deskColor = '#78350f';
-      cardBg = '#0f172a';
+      cardBg = '#ffffff';
       cardBorderColor = '#f59e0b';
-      headlineColor = '#fef08a';
+      headlineColor = '#1c1917';
       pillBg = '#f59e0b';
       pillText = '#000000';
       pillPrefix = isEnglish ? 'URGENT • ' : 'জরুরি • ';
       commentPillBg = '#f59e0b';
       commentPillText = '#000000';
-      ribbonBg = 'rgba(245, 158, 11, 0.95)';
-      ribbonBorder = '#f59e0b';
-      ribbonText = '#000000';
+      ambientOrb1 = 'rgba(245, 158, 11, 0.25)';
+      ambientOrb2 = 'rgba(251, 191, 36, 0.18)';
     } else if (theme === 'dark-cinema') {
       bgColors = ['#09090b', '#18181b', '#0f172a', '#020617'];
       strapBg = '#10b981';
       strapAccent = '#34d399';
       strapText = isEnglish ? 'LIVE BULLETIN • WORLD EDITION' : 'লাইভ বুলেটিন | LIVE BULLETIN';
       deskColor = '#064e3b';
-      cardBg = '#18181b';
-      cardBorderColor = 'rgba(56, 189, 248, 0.4)';
-      headlineColor = '#f8fafc';
+      cardBg = '#ffffff';
+      cardBorderColor = 'rgba(16, 185, 129, 0.5)';
+      headlineColor = '#064e3b';
       pillBg = '#10b981';
       pillText = '#ffffff';
       pillPrefix = isEnglish ? 'BULLETIN • ' : 'বুলেটিন • ';
-      commentPillBg = '#38bdf8';
-      commentPillText = '#020617';
-      ribbonBg = 'rgba(16, 185, 129, 0.95)';
-      ribbonBorder = '#10b981';
-      ribbonText = '#ffffff';
+      commentPillBg = '#10b981';
+      commentPillText = '#ffffff';
+      ambientOrb1 = 'rgba(16, 185, 129, 0.25)';
+      ambientOrb2 = 'rgba(56, 189, 248, 0.18)';
     } else if (theme === 'viral-gradient') {
       bgColors = ['#581c87', '#3b0764', '#1e1b4b', '#020617'];
       strapBg = '#ec4899';
@@ -967,16 +964,15 @@ export class ReelVideoRenderer {
       strapText = isEnglish ? 'TRENDING UPDATE • VIRAL NOW' : 'ভাইরাল আপডেট | VIRAL UPDATE';
       deskColor = '#831843';
       cardBg = '#ffffff';
-      cardBorderColor = 'rgba(236, 72, 153, 0.3)';
+      cardBorderColor = 'rgba(236, 72, 153, 0.4)';
       headlineColor = '#4c1d95';
       pillBg = '#ec4899';
       pillText = '#ffffff';
       pillPrefix = isEnglish ? 'VIRAL • ' : 'ভাইরাল • ';
       commentPillBg = '#ec4899';
       commentPillText = '#ffffff';
-      ribbonBg = 'rgba(236, 72, 153, 0.95)';
-      ribbonBorder = '#ec4899';
-      ribbonText = '#ffffff';
+      ambientOrb1 = 'rgba(236, 72, 153, 0.25)';
+      ambientOrb2 = 'rgba(168, 85, 247, 0.20)';
     }
 
     // 1. Overall Background (1080x1920)
@@ -988,11 +984,29 @@ export class ReelVideoRenderer {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Full-Bleed News Photo (Edge-to-Edge: 1080x1175)
-    const photoH = 1175;
+    // Atmospheric Moving Glow Orbs (Studio Ambiance)
+    const orb1X = width * 0.75 + Math.sin(progress * Math.PI * 2) * 55;
+    const orb1Y = height * 0.68 + Math.cos(progress * Math.PI * 2) * 40;
+    ctx.save();
+    ctx.fillStyle = ambientOrb1;
+    ctx.beginPath();
+    ctx.arc(orb1X, orb1Y, 380, 0, Math.PI * 2);
+    ctx.fill();
+
+    const orb2X = width * 0.20 + Math.cos(progress * Math.PI * 2) * 45;
+    const orb2Y = height * 0.88 + Math.sin(progress * Math.PI * 2) * 35;
+    ctx.fillStyle = ambientOrb2;
+    ctx.beginPath();
+    ctx.arc(orb2X, orb2Y, 340, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 2. Full-Bleed News Photo with Smooth Ken Burns Motion (0 to 1100px)
+    const photoH = 1100;
     if (articleImg) {
       const zoom = 1.0 + progress * 0.08;
-      this.drawZoomedImage(ctx, articleImg, 0, 0, width, photoH, zoom);
+      const panY = Math.sin(progress * Math.PI) * 12;
+      this.drawZoomedImage(ctx, articleImg, 0, 0, width, photoH, zoom, panY);
     } else {
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(0, 0, width, photoH);
@@ -1004,81 +1018,142 @@ export class ReelVideoRenderer {
       ctx.fillText(isEnglish ? 'Trending News World • Top Headlines' : 'BD News 24/7 • শীর্ষ সংবাদ', width / 2, photoH / 2);
     }
 
-    // Top subtle vignette for header bug contrast
-    const topVig = ctx.createLinearGradient(0, 0, 0, 220);
-    topVig.addColorStop(0, 'rgba(0,0,0,0.85)');
-    topVig.addColorStop(1, 'rgba(0,0,0,0)');
+    // Top subtle vignette for mobile header bug contrast (Y: 0 to 240)
+    const topVig = ctx.createLinearGradient(0, 0, 0, 240);
+    topVig.addColorStop(0, 'rgba(0, 0, 0, 0.88)');
+    topVig.addColorStop(0.7, 'rgba(0, 0, 0, 0.45)');
+    topVig.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = topVig;
-    ctx.fillRect(0, 0, width, 220);
+    ctx.fillRect(0, 0, width, 240);
 
     // Bottom cinematic vignette transitioning into the lower third
     const botVig = ctx.createLinearGradient(0, photoH - 260, 0, photoH);
-    botVig.addColorStop(0, 'rgba(0,0,0,0)');
-    botVig.addColorStop(1, 'rgba(0,0,0,0.92)');
+    botVig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    botVig.addColorStop(1, 'rgba(0, 0, 0, 0.94)');
     ctx.fillStyle = botVig;
     ctx.fillRect(0, photoH - 260, width, 260);
 
-    // 3. Top Television Header Bug (Y: 45 to 115)
+    // 3. Top Television Header Bug (Mobile Safe Zone: Y: 95 to 165 - safely below notch/dynamic island)
     ctx.save();
-    const logoCenterY = 80;
-    const logoRadius = 36;
+    const logoCenterY = 125;
+    const logoRadius = 38;
     if (logoImg) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(75, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.arc(80, logoCenterY, logoRadius, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(logoImg, 75 - logoRadius, logoCenterY - logoRadius, logoRadius * 2, logoRadius * 2);
+      ctx.drawImage(logoImg, 80 - logoRadius, logoCenterY - logoRadius, logoRadius * 2, logoRadius * 2);
       ctx.restore();
 
-      ctx.strokeStyle = '#ffffff';
+      // Pulsing outer halo ring
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.45 + Math.sin(f * 0.25) * 0.35})`;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(75, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.arc(80, logoCenterY, logoRadius + 2, 0, Math.PI * 2);
       ctx.stroke();
     } else {
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
-      ctx.arc(75, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.arc(80, logoCenterY, logoRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.stroke();
     }
 
-    // Channel name watermark
+    // Channel name watermark + Live tag
     const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     ctx.fillStyle = '#ffffff';
     ctx.font = isEnglish ? 'bold 30px sans-serif' : 'bold 36px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 10;
-    ctx.fillText(brandText, 128, logoCenterY);
+    ctx.shadowBlur = 12;
+    ctx.fillText(brandText, 132, logoCenterY);
 
-    // Live Category Badge (Top Right)
-    const pillW = 280;
-    const pillX = width - 35 - pillW;
-    ctx.fillStyle = pillBg;
-    ctx.beginPath();
-    ctx.roundRect(pillX, 55, pillW, 50, 25);
-    ctx.fill();
-
-    const dotRadius = 5 + Math.sin(f * 0.4) * 1.5;
-    ctx.fillStyle = pillText;
-    ctx.beginPath();
-    ctx.arc(pillX + 30, logoCenterY, dotRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : category;
-    ctx.fillStyle = pillText;
+    // Live Category Badge (Top Right) with Expanding Radar Ripple
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : (category || 'বিশেষ খবর');
     ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(pillPrefix + displayCategory, pillX + pillW / 2 + 12, logoCenterY);
+    const catLabel = pillPrefix + displayCategory;
+    const catTextW = ctx.measureText(catLabel).width;
+    const pillW = Math.max(240, catTextW + 55);
+    const pillX = width - 45 - pillW;
+    const pillY = 98;
+    const pillH = 54;
+
+    ctx.fillStyle = pillBg;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillW, pillH, 27);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Radar Ripple Expanding Ring (1s period)
+    const beaconX = pillX + 26;
+    const beaconY = pillY + pillH / 2;
+    const ripplePhase = (f % 24) / 24;
+    const rippleR = 5 + ripplePhase * 16;
+    const rippleAlpha = Math.max(0, 0.75 * (1 - ripplePhase));
+    ctx.strokeStyle = `rgba(255, 255, 255, ${rippleAlpha})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(beaconX, beaconY, rippleR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Pulsing Core Beacon Dot
+    const dotRadius = 5.5 + Math.sin(f * 0.35) * 1.6;
+    ctx.fillStyle = pillText === '#ffffff' ? (catStyle?.badgeDot || '#fbbf24') : pillText;
+    ctx.beginPath();
+    ctx.arc(beaconX, beaconY, dotRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = pillText;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(catLabel, beaconX + 16, beaconY);
     ctx.restore();
 
-    // 4. FULL-WIDTH Breaking News Category Strap (1080px Edge-to-Edge!)
-    const strapY = 1175;
-    const strapH = 72;
+    // Animated Live Audio Equalizer (Sound Wave in Photo Lower Corner)
+    // Dynamic animated frequency bars giving visual feedback that narration is live
+    const eqX = width - 210;
+    const eqY = photoH - 45;
+    const numBars = 7;
+    const barW = 8;
+    const barGap = 6;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+    ctx.beginPath();
+    ctx.roundRect(eqX - 18, eqY - 32, numBars * (barW + barGap) + 26, 44, 22);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    for (let i = 0; i < numBars; i++) {
+      const hScale = Math.abs(Math.sin(f * 0.25 + i * 0.85) * 0.7 + Math.cos(f * 0.18 - i * 0.45) * 0.3);
+      const bH = Math.max(8, Math.round(hScale * 26));
+      const bX = eqX + i * (barW + barGap);
+      const bY = eqY - bH + 2;
+
+      const barGrad = ctx.createLinearGradient(bX, bY, bX, eqY);
+      barGrad.addColorStop(0, strapAccent || '#38bdf8');
+      barGrad.addColorStop(1, '#ffffff');
+      ctx.fillStyle = barGrad;
+      ctx.beginPath();
+      ctx.roundRect(bX, bY, barW, bH, 4);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 4. FULL-WIDTH Breaking News Category Strap with Animated Shimmer Sweep
+    const strapY = 1100;
+    const strapH = 76;
     ctx.save();
     ctx.fillStyle = strapBg;
     ctx.fillRect(0, strapY, width, strapH);
@@ -1087,127 +1162,190 @@ export class ReelVideoRenderer {
     ctx.fillStyle = strapAccent;
     ctx.fillRect(0, strapY, width, 4);
 
-    // Glowing dot + Breaking strap text
-    ctx.fillStyle = '#ffffff';
+    // Specular light shimmer sweep across strap
+    const shimmerPos = ((f * 18) % (width + 400)) - 200;
+    const shimmerGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
+    shimmerGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    shimmerGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.25)');
+    shimmerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = shimmerGrad;
+    ctx.fillRect(0, strapY, width, strapH);
+
+    // Glowing broadcast beacon dot
+    const strapBeaconX = 45;
+    const strapBeaconY = strapY + strapH / 2;
+    const strapPulseR = 6.5 + Math.sin(f * 0.4) * 1.8;
+    ctx.fillStyle = strapAccent;
+    ctx.shadowColor = strapAccent;
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.arc(42, strapY + strapH / 2, 7, 0, Math.PI * 2);
+    ctx.arc(strapBeaconX, strapBeaconY, strapPulseR, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#ffffff';
     ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(strapText, 62, strapY + strapH / 2);
+    ctx.fillText(strapText, strapBeaconX + 22, strapBeaconY);
 
     // Right category desk
     ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'right';
     ctx.fillStyle = deskColor;
-    ctx.fillText(isEnglish ? displayCategory + ' DESK' : category + ' ডেস্ক', width - 35, strapY + strapH / 2);
+    ctx.fillText(isEnglish ? displayCategory + ' DESK' : category + ' ডেস্ক', width - 45, strapBeaconY);
     ctx.restore();
 
-    // 5. FULL-WIDTH Headline Banner (1080px Edge-to-Edge!)
-    const cardY = 1247;
-    const cardH = 435;
+    // 5. Mobile-Optimized Studio Headline Card
+    // Safe vertical zone: Y: 1195 to 1570 (Leaves bottom clear for Facebook Reels UI overlay!)
+    const entranceFactor = Math.min(1, f / 12);
+    const easeOut = 1 - Math.pow(1 - entranceFactor, 3);
+    const entranceOffset = (1 - easeOut) * 25; // Smooth slide-up
+    const breathingOffset = Math.sin(f * 0.08) * 2; // Subtle organic float
+
+    const cardX = 40;
+    const cardY = 1195 + entranceOffset + breathingOffset;
+    const cardW = width - 80; // 1000px wide
+    const cardH = 375;
+    const cardRadius = 24;
+
     ctx.save();
-    ctx.fillStyle = cardBg;
-    ctx.fillRect(0, cardY, width, cardH);
+    // Rich 3D Drop Shadow
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 32;
+    ctx.shadowOffsetY = 14;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+    ctx.fill();
 
-    // Bottom accent border
-    ctx.fillStyle = cardBorderColor;
-    ctx.fillRect(0, cardY + cardH - 3, width, 3);
+    // Category accent border
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = cardBorderColor || 'rgba(185, 28, 28, 0.4)';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
 
-    // Dynamic Headline Font Sizing
-    let fontSize = 66;
-    if (headline.length > 55) fontSize = 60;
-    if (headline.length > 85) fontSize = 54;
-    if (headline.length > 115) fontSize = 48;
+    // Top Category Color Bar on the card
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, 8, [cardRadius, cardRadius, 0, 0]);
+    ctx.fill();
+    ctx.restore();
 
+    // Dynamic Headline Font Sizing & Safe Text Width (860px max width centered)
+    // Constraining to 860px prevents right-side collision with mobile Like/Comment buttons!
+    let fontSize = 56;
+    if (headline.length > 55) fontSize = 50;
+    if (headline.length > 85) fontSize = 44;
+    if (headline.length > 115) fontSize = 38;
+
+    ctx.save();
     ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
-    ctx.fillStyle = headlineColor;
+    ctx.fillStyle = headlineColor || '#0f172a';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
-    const maxTextWidth = width - 80;
+    const maxTextWidth = 860;
     const lines = this.wrapText(ctx, headline, maxTextWidth);
-    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.35));
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.34));
     const totalTextHeight = lines.length * lineHeight;
-    const startY = cardY + (cardH - totalTextHeight) / 2;
+    const startY = cardY + 14 + (cardH - 14 - totalTextHeight) / 2;
 
     lines.forEach((l, i) => {
       ctx.fillText(l, width / 2, startY + i * lineHeight);
     });
     ctx.restore();
 
-    // 6. Action Bar (Y: 1700 to 1768)
-    const actionY = 1700;
-    const actionPillW = 505;
+    // 6. Action & Source Bar (Safe Zone: Y = 1590 to 1650)
+    const actionY = 1590;
+    const actionPillW = 430;
     ctx.save();
+
     // Website Pill (Left)
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
     ctx.beginPath();
-    ctx.roundRect(25, actionY, actionPillW, 66, 33);
+    ctx.roundRect(40, actionY, actionPillW, 58, 29);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.arc(65, actionY + 33, 6, 0, Math.PI * 2);
+    ctx.arc(75, actionY + 29, 6, 0, Math.PI * 2);
     ctx.fill();
 
     const cleanWebsite = (website || (isEnglish ? 'trendingnews.world' : 'bdnews.site')).toUpperCase();
     ctx.fillStyle = '#f8fafc';
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(cleanWebsite, 85, actionY + 33);
+    ctx.fillText(cleanWebsite, 95, actionY + 29);
 
-    // Comment Link Pill (Right)
-    const comPillX = width - 25 - actionPillW;
+    // Comment Link Pill (Right) - Ends at X: 915 to stay clear of Facebook Like button
+    const comPillX = width - 40 - 125 - actionPillW;
     ctx.fillStyle = commentPillBg;
     ctx.beginPath();
-    ctx.roundRect(comPillX, actionY, actionPillW, 66, 33);
+    ctx.roundRect(comPillX, actionY, actionPillW, 58, 29);
     ctx.fill();
 
     // Chat bubble vector icon
     ctx.fillStyle = commentPillText;
-    const cIconX = comPillX + 45;
-    const cIconY = actionY + 33;
+    const cIconX = comPillX + 38;
+    const cIconY = actionY + 29;
     ctx.beginPath();
-    ctx.roundRect(cIconX - 12, cIconY - 9, 22, 16, 4);
+    ctx.roundRect(cIconX - 11, cIconY - 8, 20, 15, 4);
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(cIconX - 4, cIconY + 7);
-    ctx.lineTo(cIconX - 8, cIconY + 12);
+    ctx.moveTo(cIconX - 3, cIconY + 7);
+    ctx.lineTo(cIconX - 7, cIconY + 11);
     ctx.lineTo(cIconX + 1, cIconY + 7);
     ctx.fill();
 
     ctx.fillStyle = commentPillText;
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 23px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(isEnglish ? 'Full story in first comment' : 'বিস্তারিত প্রথম কমেন্টে দেখুন', cIconX + 22, actionY + 33);
+    ctx.fillText(isEnglish ? 'Full story in first comment' : 'বিস্তারিত প্রথম কমেন্টে দেখুন', cIconX + 20, actionY + 29);
     ctx.restore();
 
-    // 7. FULL-WIDTH Follow Ticker Strip (1080px Edge-to-Edge!)
-    const ribbonY = 1790;
-    const ribbonH = 65;
-    ctx.save();
-    ctx.fillStyle = ribbonBg;
-    ctx.fillRect(0, ribbonY, width, ribbonH);
+    // 7. Animated Video Progress Bar (Y = 1665)
+    const progY = 1665;
+    const progW = width - 80;
+    const fillW = Math.max(8, progW * Math.min(1, progress));
 
-    ctx.fillStyle = ribbonText;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
     ctx.beginPath();
-    ctx.arc(220, ribbonY + ribbonH / 2, 6, 0, Math.PI * 2);
+    ctx.roundRect(40, progY, progW, 6, 3);
     ctx.fill();
 
-    ctx.fillStyle = ribbonText;
-    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.fillStyle = strapAccent || '#f59e0b';
+    ctx.shadowColor = strapAccent || '#f59e0b';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.roundRect(40, progY, fillW, 6, 3);
+    ctx.fill();
+    ctx.restore();
+
+    // 8. Bottom Mobile Caption Safe Zone (Y: 1680 to 1920)
+    // Deep cinematic gradient giving high contrast to Facebook's Page Name, Follow button, and Caption
+    const bottomVig = ctx.createLinearGradient(0, 1680, 0, height);
+    bottomVig.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
+    bottomVig.addColorStop(0.35, 'rgba(2, 6, 23, 0.85)');
+    bottomVig.addColorStop(1, 'rgba(2, 6, 23, 0.98)');
+    ctx.fillStyle = bottomVig;
+    ctx.fillRect(0, 1680, width, height - 1680);
+
+    // Follow CTA with subtle breathing pulse
+    const followY = 1715;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(isEnglish ? 'Follow & Share • Trending News World Official Page' : 'ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ', width / 2, ribbonY + ribbonH / 2);
+    const followText = isEnglish ? '🔔 Follow & Share • Trending News World Official' : '🔔 ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ';
+    ctx.fillText(followText, width / 2, followY);
     ctx.restore();
   }
 
