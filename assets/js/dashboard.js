@@ -1467,7 +1467,7 @@
       const headline = document.getElementById('reel-headline-input')?.value.trim();
       const category = document.getElementById('reel-category-input')?.value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input')?.value.trim();
-      const theme = document.getElementById('reel-theme-select')?.value || 'rolling';
+      const theme = document.getElementById('reel-theme-select')?.value || 'auto-category';
 
       const frameImg = document.getElementById('reel-frame-img');
       const placeholder = document.getElementById('reel-player-placeholder');
@@ -1619,7 +1619,7 @@
       const headline = document.getElementById('reel-headline-input').value.trim();
       const category = document.getElementById('reel-category-input').value.trim() || 'বিশেষ খবর';
       const imageUrl = document.getElementById('reel-image-input').value.trim();
-      const theme = document.getElementById('reel-theme-select').value || 'studio-red';
+      const theme = document.getElementById('reel-theme-select').value || 'auto-category';
 
       if (!headline) {
         showToast('Please enter a headline', true);

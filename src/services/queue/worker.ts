@@ -241,7 +241,7 @@ export class QueueWorker {
         Boolean(source?.name && source.name.toLowerCase().includes('bd news')) ||
         Boolean(article.link && article.link.includes('bdnews'));
 
-      if (targetReelTheme === 'rolling' || isEnglish || isBdNews) {
+      if (targetReelTheme === 'rolling') {
         const rotKey = isEnglish ? 'trending_news' : (isBdNews ? 'bd_news' : 'global');
         targetReelTheme = await getNextRollingReelTheme(db, rotKey);
         console.log(`[QueueWorker] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetReelTheme}"`);
@@ -1161,7 +1161,7 @@ export class QueueWorker {
       Boolean(article.link && article.link.includes('bdnews'));
 
     let selectedTheme = theme || 'auto-category';
-    if (selectedTheme === 'rolling' || isEnglish || isBdNews) {
+    if (selectedTheme === 'rolling') {
       const rotKey = isEnglish ? 'trending_news' : (isBdNews ? 'bd_news' : 'global');
       selectedTheme = await getNextRollingReelTheme(db, rotKey);
       console.log(`[QueueWorker] 🔄 Rolling Rotation (${rotKey}) selected: "${selectedTheme}" for article: "${article.title}"`);

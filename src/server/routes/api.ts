@@ -637,7 +637,7 @@ apiRouter.get('/reels/preview-frame.jpg', async (req: Request, res: Response) =>
       '২০২৬-২৭ শিক্ষাবর্ষের মেডিক্যাল ভর্তি পরীক্ষা স্থগিত, চূড়ান্ত হয়নি নতুন সময়সূচি';
     const category = (req.query.category as string) || 'বিশেষ খবর';
     const imageUrl = req.query.imageUrl as string | undefined;
-    const theme = (req.query.theme as string) || 'studio-red';
+    const theme = (req.query.theme as string) || 'auto-category';
 
     const frameBuffer = await reelRenderer.renderStaticPreview({
       headline,
@@ -712,10 +712,10 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     let targetCategory = category || 'বিশেষ খবর';
     let targetImageUrl = imageUrl;
     let finalArticleId = articleId;
-    let targetTheme = theme;
+    let targetTheme = theme || 'auto-category';
     const isEn = isEnglishText(targetHeadline || '') || isEnglishText(targetCategory || '') || (pageId === '1526917347161119');
     const rotKey = isEn ? 'trending_news' : 'bd_news';
-    if (!targetTheme || targetTheme === 'rolling') {
+    if (targetTheme === 'rolling') {
       targetTheme = await getNextRollingReelTheme(db, rotKey);
       console.log(`[Reels API] 🔄 Rolling Rotation (${rotKey}) selected: "${targetTheme}"`);
     }
@@ -979,7 +979,7 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       disablePoster: disablePoster !== undefined ? Boolean(disablePoster) : true,
       postPosterToStories: postPosterToStories !== undefined ? Boolean(postPosterToStories) : true,
       reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 30,
-      reelTheme: reelTheme || 'rolling',
+      reelTheme: reelTheme || 'auto-category',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

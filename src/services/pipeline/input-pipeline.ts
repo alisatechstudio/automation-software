@@ -190,7 +190,7 @@ export class InputPipelineService {
       try {
         await sourcesCol.updateMany(
           { name: { $regex: /bd news|trending news/i } },
-          { $set: { reelTheme: 'rolling' } }
+          { $set: { reelTheme: 'auto-category' } }
         );
         allSources = await sourcesCol.find({}).toArray();
       } catch (findErr: any) {
@@ -383,8 +383,8 @@ export class InputPipelineService {
           const isBdNews = sourceName.toLowerCase().includes('bd news');
           const isTrendingNews = sourceName.toLowerCase().includes('trending') || isEnglish;
 
-          let targetTheme = source.reelTheme || source.templateId || 'auto-category';
-          if (targetTheme === 'rolling' || isBdNews || isTrendingNews) {
+          let targetTheme = source.reelTheme || 'auto-category';
+          if (targetTheme === 'rolling') {
             const rotKey = isTrendingNews ? 'trending_news' : (isBdNews ? 'bd_news' : sourceName);
             targetTheme = await getNextRollingReelTheme(db, rotKey);
             console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
