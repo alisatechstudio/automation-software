@@ -442,7 +442,7 @@ export class ReelVideoRenderer {
     if (scaleX !== 1 || scaleY !== 1) {
       ctx.scale(scaleX, scaleY);
     }
-    this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 8, articleImg, logoImg, headline, category, website, isEnglish);
+    this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 60, articleImg, logoImg, headline, category, website, isEnglish);
     ctx.restore();
     return canvas.toBuffer('image/jpeg', 92);
   }
@@ -873,6 +873,114 @@ export class ReelVideoRenderer {
   }
 
   /**
+   * Renders broadcast-grade animated kinetic headline text:
+   * - Sequential word-by-word pop-in entrance with elastic scale & micro-bounce (0-1.5s)
+   * - High-contrast text readability on mobile screens
+   * - Periodic specular light beam / sheen sweep across Bengali & English typography (every 4s)
+   */
+  private drawKineticHeadlineText(
+    ctx: any,
+    lines: string[],
+    width: number,
+    startY: number,
+    lineHeight: number,
+    fontSize: number,
+    headlineColor: string,
+    accentColor: string,
+    f: number,
+    align: 'center' | 'left' = 'center',
+    leftOffset: number = 0
+  ): void {
+    ctx.save();
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+
+    const lineWords = lines.map((l) => l.split(/\s+/).filter(Boolean));
+    const totalWords = lineWords.reduce((sum, words) => sum + words.length, 0);
+    const spaceWidth = ctx.measureText(' ').width;
+
+    // Periodic text shimmer sweep (runs every 96 frames = 4s, duration 28 frames)
+    const sweepCycle = f % 96;
+    const isSweeping = f >= 45 && sweepCycle >= 48 && sweepCycle <= 76;
+    const sweepProgress = isSweeping ? (sweepCycle - 48) / 28 : -1;
+
+    let globalWordIdx = 0;
+
+    for (let lineIdx = 0; lineIdx < lineWords.length; lineIdx++) {
+      const words = lineWords[lineIdx];
+      const wordWidths = words.map((w) => ctx.measureText(w).width);
+      const totalLineWidth = wordWidths.reduce((a, b) => a + b, 0) + Math.max(0, words.length - 1) * spaceWidth;
+      let wordX = align === 'center' ? (width - totalLineWidth) / 2 : leftOffset;
+      const lineY = startY + lineIdx * lineHeight;
+
+      for (let wIdx = 0; wIdx < words.length; wIdx++) {
+        const word = words[wIdx];
+        const wordW = wordWidths[wIdx];
+        const currentWordIdx = globalWordIdx;
+        globalWordIdx++;
+
+        // Calculate reveal timing for this word across first 36 frames (~1.5s at 24fps)
+        const wordStartF = Math.round(currentWordIdx * (36 / Math.max(1, totalWords)));
+
+        // If in animation phase and word hasn't appeared yet, skip
+        if (f < wordStartF) {
+          wordX += wordW + spaceWidth;
+          continue;
+        }
+
+        ctx.save();
+        if (f >= wordStartF && f < wordStartF + 7) {
+          // Kinetic Word Entrance: Pop-in scale with slight bounce & accent glow
+          const popP = (f - wordStartF) / 7;
+          const easePop = 1 - Math.pow(1 - popP, 2);
+          const scale = 1.15 - easePop * 0.15; // 1.15 -> 1.0
+          const offsetY = (1 - easePop) * 7;   // 7px -> 0px
+          const alpha = Math.min(1, easePop * 1.3);
+
+          ctx.globalAlpha = alpha;
+          ctx.translate(wordX + wordW / 2, lineY + fontSize / 2 + offsetY);
+          ctx.scale(scale, scale);
+          ctx.translate(-(wordX + wordW / 2), -(lineY + fontSize / 2 + offsetY));
+
+          // Active popping word glows in accent color
+          ctx.fillStyle = accentColor || '#f59e0b';
+          ctx.shadowColor = accentColor || '#f59e0b';
+          ctx.shadowBlur = 10;
+          ctx.fillText(word, wordX, lineY);
+        } else {
+          // Settled word in crisp headline color
+          ctx.fillStyle = headlineColor || '#0f172a';
+
+          // Check if periodic light gleam is sweeping over this word
+          if (isSweeping) {
+            const sweepX = width * 0.12 + sweepProgress * (width * 0.76);
+            const dist = Math.abs(wordX + wordW / 2 - sweepX);
+            if (dist < 130) {
+              const sheenIntensity = 1 - dist / 130;
+              ctx.fillText(word, wordX, lineY);
+
+              // Specular white light sheen overlay
+              ctx.fillStyle = `rgba(255, 255, 255, ${sheenIntensity * 0.8})`;
+              ctx.shadowColor = '#ffffff';
+              ctx.shadowBlur = Math.round(sheenIntensity * 14);
+              ctx.fillText(word, wordX, lineY);
+              ctx.restore();
+              wordX += wordW + spaceWidth;
+              continue;
+            }
+          }
+
+          ctx.fillText(word, wordX, lineY);
+        }
+        ctx.restore();
+
+        wordX += wordW + spaceWidth;
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
    * Broadcast-grade unified 9:16 vertical fullscreen Reel (1080x1920) with theme-specific
    * color schemes, typography, and live television studio graphics (Somoy TV / Jamuna TV / BBC style).
    * Specifically tuned for mobile safe zones (Facebook / Instagram Reels / YouTube Shorts) & ultra-crisp display.
@@ -1241,9 +1349,6 @@ export class ReelVideoRenderer {
 
     ctx.save();
     ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
-    ctx.fillStyle = headlineColor || '#0f172a';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
 
     const maxTextWidth = 860;
     const lines = this.wrapText(ctx, headline, maxTextWidth);
@@ -1251,9 +1356,18 @@ export class ReelVideoRenderer {
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + 14 + (cardH - 14 - totalTextHeight) / 2;
 
-    lines.forEach((l, i) => {
-      ctx.fillText(l, width / 2, startY + i * lineHeight);
-    });
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      headlineColor || '#0f172a',
+      strapAccent || '#f59e0b',
+      f,
+      'center'
+    );
     ctx.restore();
 
     // 6. Action & Source Bar (Safe Zone: Y = 1590 to 1650)
@@ -1558,9 +1672,18 @@ export class ReelVideoRenderer {
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
-    lines.forEach((line, index) => {
-      ctx.fillText(line, width / 2, startY + index * lineHeight);
-    });
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      '#7f1d1d',
+      '#ef4444',
+      f,
+      'center'
+    );
     ctx.restore();
 
     // F. Bottom Footer Bar
@@ -2002,9 +2125,19 @@ export class ReelVideoRenderer {
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
-    lines.forEach((l, i) => {
-      ctx.fillText(l, cardX + 75, startY + i * lineHeight);
-    });
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      '#f8fafc',
+      '#38bdf8',
+      f,
+      'left',
+      cardX + 75
+    );
     ctx.restore();
 
     // F. Footer
@@ -2299,18 +2432,24 @@ export class ReelVideoRenderer {
     if (headline.length > 145) fontSize = 35;
 
     ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
-    ctx.fillStyle = style.headlineColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
 
     const lines = this.wrapText(ctx, headline, maxTextWidth);
     const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.38));
     const totalTextHeight = lines.length * lineHeight;
     const startY = cardY + (cardH - totalTextHeight) / 2;
 
-    lines.forEach((l, i) => {
-      ctx.fillText(l, width / 2, startY + i * lineHeight);
-    });
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      style.headlineColor || '#0f172a',
+      style.badgeDot || style.badgeBg || '#f59e0b',
+      f,
+      'center'
+    );
     ctx.restore();
 
     // G. Footer Action Buttons with Interactive Feedback
