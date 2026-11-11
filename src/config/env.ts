@@ -96,7 +96,7 @@ const baseConfig: AppConfig = {
     process.env.PUTER_AUTH_TOKEN ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYyIn0.eyJ0IjoidCIsInYiOiIyIiwidG9rZW5fdWlkIjoiMmE5MjdhMDItMzFlZi00MzQxLThlOTktMTUwMmU4ZThiOGVlIiwidXUiOiI5NTdKVDNvdlJ6R2FzYXZpSGQxd0tRPT0iLCJzdSI6ImlDaXQzQzV2UlVhSENvRkg3Y0s4UlE9PSIsImFpIjoiOTU3SlQzb3ZSekdhc2F2aUhkMXdLUT09IiwiZnVsbF9hY2Nlc3MiOnRydWUsImlhdCI6MTc5NDI0MDI2MH0.doxhpusznGPA8Br-LEdF7kQIjjSKFypiu1xSzjRt9zU',
   PUTER_TTS_PROVIDER: process.env.PUTER_TTS_PROVIDER || 'gemini',
-  PUTER_TTS_MODEL: process.env.PUTER_TTS_MODEL || 'gemini-3.8-flash-tts',
+  PUTER_TTS_MODEL: process.env.PUTER_TTS_MODEL || 'gemini-3.8-flash-lite-tts',
   PUTER_TTS_VOICE: process.env.PUTER_TTS_VOICE || 'Charon',
   PUTER_TTS_INSTRUCTIONS:
     process.env.PUTER_TTS_INSTRUCTIONS ||

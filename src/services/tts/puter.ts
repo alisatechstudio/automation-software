@@ -57,11 +57,17 @@ export class PuterTtsService {
       config.PUTER_TTS_PROVIDER ||
       'gemini';
 
-    const model =
+    let model =
       options?.model ||
       (await getDbSetting('PUTER_TTS_MODEL')) ||
       config.PUTER_TTS_MODEL ||
-      (provider === 'gemini' ? 'gemini-3.8-flash-tts' : provider === 'speechify' ? 'simba-3.2' : undefined);
+      (provider === 'gemini' ? 'gemini-3.8-flash-lite-tts' : provider === 'speechify' ? 'simba-3.2' : undefined);
+
+    // gemini-3.8-flash-tts consumes heavy Puter credits and triggers 402 limit.
+    // gemini-3.8-flash-lite-tts delivers the identical authentic Charon male voice with abundant free tier quota.
+    if (provider === 'gemini' && model === 'gemini-3.8-flash-tts') {
+      model = 'gemini-3.8-flash-lite-tts';
+    }
 
     // Always default to professional male news voices across all providers
     const defaultVoice =
@@ -114,16 +120,38 @@ export class PuterTtsService {
 
     // 2. Direct HTTP REST API fallback to https://api.puter.com/drivers/call
     try {
-      return await this.synthesizeWithRestApi(cleanText, token, {
+      const restBuf = await this.synthesizeWithRestApi(cleanText, token, {
         provider,
         model,
         voice,
         instructions,
       });
+      if (restBuf && restBuf.length > 500) {
+        return restBuf;
+      }
     } catch (restErr: any) {
       console.warn(`[PuterTTS] REST API error: ${restErr.message || restErr}`);
-      return null;
     }
+
+    // 3. If primary model was flash and failed (e.g. credit limit), try flash-lite
+    if (provider === 'gemini' && model !== 'gemini-3.8-flash-lite-tts') {
+      try {
+        console.log('[PuterTTS] 🔄 Retrying with lightweight Gemini Flash-Lite model (gemini-3.8-flash-lite-tts)...');
+        const liteBuf = await this.synthesizeWithRestApi(cleanText, token, {
+          provider,
+          model: 'gemini-3.8-flash-lite-tts',
+          voice,
+          instructions,
+        });
+        if (liteBuf && liteBuf.length > 500) {
+          return liteBuf;
+        }
+      } catch (liteErr: any) {
+        console.warn(`[PuterTTS] Flash-Lite retry error: ${liteErr.message || liteErr}`);
+      }
+    }
+
+    return null;
   }
 
   /**
