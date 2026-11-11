@@ -389,7 +389,13 @@ export class InputPipelineService {
             targetTheme = await getNextRollingReelTheme(db, rotKey);
             console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
           }
-          const reelDuration = source.reelDuration || 30;
+          const reelDuration = source.reelDuration || 15; // 15 seconds optimal social reel duration (prevents timeouts)
+
+          // Check if we still have time budget to render this reel
+          if (Date.now() - startTime > MAX_EXECUTION_MS - 20000) {
+            console.log(`[InputCron] ⏱️ Approaching execution budget limit (${Math.round((Date.now() - startTime) / 1000)}s). Skipping further video rendering this cycle to prevent timeout.`);
+            break;
+          }
 
           // Lazy-load cover image on-demand for this single target article if not present in RSS
           if (!item.imageUrl && item.link) {

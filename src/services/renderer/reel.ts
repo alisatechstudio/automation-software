@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 import { spawn } from 'child_process';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
@@ -543,7 +544,7 @@ export class ReelVideoRenderer {
     const scaleY = height / refHeight;
     const needsScale = scaleX !== 1 || scaleY !== 1;
 
-    let durationSeconds = input.durationSeconds || 30; // 30 seconds default (for full description readout)
+    let durationSeconds = input.durationSeconds || 15; // 15 seconds optimal social reel duration (prevents cloud/proxy timeouts)
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = Math.max(24, input.fps || 24);
 
@@ -621,7 +622,8 @@ export class ReelVideoRenderer {
         estVoiceSecs = voiceoverBuffer.length / 16000;
       }
       if (estVoiceSecs > 0) {
-        durationSeconds = Math.max(durationSeconds, Math.min(60, Math.ceil(estVoiceSecs + 1.5)));
+        // Cap reel duration at 20 seconds maximum to prevent cloud/serverless timeouts
+        durationSeconds = Math.max(durationSeconds, Math.min(20, Math.ceil(estVoiceSecs + 1)));
       }
 
       tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp3`);
@@ -635,20 +637,20 @@ export class ReelVideoRenderer {
 
     const totalFrames = durationSeconds * fps;
 
-    // 4. Configure FFmpeg spawn arguments (strictly 1 thread to respect shared hosting/CloudLinux limits)
+    // 4. Configure FFmpeg spawn arguments with high-speed raw RGBA video streaming
+    const numThreads = Math.min(4, os.cpus()?.length || 2);
     const ffmpegArgs = [
       '-y',
-      '-threads', '1',
-      '-thread_queue_size', '1',
-      '-f', 'image2pipe',
-      '-vcodec', 'mjpeg',
+      '-threads', String(numThreads),
+      '-f', 'rawvideo',
+      '-pix_fmt', 'rgba',
+      '-s', `${width}x${height}`,
       '-r', String(fps),
-      '-i', '-', // Stream from stdin
+      '-i', '-', // Zero-copy raw RGBA stream from stdin
     ];
 
     if (finalAudioPath) {
       ffmpegArgs.push(
-        '-thread_queue_size', '1',
         '-stream_loop', '-1',
         '-i', finalAudioPath
       );
@@ -662,7 +664,6 @@ export class ReelVideoRenderer {
 
     if (tempVoiceFile) {
       ffmpegArgs.push(
-        '-thread_queue_size', '1',
         '-i', tempVoiceFile
       );
     }
@@ -671,9 +672,8 @@ export class ReelVideoRenderer {
       '-c:v', 'libx264',
       '-preset', 'veryfast', // Upgraded to veryfast for sharp edge retention and zero macroblocking
       '-tune', 'film',       // Tuned for high definition visual fidelity & crisp typography
-      '-threads', '1',
-      '-x264opts', 'threads=1:sliced-threads=0:lookahead_threads=0',
-      '-crf', '20',          // Visually lossless Full HD clarity (was 26)
+      '-threads', String(numThreads),
+      '-crf', '20',          // Visually lossless Full HD clarity
       '-pix_fmt', 'yuv420p',
       '-g', String(fps * 2), // Closed GOP (2s keyframe interval as required by Meta)
       '-keyint_min', String(fps * 2),
@@ -700,7 +700,7 @@ export class ReelVideoRenderer {
       '-b:a', '128k', // 128kbps+ AAC as required by Meta
       '-ar', '48000', // 48kHz sample rate as required by Meta
       '-ac', '2',     // Stereo channels as required by Meta
-      '-threads', '1',
+      '-threads', String(numThreads),
       '-shortest'
     );
 
@@ -754,17 +754,15 @@ export class ReelVideoRenderer {
         this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       }
 
-      // Write frame to ffmpeg stdin safely with flow control (95% high quality JPEG stream)
-      const frameBuffer = canvas.toBuffer('image/jpeg', 95);
+      // Zero-copy raw RGBA buffer directly from canvas memory (0ms latency, zero compression overhead)
+      const frameBuffer = canvas.data();
       try {
         if (!isTerminated && ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
-          const ok = ffmpegProcess.stdin.write(frameBuffer, (wErr) => {
-            if (wErr) isTerminated = true;
-          });
+          const ok = ffmpegProcess.stdin.write(frameBuffer);
           if (!ok && !isTerminated) {
             await new Promise<void>((res) => {
               ffmpegProcess.stdin.once('drain', res);
-              setTimeout(res, 250);
+              setTimeout(res, 500);
             });
           }
         } else {
@@ -782,15 +780,15 @@ export class ReelVideoRenderer {
       }
     } catch {}
 
-    // 30-second watchdog timer to guarantee FFmpeg process is ALWAYS killed and never leaks
+    // 120-second watchdog timer to guarantee FFmpeg process is ALWAYS killed and never leaks
     const killWatchdog = setTimeout(() => {
       try {
         if (!ffmpegProcess.killed) {
-          console.warn('[ReelVideoRenderer] Watchdog: FFmpeg exceeded 30s timeout, terminating process...');
+          console.warn('[ReelVideoRenderer] Watchdog: FFmpeg exceeded 120s timeout, terminating process...');
           ffmpegProcess.kill('SIGKILL');
         }
       } catch {}
-    }, 30000);
+    }, 120000);
 
     try {
       // Wait for ffmpeg to complete
