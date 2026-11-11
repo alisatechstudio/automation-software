@@ -109,6 +109,7 @@ async function runReelCommentingTests() {
     title: 'নমুনা সংবাদ প্রতিবেদন',
     pubDate: new Date(),
     status: 'ingested',
+    createdAt: new Date(),
   };
 
   const resolvedUrl = await worker.resolveCommentUrl(articleWithProthomAloLink, false, testDb);
@@ -123,6 +124,7 @@ async function runReelCommentingTests() {
     title: 'সংবাদ শিরোনাম',
     pubDate: new Date(),
     status: 'ingested',
+    createdAt: new Date(),
   };
   const resolvedFallback = await worker.resolveCommentUrl(articleWithoutLink, false, testDb);
   assert.strictEqual(resolvedFallback, 'https://bdnews.site', 'Should fallback to default portal domain');
@@ -224,6 +226,8 @@ async function runReelCommentingTests() {
 
   // Cleanup test files
   try {
+    const stagedDir = path.join(config.DATA_DIR, 'gdrive_folders', testFolderId);
+    const stagedVideoPath = path.join(stagedDir, videoFilename);
     if (fs.existsSync(stagedVideoPath)) fs.unlinkSync(stagedVideoPath);
     if (fs.existsSync(stagedDir)) fs.rmdirSync(stagedDir);
     if (fs.existsSync(testDbDir)) fs.rmSync(testDbDir, { recursive: true, force: true });
