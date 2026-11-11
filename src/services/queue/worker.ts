@@ -81,13 +81,12 @@ export class QueueWorker {
 
   /**
    * Resolves the destination link for the first comment.
-   * Prioritizes the publisher's portal (bdnews.site / trendingnews.world or custom configured website)
-   * so that viral traffic turns into website AdSense/AdX revenue.
+   * Prioritizes the news article URL directly so users can read the full story immediately.
    */
   public async resolveCommentUrl(article: NewsArticle, isEnglish: boolean, db: any): Promise<string> {
     try {
       const modeSetting = await db.collection('settings').findOne({ _id: 'COMMENT_LINK_MODE' });
-      const mode = modeSetting?.value || 'website'; // 'website' (default for monetization) | 'source'
+      const mode = (modeSetting?.value || 'article').toLowerCase();
 
       const customSiteSetting = await db.collection('settings').findOne({
         _id: isEnglish ? 'WEBSITE_URL_EN' : 'WEBSITE_URL_BN',
@@ -95,29 +94,15 @@ export class QueueWorker {
       const defaultDomain = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
       const siteUrl = (customSiteSetting?.value || '').trim() || defaultDomain;
 
-      // If article link is already pointing to our own domain or news portal, use the direct article link
-      if (article.link) {
-        const cleanLink = article.link.toLowerCase();
-        if (cleanLink.includes('bdnews.site') || cleanLink.includes('trendingnews.world')) {
-          return article.link;
-        }
-        try {
-          const siteHost = new URL(siteUrl).hostname.toLowerCase();
-          if (cleanLink.includes(siteHost)) {
-            return article.link;
-          }
-        } catch {}
+      // 1. If direct article link is present and not explicitly set to homepage-only
+      if (article.link && mode !== 'homepage') {
+        return article.link.trim();
       }
 
-      // If user explicitly configured 'source' mode, preserve the original third-party RSS link
-      if (mode === 'source' && article.link) {
-        return article.link;
-      }
-
-      // Default: Direct visitors to your monetized news website
+      // 2. Fallback to portal website domain
       return siteUrl;
     } catch {
-      return isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
+      return (article.link && article.link.trim()) || (isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site');
     }
   }
 

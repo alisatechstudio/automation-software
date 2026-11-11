@@ -42,17 +42,24 @@ export class FacebookGraphClient {
    */
   public formatComment(
     newsUrl: string,
-    template: string = config.DEFAULT_COMMENT_FORMAT
+    template: string = config.DEFAULT_COMMENT_FORMAT,
+    isEnglish?: boolean
   ): string {
     const cleanUrl = (newsUrl || '').trim();
     if (!cleanUrl) return '';
 
-    const isEnglish = cleanUrl.includes('trendingnews');
+    const effectiveIsEnglish =
+      isEnglish !== undefined
+        ? isEnglish
+        : cleanUrl.includes('trendingnews') || /^[a-zA-Z0-9\s.,!?'":;\-_#@$%&*()]+$/.test(template);
 
     // If a custom template is provided (and is not just the legacy default placeholder)
     if (template && (template.includes('{url}') || template.includes('{website}'))) {
-      if (isEnglish && template.includes('বিস্তারিত')) {
+      if (effectiveIsEnglish && template.includes('বিস্তারিত')) {
         return `🌐 Read the full story & live updates here:\n👉 ${cleanUrl}`;
+      }
+      if (template === 'বিস্তারিত পড়ুন: {url}') {
+        return `🌐 বিস্তারিত পড়ুন:\n👉 ${cleanUrl}`;
       }
       return template
         .replace(/\{url\}/g, cleanUrl)
@@ -60,8 +67,10 @@ export class FacebookGraphClient {
         .trim();
     }
 
-    if (isEnglish) {
-      return `🌐 Read the full story & live updates here:\n👉 ${cleanUrl}`;
+    if (effectiveIsEnglish) {
+      return template && template !== 'Read the full story here: {url}'
+        ? `${template.trim()}\n👉 ${cleanUrl}`
+        : `🌐 Read the full story & live updates here:\n👉 ${cleanUrl}`;
     }
 
     return template && template !== 'বিস্তারিত পড়ুন: {url}'
@@ -116,9 +125,44 @@ export class FacebookGraphClient {
   }
 
   /**
+   * Queries Meta Graph API to check the encoding and publication status of a video/reel.
+   * Returns readiness state, video_status, and any error message.
+   */
+  public async checkVideoStatus(
+    videoId: string,
+    accessToken: string
+  ): Promise<{ isReady: boolean; status?: string; error?: string }> {
+    try {
+      const cleanId = videoId.includes('_') ? videoId.split('_').pop()! : videoId;
+      const url = `https://graph.facebook.com/${this.apiVersion}/${cleanId}?fields=status&access_token=${encodeURIComponent(accessToken)}`;
+      const res = await fetch(url);
+      const data = (await res.json()) as any;
+      if (!res.ok || data.error) {
+        return { isReady: false, error: data.error?.message || `HTTP ${res.status}` };
+      }
+      const videoStatus = (data.status?.video_status || '').toLowerCase();
+      const publishingStatus = (data.status?.publishing_phase?.status || '').toLowerCase();
+      const processingStatus = (data.status?.processing_phase?.status || '').toLowerCase();
+
+      // Video is ready if video_status is 'ready' or publishing_phase is 'complete'
+      const isReady =
+        videoStatus === 'ready' ||
+        publishingStatus === 'complete' ||
+        (!data.status && Boolean(data.id));
+
+      return {
+        isReady,
+        status: videoStatus || publishingStatus || processingStatus || 'ready',
+      };
+    } catch (err: any) {
+      return { isReady: false, error: err.message };
+    }
+  }
+
+  /**
    * Publishes a comment with the news link to the created Facebook post or video reel.
    * Features intelligent candidate ID resolution (handles both composite page_post and native video IDs),
-   * plus exponential retry backoff while Facebook finishes processing new video uploads.
+   * proactive video readiness polling, form-urlencoded payload dispatch, and resilient exponential retry backoff.
    */
   public async publishComment(
     targetPostId: string,
@@ -127,17 +171,22 @@ export class FacebookGraphClient {
     dryRun: boolean = config.DRY_RUN,
     alternateId?: string
   ): Promise<{ commentId: string }> {
+    const cleanComment = (commentText || '').trim();
+    if (!cleanComment) {
+      console.warn(`[FacebookClient] publishComment skipped: commentText is empty.`);
+      return { commentId: '' };
+    }
+
     if (dryRun) {
       const mockCommentId = `dryrun_comment_${Date.now()}`;
       console.log(`[FacebookClient - DRY RUN] Simulated comment on post ${targetPostId}:`);
-      console.log(`  Comment: "${commentText}"`);
+      console.log(`  Comment: "${cleanComment}"`);
       return { commentId: mockCommentId };
     }
 
-    // Prepare candidate target IDs:
-    // 1. alternateId (e.g. raw videoId if targetPostId was composite page_video)
-    // 2. Direct ID as passed
-    // 3. Sub-ID after underscore if targetPostId is composite pageId_videoId
+    // Build ordered list of candidate target IDs.
+    // For Facebook Reels and Videos, Meta's comment edge expects the direct numeric video ID!
+    // Composite pageId_videoId only works on page feed photo/status posts.
     const candidates: string[] = [];
     const addCandidate = (id?: string | null) => {
       if (id && typeof id === 'string') {
@@ -146,36 +195,50 @@ export class FacebookGraphClient {
       }
     };
 
-    addCandidate(alternateId);
+    // Extract sub-IDs (the numeric ID after underscore)
+    const rawTarget = targetPostId && targetPostId.includes('_') ? targetPostId.split('_').pop() : targetPostId;
+    const rawAlternate = alternateId && alternateId.includes('_') ? alternateId.split('_').pop() : alternateId;
+
+    // Prioritize pure numeric IDs first (direct video object nodes for Reels)
+    addCandidate(rawTarget);
+    addCandidate(rawAlternate);
+    // Then direct passed IDs
     addCandidate(targetPostId);
-    if (targetPostId && targetPostId.includes('_')) {
-      const parts = targetPostId.split('_');
-      addCandidate(parts[parts.length - 1]);
-    }
-    if (alternateId && alternateId.includes('_')) {
-      const parts = alternateId.split('_');
-      addCandidate(parts[parts.length - 1]);
-    }
+    addCandidate(alternateId);
+
+    console.log(`[FacebookClient] Target comment candidates for Reel/Post: [${candidates.join(', ')}]`);
 
     let lastError: any = null;
     const maxAttempts = 6;
-    const backoffSchedule = [3000, 5000, 7000, 10000, 12000, 15000];
+    const backoffSchedule = [4000, 6000, 8000, 10000, 12000, 15000];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       for (const candidateId of candidates) {
         try {
-          const url = `https://graph.facebook.com/${this.apiVersion}/${candidateId}/comments`;
+          // If candidate is a pure numeric ID (likely a video reel), check status on early attempts
+          const isNumeric = /^\d+$/.test(candidateId);
+          if (isNumeric && attempt <= 2) {
+            const statusCheck = await this.checkVideoStatus(candidateId, accessToken);
+            if (!statusCheck.isReady && (statusCheck.status === 'processing' || statusCheck.status === 'in_progress')) {
+              console.log(`[FacebookClient] ⏳ Meta is currently transcoding Reel ${candidateId} (status: "${statusCheck.status}"). Waiting for video readiness...`);
+              break; // Wait for next backoff cycle
+            }
+          }
+
+          const url = `https://graph.facebook.com/${this.apiVersion}/${candidateId}/comments?access_token=${encodeURIComponent(accessToken)}`;
           console.log(`[FacebookClient] Attempting to publish first comment on ${candidateId} (attempt ${attempt}/${maxAttempts})...`);
+
+          const bodyParams = new URLSearchParams({
+            message: cleanComment,
+            access_token: accessToken,
+          });
 
           const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: JSON.stringify({
-              message: commentText,
-              access_token: accessToken,
-            }),
+            body: bodyParams.toString(),
           });
 
           const data = (await response.json()) as any;
@@ -187,7 +250,11 @@ export class FacebookGraphClient {
 
           lastError = data.error || { message: `HTTP ${response.status}: ${JSON.stringify(data)}` };
           const errMsg = (data.error?.message || '').toLowerCase();
-          const isProcessing = errMsg.includes('unpublished video') || errMsg.includes('does not exist') || data.error?.code === 100;
+          const isProcessing =
+            errMsg.includes('unpublished video') ||
+            errMsg.includes('does not exist') ||
+            errMsg.includes('cannot be loaded') ||
+            data.error?.code === 100;
 
           if (isProcessing) {
             console.log(`[FacebookClient] ⏳ Reel is still being processed/indexed by Meta on ${candidateId}. Waiting for video readiness...`);

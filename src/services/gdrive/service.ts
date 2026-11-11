@@ -683,10 +683,14 @@ export class GDriveReelService {
               if (!alreadyInList) {
                 const filePath = path.join(localDir, localFile);
                 const stat = fs.statSync(filePath);
-                const isPosted = postedIdSet.has(`local_${localFile}`) || postedNameSet.has(localFile.toLowerCase());
+                const hexId = `local_${Buffer.from(localFile).toString('hex').slice(0, 16)}`;
+                const isPosted =
+                  postedIdSet.has(hexId) ||
+                  postedIdSet.has(`local_${localFile}`) ||
+                  postedNameSet.has(localFile.toLowerCase());
 
                 videoList.push({
-                  id: `local_${localFile}`,
+                  id: hexId,
                   name: localFile,
                   cleanTitle: this.cleanVideoTitle(localFile),
                   sizeBytes: stat.size,
@@ -695,7 +699,7 @@ export class GDriveReelService {
                   modifiedTime: new Date(stat.mtime),
                   isPosted,
                   isLocalFallback: true,
-                  webViewLink: `/api/gdrive-reels/files/${encodeURIComponent(`local_${localFile}`)}/preview?folderId=${encodeURIComponent(path.basename(localDir))}`,
+                  webViewLink: `/api/gdrive-reels/files/${encodeURIComponent(hexId)}/preview?folderId=${encodeURIComponent(path.basename(localDir))}`,
                 });
               }
             }
@@ -868,7 +872,13 @@ export class GDriveReelService {
       }
 
       const scan = await this.scanChannel(channelId);
-      const targetVideo = scan.videos.find((v) => v.id === fileId);
+      const targetVideo = scan.videos.find(
+        (v) =>
+          v.id === fileId ||
+          v.name === fileId ||
+          `local_${Buffer.from(v.name).toString('hex').slice(0, 16)}` === fileId ||
+          `local_${v.name}` === fileId
+      );
       if (!targetVideo) {
         return {
           success: false,
@@ -1007,20 +1017,65 @@ export class GDriveReelService {
         config.DRY_RUN
       );
 
-      // Optional First Comment (CTA / Link)
-      if (conf.firstCommentText && conf.firstCommentText.trim() && (videoId || postId)) {
+      // 3A-2. Auto First Comment with News Article URL (High-CTR Link CTA)
+      let newsUrl = '';
+      let matchedArticle: NewsArticle | null = null;
+      try {
+        const rawTitle = video.cleanTitle;
+        const filenamePrefix = video.name.replace(/\.[^/.]+$/, '').trim();
+        matchedArticle = await db.collection<NewsArticle>('news_articles').findOne({
+          $or: [
+            { gdriveFileId: video.id },
+            { title: rawTitle },
+            { title: filenamePrefix },
+            { title: { $regex: new RegExp('^' + rawTitle.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } },
+          ],
+        });
+
+        if (matchedArticle && matchedArticle.link) {
+          newsUrl = matchedArticle.link.trim();
+          console.log(`[GDriveReelService] 🔗 Found matching news article URL: ${newsUrl}`);
+        }
+      } catch (matchErr: any) {
+        console.warn(`[GDriveReelService] Note looking up article in news_articles:`, matchErr.message);
+      }
+
+      // If no direct article found, fallback to portal website
+      if (!newsUrl) {
+        const defaultDomain = isEnglishChannel ? 'https://trendingnews.world' : 'https://bdnews.site';
+        const siteSetting = await db.collection<any>('settings').findOne({
+          _id: isEnglishChannel ? 'WEBSITE_URL_EN' : 'WEBSITE_URL_BN',
+        });
+        newsUrl = (siteSetting?.value || '').trim() || defaultDomain;
+        console.log(`[GDriveReelService] 🌐 Using portal website URL for first comment: ${newsUrl}`);
+      }
+
+      // Determine template: channel-level custom template > DB setting > default
+      let commentTemplate = conf.firstCommentText?.trim();
+      if (!commentTemplate) {
+        const commentFormatSetting = await db.collection<any>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
+        commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
+      }
+
+      const formattedComment = this.fbClient.formatComment(newsUrl, commentTemplate, isEnglishChannel);
+      let publishedCommentId = '';
+
+      if (formattedComment && (videoId || postId)) {
         try {
           const commentTargetId = videoId || postId;
-          await this.fbClient.publishComment(
+          const { commentId } = await this.fbClient.publishComment(
             commentTargetId,
             page.accessToken,
-            conf.firstCommentText.trim(),
+            formattedComment,
             config.DRY_RUN,
             postId
           );
-          console.log(`✓ [GDriveReelService] First comment posted to Facebook Reel ${commentTargetId}`);
+          publishedCommentId = commentId;
+          if (commentId) {
+            console.log(`✓ [GDriveReelService] First comment with news URL posted to Facebook Reel ${commentTargetId}! (Comment ID: ${commentId})`);
+          }
         } catch (cErr: any) {
-          console.warn(`[GDriveReelService] Could not post first comment:`, cErr.message);
+          console.warn(`[GDriveReelService] Could not post first comment on Reel:`, cErr.message);
         }
       }
 
@@ -1151,7 +1206,7 @@ export class GDriveReelService {
       // 5. Record to reel_logs
       await db.collection<ReelLog>('reel_logs').insertOne({
         _id: crypto.randomUUID(),
-        articleId: `gdrive_${conf._id}_${video.id}`,
+        articleId: matchedArticle?._id || `gdrive_${conf._id}_${video.id}`,
         articleTitle: video.cleanTitle,
         pageId: page._id,
         pageName: page.name,
@@ -1160,9 +1215,11 @@ export class GDriveReelService {
         fbPostId: postId,
         status: config.DRY_RUN ? 'dry_run' : 'published',
         caption: caption,
+        comment: formattedComment || undefined,
+        fbCommentId: publishedCommentId || undefined,
         durationSeconds: 15,
         createdAt: now,
-      });
+      } as any);
 
       // Synchronize article status in news_articles if originated from RSS
       try {

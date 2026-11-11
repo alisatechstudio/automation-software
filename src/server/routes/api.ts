@@ -842,10 +842,10 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
     const siteSetting = await db.collection<Setting>('settings').findOne({ _id: isEnglish ? 'WEBSITE_URL_EN' : 'WEBSITE_URL_BN' });
     const siteUrl = siteSetting?.value?.trim() || defaultDomain;
     const modeSetting = await db.collection<Setting>('settings').findOne({ _id: 'COMMENT_LINK_MODE' });
-    const mode = modeSetting?.value || 'website';
+    const mode = modeSetting?.value || 'article';
 
-    if (!targetLink || mode !== 'source') {
-      targetLink = (targetLink && (targetLink.includes('bdnews.site') || targetLink.includes('trendingnews.world'))) ? targetLink : siteUrl;
+    if (!targetLink || mode === 'homepage') {
+      targetLink = targetLink && mode !== 'homepage' ? targetLink : siteUrl;
     }
 
     const commentTargetId = videoId || postId;
@@ -853,7 +853,7 @@ apiRouter.post('/reels/publish', async (req: Request, res: Response) => {
       try {
         const commentFormatSetting = await db.collection<Setting>('settings').findOne({ _id: 'DEFAULT_COMMENT_FORMAT' });
         const commentTemplate = commentFormatSetting?.value || config.DEFAULT_COMMENT_FORMAT;
-        const commentText = fbClient.formatComment(targetLink, commentTemplate);
+        const commentText = fbClient.formatComment(targetLink, commentTemplate, isEnglish);
         const commentRes = await fbClient.publishComment(commentTargetId, page.accessToken, commentText, config.DRY_RUN, postId);
         commentId = commentRes.commentId;
         console.log(`✓ [Reels API] Added news link as first comment to Reel (${commentTargetId})!`);
