@@ -36,7 +36,8 @@ export type ReelTheme =
   | 'breaking-bold'
   | 'dark-cinema'
   | 'viral-gradient'
-  | 'vertical-916';
+  | 'vertical-916'
+  | 'remotion-studio';
 
 export interface CategoryReelStyle {
   id: string;
@@ -270,6 +271,43 @@ export interface ReelRenderInput {
   voiceoverBuffer?: Buffer;
 }
 
+/**
+ * Analytical Remotion-standard spring() calculation.
+ * Implements deterministic second-order differential damped harmonic oscillator.
+ */
+export function remotionSpring(options: {
+  frame: number;
+  fps: number;
+  config?: { damping?: number; stiffness?: number; mass?: number; overshootClamping?: boolean };
+}): number {
+  const { frame, fps, config = {} } = options;
+  if (frame <= 0) return 0;
+
+  const damping = config.damping ?? 12;
+  const stiffness = config.stiffness ?? 100;
+  const mass = config.mass ?? 1;
+  const overshootClamping = config.overshootClamping ?? false;
+
+  const t = frame / fps;
+  const dampingRatio = damping / (2 * Math.sqrt(stiffness * mass));
+  const angularFrequency = Math.sqrt(stiffness / mass);
+
+  let val = 1;
+  if (dampingRatio < 1) {
+    // Underdamped harmonic oscillator (spring bounce)
+    const dampedFrequency = angularFrequency * Math.sqrt(1 - dampingRatio * dampingRatio);
+    const envelope = Math.exp(-dampingRatio * angularFrequency * t);
+    val = 1 - envelope * (Math.cos(dampedFrequency * t) + ((dampingRatio * angularFrequency) / dampedFrequency) * Math.sin(dampedFrequency * t));
+  } else {
+    // Critically / overdamped
+    const envelope = Math.exp(-angularFrequency * t);
+    val = 1 - envelope * (1 + angularFrequency * t);
+  }
+
+  if (overshootClamping && val > 1) return 1;
+  return Math.max(0, val);
+}
+
 export class ReelVideoRenderer {
   private fontsRegistered: boolean = false;
   private ttsService: UnifiedTtsService;
@@ -358,7 +396,12 @@ export class ReelVideoRenderer {
 
     const drawX = x - (drawW - w) / 2;
     const drawY = y - (drawH - h) / 2 + panY;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    ctx.restore();
   }
 
   /**
@@ -402,25 +445,17 @@ export class ReelVideoRenderer {
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
-    // Enforce minimum resolution of AT LEAST 720p HD:
-    // Vertical 9:16: minimum 720 x 1280 (720p HD) or 1080 x 1920 (1080p Full HD)
-    // Square 1:1: minimum 720 x 720
+    // Native Crystal Clear Full HD 1080p Resolution:
+    // Vertical 9:16: native 1080 x 1920 (1080p Full HD)
+    // Square 1:1: native 1080 x 1080 (1080p Square)
     const isExplicitlySquare = input.aspectRatio === '1:1' || Boolean(input.height && input.width && input.height === input.width && input.theme !== 'vertical-916');
     const isVertical = !isExplicitlySquare;
 
-    const minWidth = 720;
-    const minHeight = isVertical ? 1280 : 720;
+    const defaultWidth = 1080;
+    const defaultHeight = isVertical ? 1920 : 1080;
 
-    let width = input.width ? Math.max(minWidth, input.width) : minWidth;
-    let height = input.height ? Math.max(minHeight, input.height) : minHeight;
-
-    if (isVertical) {
-      if (width < 720) width = 720;
-      if (height < 1280) height = 1280;
-    } else {
-      if (width < 720) width = 720;
-      if (height < 720) height = 720;
-    }
+    let width = input.width ? Math.max(720, input.width) : defaultWidth;
+    let height = input.height ? Math.max(isVertical ? 1280 : 720, input.height) : defaultHeight;
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -437,6 +472,8 @@ export class ReelVideoRenderer {
     const logoImg = await this.loadLogoImage(isEnglish);
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     ctx.save();
     if (scaleX !== 1 || scaleY !== 1) {
@@ -444,7 +481,7 @@ export class ReelVideoRenderer {
     }
     this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 60, articleImg, logoImg, headline, category, website, isEnglish);
     ctx.restore();
-    return canvas.toBuffer('image/jpeg', 92);
+    return canvas.toBuffer('image/jpeg', 96);
   }
 
   /**
@@ -488,25 +525,17 @@ export class ReelVideoRenderer {
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
-    // Enforce minimum resolution of AT LEAST 720p HD:
-    // Vertical 9:16: minimum 720 x 1280 (720p HD) or 1080 x 1920 (1080p Full HD)
-    // Square 1:1: minimum 720 x 720
+    // Native Crystal Clear Full HD 1080p Resolution:
+    // Vertical 9:16: native 1080 x 1920 (1080p Full HD)
+    // Square 1:1: native 1080 x 1080 (1080p Square)
     const isExplicitlySquare = input.aspectRatio === '1:1' || Boolean(input.height && input.width && input.height === input.width && input.theme !== 'vertical-916');
     const isVertical = !isExplicitlySquare;
 
-    const minWidth = 720;
-    const minHeight = isVertical ? 1280 : 720;
+    const defaultWidth = 1080;
+    const defaultHeight = isVertical ? 1920 : 1080;
 
-    let width = input.width ? Math.max(minWidth, input.width) : minWidth;
-    let height = input.height ? Math.max(minHeight, input.height) : minHeight;
-
-    if (isVertical) {
-      if (width < 720) width = 720;
-      if (height < 1280) height = 1280;
-    } else {
-      if (width < 720) width = 720;
-      if (height < 720) height = 720;
-    }
+    let width = input.width ? Math.max(720, input.width) : defaultWidth;
+    let height = input.height ? Math.max(isVertical ? 1280 : 720, input.height) : defaultHeight;
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -640,11 +669,11 @@ export class ReelVideoRenderer {
 
     ffmpegArgs.push(
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-tune', 'zerolatency',
+      '-preset', 'veryfast', // Upgraded to veryfast for sharp edge retention and zero macroblocking
+      '-tune', 'film',       // Tuned for high definition visual fidelity & crisp typography
       '-threads', '1',
       '-x264opts', 'threads=1:sliced-threads=0:lookahead_threads=0',
-      '-crf', '26',
+      '-crf', '20',          // Visually lossless Full HD clarity (was 26)
       '-pix_fmt', 'yuv420p',
       '-g', String(fps * 2), // Closed GOP (2s keyframe interval as required by Meta)
       '-keyint_min', String(fps * 2),
@@ -704,6 +733,8 @@ export class ReelVideoRenderer {
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // 5. Render frames loop
     for (let f = 0; f < totalFrames; f++) {
@@ -723,8 +754,8 @@ export class ReelVideoRenderer {
         this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       }
 
-      // Write frame to ffmpeg stdin safely with flow control
-      const frameBuffer = canvas.toBuffer('image/jpeg', 80);
+      // Write frame to ffmpeg stdin safely with flow control (95% high quality JPEG stream)
+      const frameBuffer = canvas.toBuffer('image/jpeg', 95);
       try {
         if (!isTerminated && ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
           const ok = ffmpegProcess.stdin.write(frameBuffer, (wErr) => {
@@ -929,13 +960,16 @@ export class ReelVideoRenderer {
         }
 
         ctx.save();
-        if (f >= wordStartF && f < wordStartF + 7) {
-          // Kinetic Word Entrance: Pop-in scale with slight bounce & accent glow
-          const popP = (f - wordStartF) / 7;
-          const easePop = 1 - Math.pow(1 - popP, 2);
-          const scale = 1.15 - easePop * 0.15; // 1.15 -> 1.0
-          const offsetY = (1 - easePop) * 7;   // 7px -> 0px
-          const alpha = Math.min(1, easePop * 1.3);
+        if (f >= wordStartF && f < wordStartF + 9) {
+          // Kinetic Word Entrance: Remotion spring-driven pop-in with slight bounce & accent glow
+          const springVal = remotionSpring({
+            frame: f - wordStartF,
+            fps: 24,
+            config: { damping: 11, stiffness: 125, mass: 0.5 },
+          });
+          const scale = 0.8 + springVal * 0.2; // 0.8 -> 1.0 with overshoot
+          const offsetY = (1 - Math.min(1, springVal)) * 9;   // 9px -> 0px
+          const alpha = Math.min(1, springVal * 1.3);
 
           ctx.globalAlpha = alpha;
           ctx.translate(wordX + wordW / 2, lineY + fontSize / 2 + offsetY);
@@ -1081,6 +1115,54 @@ export class ReelVideoRenderer {
       commentPillText = '#ffffff';
       ambientOrb1 = 'rgba(236, 72, 153, 0.25)';
       ambientOrb2 = 'rgba(168, 85, 247, 0.20)';
+    } else if (theme === 'remotion-studio') {
+      bgColors = ['#0f172a', '#1e1b4b', '#020617', '#000000'];
+      strapBg = '#6366f1';
+      strapAccent = '#818cf8';
+      strapText = isEnglish ? 'REMOTION BROADCAST • 4K ULTRA' : 'রেমোশন ব্রডকাস্ট • আল্ট্রা এইচডি';
+      deskColor = '#4338ca';
+      cardBg = '#ffffff';
+      cardBorderColor = 'rgba(99, 102, 241, 0.55)';
+      headlineColor = '#0f172a';
+      pillBg = '#6366f1';
+      pillText = '#ffffff';
+      pillPrefix = isEnglish ? 'STUDIO • ' : 'স্টুডিও • ';
+      commentPillBg = '#4f46e5';
+      commentPillText = '#ffffff';
+      ambientOrb1 = 'rgba(99, 102, 241, 0.32)';
+      ambientOrb2 = 'rgba(236, 72, 153, 0.24)';
+    } else if (theme === 'studio-red') {
+      bgColors = ['#500707', '#3d0202', '#1a0000', '#0a0000'];
+      strapBg = '#dc2626';
+      strapAccent = '#facc15';
+      strapText = isEnglish ? 'STUDIO RED • SPECIAL BROADCAST' : 'স্টুডিও রেড • বিশেষ সম্প্রচার';
+      deskColor = '#fecaca';
+      cardBg = '#ffffff';
+      cardBorderColor = 'rgba(220, 38, 38, 0.55)';
+      headlineColor = '#450a0a';
+      pillBg = '#dc2626';
+      pillText = '#ffffff';
+      pillPrefix = isEnglish ? 'STUDIO • ' : 'স্টুডিও • ';
+      commentPillBg = '#b91c1c';
+      commentPillText = '#ffffff';
+      ambientOrb1 = 'rgba(220, 38, 38, 0.32)';
+      ambientOrb2 = 'rgba(250, 204, 21, 0.22)';
+    } else if (theme === 'vertical-916') {
+      bgColors = ['#0f172a', '#020617', '#030712', '#000000'];
+      strapBg = '#059669';
+      strapAccent = '#10b981';
+      strapText = isEnglish ? 'VERTICAL 9:16 • MOBILE FULLSCREEN' : 'মোবাইল ফুলস্ক্রিন • ৯:১৬ রিল';
+      deskColor = '#a7f3d0';
+      cardBg = '#ffffff';
+      cardBorderColor = 'rgba(16, 185, 129, 0.55)';
+      headlineColor = '#064e3b';
+      pillBg = '#059669';
+      pillText = '#ffffff';
+      pillPrefix = isEnglish ? 'LIVE • ' : 'লাইভ • ';
+      commentPillBg = '#047857';
+      commentPillText = '#ffffff';
+      ambientOrb1 = 'rgba(16, 185, 129, 0.28)';
+      ambientOrb2 = 'rgba(56, 189, 248, 0.20)';
     }
 
     // 1. Overall Background (1080x1920)

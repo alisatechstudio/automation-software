@@ -12,5 +12,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/**/*", "api/**/*"],
-  "exclude": ["node_modules", "dist", "data"]
+  "exclude": ["node_modules", "dist", "data", "src/templates/remotion", "remotion"]
 }
