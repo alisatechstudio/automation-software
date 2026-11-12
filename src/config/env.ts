@@ -90,7 +90,9 @@ const baseConfig: AppConfig = {
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
   TTS_PROVIDER: process.env.TTS_PROVIDER || 'auto',
-  PUTER_AUTH_TOKEN: process.env.PUTER_AUTH_TOKEN,
+  PUTER_AUTH_TOKEN:
+    process.env.PUTER_AUTH_TOKEN ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYyIn0.eyJ0IjoidCIsInYiOiIyIiwidG9rZW5fdWlkIjoiNWFkNjcwMzktNzE1OC00MmUwLTk3MDUtNmJkYWFhYjcxYzU5IiwidXUiOiI5NTdKVDNvdlJ6R2FzYXZpSGQxd0tRPT0iLCJzdSI6IkFjUGtySzBKUTFtR25CZTZRQkpteXc9PSIsImFpIjoiOTU3SlQzb3ZSekdhc2F2aUhkMXdLUT09IiwiZnVsbF9hY2Nlc3MiOnRydWUsImlhdCI6MTc5NDQ2Mjg4Nn0.itlPxBKhmX0by-PAakfl1ByN_P6lphFz0JrH2PHMRA4',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   HF_AUTH_TOKEN: process.env.HF_AUTH_TOKEN,
   DATA_DIR: dataDir,
