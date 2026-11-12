@@ -41,6 +41,11 @@ function pcmToWav(
 export class GeminiTtsService {
   public static readonly DEFAULT_VOICE = 'Charon';
   public static readonly DEFAULT_MODEL = 'gemini-2.5-flash-preview-tts';
+  public static readonly MODELS: string[] = [
+    'gemini-2.5-pro-preview-tts',      // Pro model - higher rate limits
+    'gemini-2.5-flash-preview-tts',     // Flash model - default
+    'gemini-2.0-flash-preview-tts',     // Fallback model
+  ];
   private static readonly API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
   /**
@@ -65,17 +70,17 @@ export class GeminiTtsService {
     }
 
     const voice = GeminiTtsService.DEFAULT_VOICE; // Exclusively Charon
-    const model =
+
+    // Determine model list - use custom model if specified, otherwise use full chain
+    const customModel =
       (await getDbSetting('GEMINI_TTS_MODEL')) ||
       process.env.GEMINI_TTS_MODEL ||
-      GeminiTtsService.DEFAULT_MODEL;
+      '';
+    const models = customModel ? [customModel] : GeminiTtsService.MODELS;
 
-    console.log(`[GeminiTTS] 🎙️ Synthesizing with Gemini API (${model}, voice: ${voice}) for: "${cleanText.substring(0, 50)}..."`);
+    console.log(`[GeminiTTS] 🎙️ Trying model chain: ${models.join(' → ')} (voice: ${voice})`);
 
-    const endpoint = `${GeminiTtsService.API_BASE}/${model}:generateContent?key=${apiKey}`;
-
-    // Prompt directive instructs the model to read verbatim as a news broadcast,
-    // avoiding HTTP 400 "Model tried to generate text, but it should only be used for TTS"
+    // Prompt directive instructs the model to read verbatim as a news broadcast
     const promptText = `Read aloud the following text verbatim as a professional news broadcast:\n${cleanText}`;
 
     const requestPayload = {
@@ -96,60 +101,75 @@ export class GeminiTtsService {
       },
     };
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestPayload),
-        signal: AbortSignal.timeout(35000),
-      });
+    // Try each model in order with fallback
+    for (const model of models) {
+      const endpoint = `${GeminiTtsService.API_BASE}/${model}:generateContent?key=${apiKey}`;
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        console.warn(`[GeminiTTS] HTTP ${response.status}: ${errText.substring(0, 250)}`);
-        return null;
+      try {
+        console.log(`[GeminiTTS] Attempting model: ${model} for: "${cleanText.substring(0, 50)}..."`);
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestPayload),
+          signal: AbortSignal.timeout(35000),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          // Check for rate limit or quota errors - continue to next model
+          if (response.status === 429 || response.status === 403 || errText.includes('quota') || errText.includes('limit')) {
+            console.warn(`[GeminiTTS] Model ${model} rate-limited/quota exceeded: ${errText.substring(0, 200)}. Trying next model...`);
+            continue;
+          }
+          console.warn(`[GeminiTTS] Model ${model} HTTP ${response.status}: ${errText.substring(0, 250)}. Trying next model...`);
+          continue;
+        }
+
+        const data = await response.json();
+        const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+        if (!inlineData?.data) {
+          console.warn(`[GeminiTTS] Model ${model} returned no audio data`);
+          continue;
+        }
+
+        const rawBuffer = Buffer.from(inlineData.data, 'base64');
+        const mimeType = String(inlineData.mimeType || '');
+        console.log(`[GeminiTTS] Model ${model} success: ${rawBuffer.length} bytes, mimeType: "${mimeType}"`);
+
+        // Check if it already has a media container header (RIFF, ID3, OggS, etc.)
+        const isRiff = rawBuffer.length > 4 && rawBuffer.toString('ascii', 0, 4) === 'RIFF';
+        const isMp3 =
+          rawBuffer.length > 3 &&
+          (rawBuffer.toString('ascii', 0, 3) === 'ID3' ||
+            (rawBuffer[0] === 0xff && (rawBuffer[1] & 0xe0) === 0xe0));
+        const isOgg = rawBuffer.length > 4 && rawBuffer.toString('ascii', 0, 4) === 'OggS';
+
+        if (isRiff || isMp3 || isOgg) {
+          return rawBuffer;
+        }
+
+        // If mimeType is PCM or lacks a container, wrap into a standard WAV header
+        let sampleRate = 24000;
+        const rateMatch = mimeType.match(/rate=(\d+)/i);
+        if (rateMatch && rateMatch[1]) {
+          sampleRate = parseInt(rateMatch[1], 10);
+        }
+
+        const wavBuffer = pcmToWav(rawBuffer, sampleRate, 1, 16);
+        console.log(`[GeminiTTS] ✅ Packaged PCM audio to WAV (${wavBuffer.length} bytes, ${sampleRate}Hz) via ${model}`);
+        return wavBuffer;
+      } catch (err: any) {
+        console.warn(`[GeminiTTS] Model ${model} failed: ${err.message || err}. Trying next model...`);
+        continue;
       }
-
-      const data = await response.json();
-      const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-
-      if (!inlineData?.data) {
-        console.warn('[GeminiTTS] No audio inlineData found in response:', JSON.stringify(data).substring(0, 300));
-        return null;
-      }
-
-      const rawBuffer = Buffer.from(inlineData.data, 'base64');
-      const mimeType = String(inlineData.mimeType || '');
-      console.log(`[GeminiTTS] Received ${rawBuffer.length} bytes, mimeType: "${mimeType}"`);
-
-      // Check if it already has a media container header (RIFF, ID3, OggS, etc.)
-      const isRiff = rawBuffer.length > 4 && rawBuffer.toString('ascii', 0, 4) === 'RIFF';
-      const isMp3 =
-        rawBuffer.length > 3 &&
-        (rawBuffer.toString('ascii', 0, 3) === 'ID3' ||
-          (rawBuffer[0] === 0xff && (rawBuffer[1] & 0xe0) === 0xe0));
-      const isOgg = rawBuffer.length > 4 && rawBuffer.toString('ascii', 0, 4) === 'OggS';
-
-      if (isRiff || isMp3 || isOgg) {
-        return rawBuffer;
-      }
-
-      // If mimeType is PCM or lacks a container, wrap into a standard WAV header
-      let sampleRate = 24000;
-      const rateMatch = mimeType.match(/rate=(\d+)/i);
-      if (rateMatch && rateMatch[1]) {
-        sampleRate = parseInt(rateMatch[1], 10);
-      }
-
-      const wavBuffer = pcmToWav(rawBuffer, sampleRate, 1, 16);
-      console.log(`[GeminiTTS] ✅ Packaged PCM audio to WAV (${wavBuffer.length} bytes, ${sampleRate}Hz)`);
-      return wavBuffer;
-    } catch (err: any) {
-      console.warn(`[GeminiTTS] Synthesis failed: ${err.message || err}`);
-      return null;
     }
+
+    console.warn('[GeminiTTS] All models in chain failed or exhausted');
+    return null;
   }
 
   /**
