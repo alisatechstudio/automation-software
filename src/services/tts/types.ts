@@ -14,8 +14,8 @@ export interface TtsConnectionStatus {
   voice?: string;
   message: string;
   providers?: {
+    puter: boolean;
     huggingface: boolean;
-    freeFallback: boolean;
   };
 }
 

@@ -29,6 +29,7 @@ export interface AppConfig {
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
   TTS_PROVIDER: string;
+  PUTER_AUTH_TOKEN?: string;
   HF_AUTH_TOKEN?: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
@@ -88,6 +89,7 @@ const baseConfig: AppConfig = {
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
   TTS_PROVIDER: process.env.TTS_PROVIDER || 'auto',
+  PUTER_AUTH_TOKEN: process.env.PUTER_AUTH_TOKEN,
   HF_AUTH_TOKEN: process.env.HF_AUTH_TOKEN,
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
