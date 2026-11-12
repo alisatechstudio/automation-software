@@ -30,6 +30,7 @@ export interface AppConfig {
   ENABLE_VIDEO_REELS: boolean;
   TTS_PROVIDER: string;
   PUTER_AUTH_TOKEN?: string;
+  GEMINI_API_KEY?: string;
   HF_AUTH_TOKEN?: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
@@ -90,6 +91,7 @@ const baseConfig: AppConfig = {
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
   TTS_PROVIDER: process.env.TTS_PROVIDER || 'auto',
   PUTER_AUTH_TOKEN: process.env.PUTER_AUTH_TOKEN,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   HF_AUTH_TOKEN: process.env.HF_AUTH_TOKEN,
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,

@@ -15,6 +15,7 @@ export interface TtsConnectionStatus {
   message: string;
   providers?: {
     puter: boolean;
+    gemini: boolean;
     huggingface: boolean;
   };
 }

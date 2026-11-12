@@ -2247,6 +2247,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DEFAULT_REEL_THEME: 'auto-category',
       TTS_PROVIDER: config.TTS_PROVIDER || 'auto',
       PUTER_AUTH_TOKEN: config.PUTER_AUTH_TOKEN ? '••••••••' : '',
+      GEMINI_API_KEY: config.GEMINI_API_KEY ? '••••••••' : '',
       HF_AUTH_TOKEN: config.HF_AUTH_TOKEN ? '••••••••' : '',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
