@@ -31,6 +31,8 @@ export class HuggingFaceTtsService {
       return null;
     }
 
+    console.log(`[HuggingFaceTTS] Token found (${token.substring(0, 20)}...), attempting synthesis...`);
+
     // Select model based on language and options
     const isEnglish = options?.isEnglish ?? true;
     let model: string;
@@ -50,7 +52,10 @@ export class HuggingFaceTtsService {
     try {
       const audioBuffer = await this.callInferenceAPI(cleanText, model, token);
       if (audioBuffer && audioBuffer.length > 500) {
+        console.log(`[HuggingFaceTTS] Synthesis success: ${audioBuffer.length} bytes`);
         return audioBuffer;
+      } else {
+        console.warn('[HuggingFaceTTS] Synthesis returned empty/invalid audio');
       }
     } catch (err: any) {
       console.warn(`[HuggingFaceTTS] Synthesis error: ${err.message}`);
@@ -64,6 +69,7 @@ export class HuggingFaceTtsService {
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
+      console.log(`[HuggingFaceTTS] Calling HF Inference API for ${model}...`);
       const response = await fetch(`${HuggingFaceTtsService.HF_API_URL}/${model}`, {
         method: 'POST',
         headers: {
@@ -83,12 +89,14 @@ export class HuggingFaceTtsService {
       }
 
       const contentType = response.headers.get('content-type') || '';
+      console.log(`[HuggingFaceTTS] Response content-type: ${contentType}`);
       if (contentType.includes('audio') || contentType.includes('octet-stream') || contentType.includes('wav')) {
         const ab = await response.arrayBuffer();
         return Buffer.from(ab);
       }
 
       const jsonText = await response.text();
+      console.log(`[HuggingFaceTTS] Response (non-audio): ${jsonText.substring(0, 300)}`);
       try {
         const data = JSON.parse(jsonText);
         if (data.error) {

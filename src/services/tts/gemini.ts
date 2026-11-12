@@ -23,6 +23,8 @@ export class GeminiTtsService {
       return null;
     }
 
+    console.log(`[GeminiTTS] API key found (${apiKey.substring(0, 20)}...), attempting synthesis...`);
+
     // Charon voice configuration
     const voiceName = options?.voice || 'Charon';
     const instructions = options?.instructions || 'Speak in a confident, authoritative, clear, and professional male television news broadcast voice.';
@@ -60,14 +62,17 @@ export class GeminiTtsService {
       }
 
       const data = await response.json();
+      console.log('[GeminiTTS] Response received, extracting audio...');
       
       // Extract base64 audio from response
       const audioData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (audioData) {
-        return Buffer.from(audioData, 'base64');
+        const buffer = Buffer.from(audioData, 'base64');
+        console.log(`[GeminiTTS] Synthesis success: ${buffer.length} bytes`);
+        return buffer;
       }
 
-      console.warn('[GeminiTTS] No audio data in response');
+      console.warn('[GeminiTTS] No audio data in response:', JSON.stringify(data).substring(0, 300));
       return null;
     } catch (err: any) {
       console.warn(`[GeminiTTS] Synthesis error: ${err.message}`);

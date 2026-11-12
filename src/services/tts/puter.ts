@@ -11,6 +11,7 @@ export class PuterTtsService {
         const { puter } = await import('@heyputer/puter.js');
         puter.quiet = true;
         this.puterInstance = puter;
+        console.log('[PuterTTS] Successfully loaded @heyputer/puter.js');
       } catch (err: any) {
         console.warn(`[PuterTTS] Could not import @heyputer/puter.js: ${err.message}`);
         return null;
@@ -20,7 +21,9 @@ export class PuterTtsService {
     if (this.puterInstance && token) {
       try {
         this.puterInstance.setAuthToken(token);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[PuterTTS] Failed to set auth token:', e);
+      }
     }
 
     return this.puterInstance;
@@ -40,8 +43,11 @@ export class PuterTtsService {
       '';
 
     if (!token) {
+      console.warn('[PuterTTS] No PUTER_AUTH_TOKEN found');
       return null;
     }
+
+    console.log(`[PuterTTS] Token found (${token.substring(0, 20)}...), attempting synthesis...`);
 
     const provider = 'gemini';
     const model = 'gemini-3.8-flash-lite-tts';
@@ -50,6 +56,7 @@ export class PuterTtsService {
 
     console.log(`[PuterTTS] 🎙️ Calling Puter.js TTS (Gemini ${model}, voice: ${voice}) for: "${cleanText.substring(0, 40)}..."`);
 
+    // 1. Try via @heyputer/puter.js SDK
     try {
       const puter = await this.getPuterClient(token);
       if (puter && puter.ai && typeof puter.ai.txt2speech === 'function') {
@@ -60,26 +67,37 @@ export class PuterTtsService {
           instructions: instructions,
         };
 
+        console.log('[PuterTTS] Attempting SDK synthesis...');
         const audioResult = await puter.ai.txt2speech(cleanText, ttsOptions);
         const buffer = await this.extractAudioBuffer(audioResult);
         if (buffer && buffer.length > 500) {
+          console.log(`[PuterTTS] SDK synthesis success: ${buffer.length} bytes`);
           return buffer;
+        } else {
+          console.warn('[PuterTTS] SDK returned empty/invalid audio');
         }
+      } else {
+        console.warn('[PuterTTS] SDK not available or txt2speech not a function');
       }
     } catch (sdkErr: any) {
       console.warn(`[PuterTTS] SDK error: ${sdkErr.message || sdkErr}. Falling back to REST API...`);
     }
 
-    // REST API fallback
+    // 2. REST API fallback
     try {
+      console.log('[PuterTTS] Attempting REST API synthesis...');
       const restBuf = await this.synthesizeWithRestApi(cleanText, token, { provider, model, voice, instructions });
       if (restBuf && restBuf.length > 500) {
+        console.log(`[PuterTTS] REST API synthesis success: ${restBuf.length} bytes`);
         return restBuf;
+      } else {
+        console.warn('[PuterTTS] REST API returned empty/invalid audio');
       }
     } catch (restErr: any) {
       console.warn(`[PuterTTS] REST API error: ${restErr.message || restErr}`);
     }
 
+    console.warn('[PuterTTS] All synthesis attempts failed');
     return null;
   }
 

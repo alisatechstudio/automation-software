@@ -42,6 +42,8 @@ export class UnifiedTtsService {
       config.TTS_PROVIDER ||
       'auto';
 
+    console.log(`[UnifiedTTS] TTS Provider setting: ${ttsProvider}`);
+
     if (ttsProvider === 'off' || ttsProvider === 'disabled') {
       return null;
     }
@@ -64,13 +66,18 @@ export class UnifiedTtsService {
       config.HF_AUTH_TOKEN ||
       '';
 
+    console.log(`[UnifiedTTS] Tokens - Puter: ${puterToken ? 'YES' : 'NO'}, Gemini: ${geminiKey ? 'YES' : 'NO'}, HF: ${hfToken ? 'YES' : 'NO'}`);
+
     // 1. Puter.js Provider (Charon voice) - primary if token available
     if ((ttsProvider === 'puter' || (ttsProvider === 'auto' && puterToken)) && puterToken) {
+      console.log('[UnifiedTTS] Trying Puter.js (Charon)...');
       try {
         const audio = await this.puterService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
+          console.log('[UnifiedTTS] Puter.js success!');
           return audio;
         }
+        console.warn('[UnifiedTTS] Puter.js returned no audio, falling back...');
       } catch (err: any) {
         console.warn(`[UnifiedTTS] Puter TTS (Charon) failed: ${err.message}. Falling back to Gemini API...`);
       }
@@ -78,11 +85,14 @@ export class UnifiedTtsService {
 
     // 2. Google AI Studio (Gemini API) - Charon voice
     if ((ttsProvider === 'gemini' || (ttsProvider === 'auto' && geminiKey)) && geminiKey) {
+      console.log('[UnifiedTTS] Trying Google AI Studio (Gemini API Charon)...');
       try {
         const audio = await this.geminiService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
+          console.log('[UnifiedTTS] Gemini API success!');
           return audio;
         }
+        console.warn('[UnifiedTTS] Gemini API returned no audio, falling back...');
       } catch (err: any) {
         console.warn(`[UnifiedTTS] Gemini API TTS (Charon) failed: ${err.message}. Falling back to MMS-TTS...`);
       }
@@ -90,16 +100,20 @@ export class UnifiedTtsService {
 
     // 3. Hugging Face Provider (MMS-TTS) - fallback
     if ((ttsProvider === 'huggingface' || (ttsProvider === 'auto' && hfToken)) && hfToken) {
+      console.log('[UnifiedTTS] Trying Hugging Face (MMS-TTS)...');
       try {
         const audio = await this.hfService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
+          console.log('[UnifiedTTS] Hugging Face success!');
           return audio;
         }
+        console.warn('[UnifiedTTS] Hugging Face returned no audio');
       } catch (err: any) {
         console.warn(`[UnifiedTTS] Hugging Face MMS-TTS failed: ${err.message}`);
       }
     }
 
+    console.warn('[UnifiedTTS] All TTS providers failed or unavailable');
     return null;
   }
 
