@@ -7,10 +7,11 @@ export class HuggingFaceTtsService {
   private static readonly MMS_ENGLISH_MODEL = 'facebook/mms-tts-eng';
   private static readonly MMS_BENGALI_MODEL = 'facebook/mms-tts-ben';
   private static readonly MMS_HINDI_MODEL = 'facebook/mms-tts-hin';
+  private static readonly OMNIVOICE_BENGALI_MODEL = 'sawon19/omnivoice-bengali';
 
   /**
-   * Synthesizes audio using Hugging Face Inference API with Facebook MMS-TTS.
-   * Supports English, Bengali, and Hindi. Single-speaker models (no voice selection).
+   * Synthesizes audio using Hugging Face Inference API with Facebook MMS-TTS and OmniVoice.
+   * Supports English, Bengali (MMS + OmniVoice), and Hindi. Single-speaker models (no voice selection).
    */
   public async synthesize(
     text: string,
@@ -30,13 +31,16 @@ export class HuggingFaceTtsService {
       return null;
     }
 
-    // Select model based on language
+    // Select model based on language and options
     const isEnglish = options?.isEnglish ?? true;
     let model: string;
+    
     if (options?.model === 'mms-hin') {
       model = HuggingFaceTtsService.MMS_HINDI_MODEL;
     } else if (options?.model === 'mms-ben') {
       model = HuggingFaceTtsService.MMS_BENGALI_MODEL;
+    } else if (options?.model === 'omnivoice-ben') {
+      model = HuggingFaceTtsService.OMNIVOICE_BENGALI_MODEL;
     } else {
       model = isEnglish ? HuggingFaceTtsService.MMS_ENGLISH_MODEL : HuggingFaceTtsService.MMS_BENGALI_MODEL;
     }
