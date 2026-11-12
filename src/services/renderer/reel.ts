@@ -683,13 +683,13 @@ export class ReelVideoRenderer {
     );
 
     if (tempVoiceFile) {
-      // Duck background audio to 10% volume while voiceover plays boosted at 220% volume with weights
+      // Background music at 10% volume, Charon voice at 90% volume
       const bgFilter = useAudioFilter && activeCategoryStyle?.audioFilter
         ? `${activeCategoryStyle.audioFilter},volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000`
         : 'volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000';
       ffmpegArgs.push(
         '-filter_complex',
-        `[1:a]${bgFilter}[bg];[2:a]volume=2.2,aformat=channel_layouts=stereo:sample_rates=48000[voice];[bg][voice]amix=inputs=2:duration=first:dropout_transition=2:weights=0.15 1[aout]`,
+        `[1:a]${bgFilter}[bg];[2:a]volume=0.90,aformat=channel_layouts=stereo:sample_rates=48000[voice];[bg][voice]amix=inputs=2:duration=first:dropout_transition=2:weights=0.1 0.9[aout]`,
         '-map', '0:v',
         '-map', '[aout]'
       );
