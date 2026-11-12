@@ -28,8 +28,15 @@ export interface AppConfig {
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
+  /** TTS provider chain: 'auto' | 'puter' | 'edge' | 'gemini' | 'huggingface' | 'off' */
   TTS_PROVIDER: string;
   PUTER_AUTH_TOKEN?: string;
+  /** Puter.js TTS sub-provider: 'openai' | 'gemini' | 'speechify' | 'xai' */
+  PUTER_TTS_PROVIDER: string;
+  /** Model for the Puter TTS sub-provider, e.g. 'gpt-4o-mini-tts' */
+  PUTER_TTS_MODEL: string;
+  /** Voice name for the Puter TTS sub-provider, e.g. 'onyx' */
+  PUTER_TTS_VOICE: string;
   GEMINI_API_KEY?: string;
   HF_AUTH_TOKEN?: string;
   DATA_DIR: string;
@@ -90,6 +97,11 @@ const baseConfig: AppConfig = {
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
   TTS_PROVIDER: process.env.TTS_PROVIDER || 'auto',
+  // Puter.js TTS sub-provider config — override via env or DB settings
+  // Male voices: openai/onyx, openai/fable, speechify/hugh_32, xai/leo
+  PUTER_TTS_PROVIDER: process.env.PUTER_TTS_PROVIDER || 'openai',
+  PUTER_TTS_MODEL:    process.env.PUTER_TTS_MODEL    || 'gpt-4o-mini-tts',
+  PUTER_TTS_VOICE:    process.env.PUTER_TTS_VOICE    || 'onyx',
   PUTER_AUTH_TOKEN:
     process.env.PUTER_AUTH_TOKEN ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYyIn0.eyJ0IjoidCIsInYiOiIyIiwidG9rZW5fdWlkIjoiNWFkNjcwMzktNzE1OC00MmUwLTk3MDUtNmJkYWFhYjcxYzU5IiwidXUiOiI5NTdKVDNvdlJ6R2FzYXZpSGQxd0tRPT0iLCJzdSI6IkFjUGtySzBKUTFtR25CZTZRQkpteXc9PSIsImFpIjoiOTU3SlQzb3ZSekdhc2F2aUhkMXdLUT09IiwiZnVsbF9hY2Nlc3MiOnRydWUsImlhdCI6MTc5NDQ2Mjg4Nn0.itlPxBKhmX0by-PAakfl1ByN_P6lphFz0JrH2PHMRA4',

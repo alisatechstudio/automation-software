@@ -1,6 +1,7 @@
 import { config } from '../../config/env.js';
 import { getDbSetting } from '../settings.js';
 import { PuterTtsService } from './puter.js';
+import { EdgeTtsService } from './edge-tts.js';
 import { GeminiTtsService } from './gemini.js';
 import { HuggingFaceTtsService } from './huggingface.js';
 import { cleanSpeechScript } from './cleaner.js';
@@ -8,17 +9,19 @@ import { SynthesisOptions, TtsConnectionStatus } from './types.js';
 
 export { SynthesisOptions, TtsConnectionStatus } from './types.js';
 export { PuterTtsService } from './puter.js';
+export { EdgeTtsService } from './edge-tts.js';
 export { GeminiTtsService } from './gemini.js';
 export { HuggingFaceTtsService } from './huggingface.js';
 export { cleanSpeechScript } from './cleaner.js';
 
 export class UnifiedTtsService {
-  private puterService = new PuterTtsService();
+  private puterService  = new PuterTtsService();
+  private edgeService   = new EdgeTtsService();
   private geminiService = new GeminiTtsService();
-  private hfService = new HuggingFaceTtsService();
+  private hfService     = new HuggingFaceTtsService();
 
   /**
-   * Preprocesses and formats description text to natural news broadcast speech
+   * Preprocesses description text to natural news broadcast speech.
    */
   public cleanDescription(description?: string, headline?: string): string {
     return cleanSpeechScript(description, headline);
@@ -26,9 +29,11 @@ export class UnifiedTtsService {
 
   /**
    * Synthesizes audio using the configured TTS provider chain:
-   * 1. Puter.js (Gemini TTS - Charon voice) if PUTER_AUTH_TOKEN is configured
-   * 2. Google AI Studio (Gemini TTS - Charon voice) if GEMINI_API_KEY is configured
-   * 3. Hugging Face (Facebook MMS-TTS) if HF_AUTH_TOKEN is configured
+   *
+   * 1. Puter.js  — OpenAI gpt-4o-mini-tts / onyx  (male news anchor, requires PUTER_AUTH_TOKEN)
+   * 2. Edge TTS  — Microsoft bn-BD-PradeepNeural   (free, native Bengali male, no key needed)
+   * 3. Gemini API— Gemini 2.5 Flash TTS / Charon   (requires GEMINI_API_KEY)
+   * 4. Hugging Face MMS-TTS                        (requires HF_AUTH_TOKEN)
    */
   public async synthesize(
     text: string,
@@ -42,11 +47,9 @@ export class UnifiedTtsService {
       config.TTS_PROVIDER ||
       'auto';
 
-    console.log(`[UnifiedTTS] TTS Provider setting: ${ttsProvider}`);
+    console.log(`[UnifiedTTS] Provider setting: ${ttsProvider}`);
 
-    if (ttsProvider === 'off' || ttsProvider === 'disabled') {
-      return null;
-    }
+    if (ttsProvider === 'off' || ttsProvider === 'disabled') return null;
 
     const puterToken =
       (await getDbSetting('PUTER_AUTH_TOKEN')) ||
@@ -66,65 +69,78 @@ export class UnifiedTtsService {
       config.HF_AUTH_TOKEN ||
       '';
 
-    console.log(`[UnifiedTTS] Tokens - Puter: ${puterToken ? 'YES' : 'NO'}, Gemini: ${geminiKey ? 'YES' : 'NO'}, HF: ${hfToken ? 'YES' : 'NO'}`);
+    console.log(
+      `[UnifiedTTS] Tokens — Puter: ${puterToken ? 'YES' : 'NO'}, Gemini: ${geminiKey ? 'YES' : 'NO'}, HF: ${hfToken ? 'YES' : 'NO'}`
+    );
 
-    // 1. Puter.js Provider (Charon voice) - primary if token available
+    // ── Tier 1: Puter.js (OpenAI onyx) ──────────────────────────────────────
     if ((ttsProvider === 'puter' || (ttsProvider === 'auto' && puterToken)) && puterToken) {
-      console.log('[UnifiedTTS] Trying Puter.js (Charon)...');
+      console.log('[UnifiedTTS] 🎙️ Trying Puter.js (OpenAI onyx)...');
       try {
         const audio = await this.puterService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
-          console.log('[UnifiedTTS] Puter.js success!');
+          console.log('[UnifiedTTS] ✅ Puter.js success!');
           return audio;
         }
-        console.warn('[UnifiedTTS] Puter.js returned no audio, falling back...');
+        console.warn('[UnifiedTTS] Puter.js returned no audio, trying Edge TTS...');
       } catch (err: any) {
-        console.warn(`[UnifiedTTS] Puter TTS (Charon) failed: ${err.message}. Falling back to Gemini API...`);
+        console.warn(`[UnifiedTTS] Puter.js failed: ${err.message}. Trying Edge TTS...`);
       }
     }
 
-    // 2. Google AI Studio (Gemini API) - Charon voice
+    // ── Tier 2: Edge TTS (free, bn-BD-PradeepNeural) ────────────────────────
+    if (ttsProvider === 'edge' || ttsProvider === 'auto') {
+      console.log('[UnifiedTTS] 🎙️ Trying Edge TTS (bn-BD-PradeepNeural)...');
+      try {
+        const audio = await this.edgeService.synthesize(cleanText, options);
+        if (audio && audio.length > 500) {
+          console.log('[UnifiedTTS] ✅ Edge TTS success!');
+          return audio;
+        }
+        console.warn('[UnifiedTTS] Edge TTS returned no audio, trying Gemini API...');
+      } catch (err: any) {
+        console.warn(`[UnifiedTTS] Edge TTS failed: ${err.message}. Trying Gemini API...`);
+      }
+    }
+
+    // ── Tier 3: Google AI Studio (Gemini TTS — Charon) ──────────────────────
     if ((ttsProvider === 'gemini' || (ttsProvider === 'auto' && geminiKey)) && geminiKey) {
-      console.log('[UnifiedTTS] Trying Google AI Studio (Gemini API Charon)...');
+      console.log('[UnifiedTTS] 🎙️ Trying Google AI Studio (Gemini TTS / Charon)...');
       try {
         const audio = await this.geminiService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
-          console.log('[UnifiedTTS] Gemini API success!');
+          console.log('[UnifiedTTS] ✅ Gemini API success!');
           return audio;
         }
-        console.warn('[UnifiedTTS] Gemini API returned no audio, falling back...');
+        console.warn('[UnifiedTTS] Gemini API returned no audio, trying Hugging Face...');
       } catch (err: any) {
-        console.warn(`[UnifiedTTS] Gemini API TTS (Charon) failed: ${err.message}. Falling back to MMS-TTS...`);
+        console.warn(`[UnifiedTTS] Gemini API failed: ${err.message}. Trying Hugging Face...`);
       }
     }
 
-    // 3. Hugging Face Provider (MMS-TTS) - fallback
+    // ── Tier 4: Hugging Face MMS-TTS ────────────────────────────────────────
     if ((ttsProvider === 'huggingface' || (ttsProvider === 'auto' && hfToken)) && hfToken) {
-      console.log('[UnifiedTTS] Trying Hugging Face (MMS-TTS)...');
+      console.log('[UnifiedTTS] 🎙️ Trying Hugging Face (MMS-TTS)...');
       try {
         const audio = await this.hfService.synthesize(cleanText, options);
         if (audio && audio.length > 500) {
-          console.log('[UnifiedTTS] Hugging Face success!');
+          console.log('[UnifiedTTS] ✅ Hugging Face success!');
           return audio;
         }
         console.warn('[UnifiedTTS] Hugging Face returned no audio');
       } catch (err: any) {
-        console.warn(`[UnifiedTTS] Hugging Face MMS-TTS failed: ${err.message}`);
+        console.warn(`[UnifiedTTS] Hugging Face failed: ${err.message}`);
       }
     }
 
-    console.warn('[UnifiedTTS] All TTS providers failed or unavailable');
+    console.warn('[UnifiedTTS] ❌ All TTS providers failed or unavailable');
     return null;
   }
 
   /**
-   * Tests all available providers and reports the active TTS status
+   * Tests all available providers and reports TTS status.
    */
   public async testConnection(): Promise<TtsConnectionStatus> {
-    const puterStatus = await this.puterService.testConnection();
-    const geminiStatus = await this.geminiService.testConnection();
-    const hfStatus = await this.hfService.testConnection();
-
     const puterToken =
       (await getDbSetting('PUTER_AUTH_TOKEN')) ||
       process.env.PUTER_AUTH_TOKEN ||
@@ -142,15 +158,25 @@ export class UnifiedTtsService {
       process.env.HF_AUTH_TOKEN ||
       config.HF_AUTH_TOKEN ||
       '';
+
+    const [puterStatus, edgeStatus, geminiStatus, hfStatus] = await Promise.all([
+      this.puterService.testConnection(),
+      this.edgeService.testConnection(),
+      this.geminiService.testConnection(),
+      this.hfService.testConnection(),
+    ]);
 
     let activeProvider = 'None';
     let message = 'No TTS configured.';
 
     if (puterStatus.available) {
-      activeProvider = 'Puter.js (Gemini TTS - Charon)';
-      message = 'Connected to Puter.js! Charon voice (male news anchor) is ready.';
+      activeProvider = puterStatus.provider || 'Puter.js (OpenAI onyx)';
+      message = 'Connected to Puter.js! OpenAI onyx voice (male news anchor) is ready.';
+    } else if (edgeStatus.available) {
+      activeProvider = edgeStatus.provider || 'Edge TTS (bn-BD-PradeepNeural)';
+      message = 'Connected to Edge TTS! Native Bengali male voice is ready.';
     } else if (geminiStatus.available) {
-      activeProvider = 'Google AI Studio (Gemini TTS - Charon)';
+      activeProvider = geminiStatus.provider || 'Google AI Studio (Gemini TTS — Charon)';
       message = 'Connected to Google AI Studio! Charon voice (male news anchor) is ready.';
     } else if (hfStatus.available) {
       activeProvider = 'Hugging Face (Facebook MMS-TTS)';
@@ -164,10 +190,13 @@ export class UnifiedTtsService {
     } else if (hfToken) {
       activeProvider = 'Hugging Face (Configured, verifying token...)';
       message = hfStatus.message;
+    } else {
+      activeProvider = 'Edge TTS';
+      message = edgeStatus.message;
     }
 
     return {
-      available: puterStatus.available || geminiStatus.available || hfStatus.available,
+      available: puterStatus.available || edgeStatus.available || geminiStatus.available || hfStatus.available,
       activeProvider,
       message,
       providers: {

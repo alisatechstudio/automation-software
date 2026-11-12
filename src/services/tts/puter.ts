@@ -2,6 +2,46 @@ import { config } from '../../config/env.js';
 import { getDbSetting } from '../settings.js';
 import { SynthesisOptions } from './types.js';
 
+/**
+ * Resolves TTS provider config from DB settings → process.env → app config defaults.
+ * Default chain: openai / gpt-4o-mini-tts / onyx  (working, male, news anchor quality)
+ */
+async function resolveTtsConfig(): Promise<{
+  token: string;
+  provider: string;
+  model: string;
+  voice: string;
+  instructions: string;
+}> {
+  const token =
+    (await getDbSetting('PUTER_AUTH_TOKEN')) ||
+    process.env.PUTER_AUTH_TOKEN ||
+    config.PUTER_AUTH_TOKEN ||
+    '';
+
+  const provider =
+    (await getDbSetting('PUTER_TTS_PROVIDER')) ||
+    process.env.PUTER_TTS_PROVIDER ||
+    'openai';
+
+  const model =
+    (await getDbSetting('PUTER_TTS_MODEL')) ||
+    process.env.PUTER_TTS_MODEL ||
+    'gpt-4o-mini-tts';
+
+  const voice =
+    (await getDbSetting('PUTER_TTS_VOICE')) ||
+    process.env.PUTER_TTS_VOICE ||
+    'onyx';
+
+  const instructions =
+    (await getDbSetting('PUTER_TTS_INSTRUCTIONS')) ||
+    process.env.PUTER_TTS_INSTRUCTIONS ||
+    'Speak in a confident, authoritative, clear, and professional male Bangladeshi television news broadcast voice.';
+
+  return { token, provider, model, voice, instructions };
+}
+
 export class PuterTtsService {
   private puterInstance: any = null;
 
@@ -36,36 +76,25 @@ export class PuterTtsService {
     const cleanText = (text || '').trim();
     if (!cleanText) return null;
 
-    const token =
-      (await getDbSetting('PUTER_AUTH_TOKEN')) ||
-      process.env.PUTER_AUTH_TOKEN ||
-      config.PUTER_AUTH_TOKEN ||
-      '';
+    const { token, provider, model, voice: defaultVoice, instructions } = await resolveTtsConfig();
+    const voice = options?.voice || defaultVoice;
+    const speakInstructions = options?.instructions || instructions;
 
     if (!token) {
       console.warn('[PuterTTS] No PUTER_AUTH_TOKEN found');
       return null;
     }
 
-    console.log(`[PuterTTS] Token found (${token.substring(0, 20)}...), attempting synthesis...`);
-
-    const provider = 'gemini';
-    const model = 'gemini-3.8-flash-lite-tts';
-    const voice = options?.voice || 'Charon';
-    const instructions = options?.instructions || 'Speak in a confident, authoritative, clear, and professional male television news broadcast voice.';
-
-    console.log(`[PuterTTS] 🎙️ Calling Puter.js TTS (Gemini ${model}, voice: ${voice}) for: "${cleanText.substring(0, 40)}..."`);
+    console.log(`[PuterTTS] Token found (${token.substring(0, 20)}...), provider: ${provider}, model: ${model}, voice: ${voice}`);
+    console.log(`[PuterTTS] 🎙️ Synthesizing: "${cleanText.substring(0, 60)}..."`);
 
     // 1. Try via @heyputer/puter.js SDK
     try {
       const puter = await this.getPuterClient(token);
       if (puter && puter.ai && typeof puter.ai.txt2speech === 'function') {
-        const ttsOptions: Record<string, any> = {
-          provider: 'gemini',
-          voice: voice,
-          model: model,
-          instructions: instructions,
-        };
+        const ttsOptions: Record<string, any> = { provider, voice, model };
+        if (provider === 'openai') ttsOptions.instructions = speakInstructions;
+        if (provider === 'gemini') ttsOptions.instructions = speakInstructions;
 
         console.log('[PuterTTS] Attempting SDK synthesis...');
         const audioResult = await puter.ai.txt2speech(cleanText, ttsOptions);
@@ -73,9 +102,8 @@ export class PuterTtsService {
         if (buffer && buffer.length > 500) {
           console.log(`[PuterTTS] SDK synthesis success: ${buffer.length} bytes`);
           return buffer;
-        } else {
-          console.warn('[PuterTTS] SDK returned empty/invalid audio');
         }
+        console.warn('[PuterTTS] SDK returned empty/invalid audio, falling back to REST API...');
       } else {
         console.warn('[PuterTTS] SDK not available or txt2speech not a function');
       }
@@ -86,13 +114,17 @@ export class PuterTtsService {
     // 2. REST API fallback
     try {
       console.log('[PuterTTS] Attempting REST API synthesis...');
-      const restBuf = await this.synthesizeWithRestApi(cleanText, token, { provider, model, voice, instructions });
+      const restBuf = await this.synthesizeWithRestApi(cleanText, token, {
+        provider,
+        model,
+        voice,
+        instructions: speakInstructions,
+      });
       if (restBuf && restBuf.length > 500) {
         console.log(`[PuterTTS] REST API synthesis success: ${restBuf.length} bytes`);
         return restBuf;
-      } else {
-        console.warn('[PuterTTS] REST API returned empty/invalid audio');
       }
+      console.warn('[PuterTTS] REST API returned empty/invalid audio');
     } catch (restErr: any) {
       console.warn(`[PuterTTS] REST API error: ${restErr.message || restErr}`);
     }
@@ -107,7 +139,7 @@ export class PuterTtsService {
     params: { provider: string; model?: string; voice?: string; instructions?: string }
   ): Promise<Buffer | null> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     const bodyPayload: Record<string, any> = {
       interface: 'puter-tts',
@@ -115,14 +147,15 @@ export class PuterTtsService {
       test_mode: false,
       method: 'synthesize',
       args: {
-        text: text,
+        text,
         provider: params.provider,
         voice: params.voice,
       },
       auth_token: token,
     };
     if (params.model) bodyPayload.args.model = params.model;
-    if (params.provider === 'gemini' && params.instructions) {
+    // instructions supported by openai and gemini providers
+    if ((params.provider === 'openai' || params.provider === 'gemini') && params.instructions) {
       bodyPayload.args.instructions = params.instructions;
     }
 
@@ -140,7 +173,7 @@ export class PuterTtsService {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
-      console.warn(`[PuterTTS - REST] HTTP ${response.status}: ${errText.substring(0, 150)}`);
+      console.warn(`[PuterTTS - REST] HTTP ${response.status}: ${errText.substring(0, 200)}`);
       return null;
     }
 
@@ -166,35 +199,24 @@ export class PuterTtsService {
   private async extractAudioBuffer(audioOutput: any): Promise<Buffer | null> {
     if (!audioOutput) return null;
 
-    if (Buffer.isBuffer(audioOutput)) {
-      return audioOutput;
-    }
-
-    if (audioOutput instanceof ArrayBuffer) {
-      return Buffer.from(audioOutput);
-    }
+    if (Buffer.isBuffer(audioOutput)) return audioOutput;
+    if (audioOutput instanceof ArrayBuffer) return Buffer.from(audioOutput);
 
     if (typeof audioOutput === 'string') {
-      if (audioOutput.startsWith('data:audio/')) {
-        return this.dataUrlToBuffer(audioOutput);
-      }
+      if (audioOutput.startsWith('data:audio/')) return this.dataUrlToBuffer(audioOutput);
       if (audioOutput.startsWith('http://') || audioOutput.startsWith('https://')) {
         const res = await fetch(audioOutput);
-        if (res.ok) {
-          return Buffer.from(await res.arrayBuffer());
-        }
+        if (res.ok) return Buffer.from(await res.arrayBuffer());
       }
     }
 
-    const src = audioOutput.src || (typeof audioOutput.toString === 'function' ? audioOutput.toString() : '');
-    if (typeof src === 'string' && src.startsWith('data:audio/')) {
-      return this.dataUrlToBuffer(src);
-    }
+    const src =
+      audioOutput.src ||
+      (typeof audioOutput.toString === 'function' ? audioOutput.toString() : '');
+    if (typeof src === 'string' && src.startsWith('data:audio/')) return this.dataUrlToBuffer(src);
     if (typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'))) {
       const res = await fetch(src);
-      if (res.ok) {
-        return Buffer.from(await res.arrayBuffer());
-      }
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
     }
 
     if (audioOutput.audio && typeof audioOutput.audio === 'string') {
@@ -208,19 +230,14 @@ export class PuterTtsService {
     try {
       const commaIndex = dataUrl.indexOf(',');
       if (commaIndex === -1) return null;
-      const base64 = dataUrl.substring(commaIndex + 1);
-      return Buffer.from(base64, 'base64');
+      return Buffer.from(dataUrl.substring(commaIndex + 1), 'base64');
     } catch {
       return null;
     }
   }
 
   public async testConnection(): Promise<{ available: boolean; message: string; provider?: string }> {
-    const token =
-      (await getDbSetting('PUTER_AUTH_TOKEN')) ||
-      process.env.PUTER_AUTH_TOKEN ||
-      config.PUTER_AUTH_TOKEN ||
-      '';
+    const { token, provider, voice } = await resolveTtsConfig();
 
     if (!token) {
       return {
@@ -230,23 +247,23 @@ export class PuterTtsService {
     }
 
     try {
-      const audio = await this.synthesize('Testing Puter.js text to speech with Charon voice.');
+      const audio = await this.synthesize('Testing text to speech for news broadcast.');
       if (audio && audio.length > 500) {
         return {
           available: true,
-          provider: 'Puter.js (Gemini TTS - Charon)',
-          message: 'Puter.js TTS is connected! Charon voice is ready.',
+          provider: `Puter.js (${provider} - ${voice})`,
+          message: `Puter.js TTS is connected! ${voice} voice (${provider}) is ready.`,
         };
       }
       return {
         available: false,
-        provider: 'Puter.js',
+        provider: `Puter.js (${provider})`,
         message: 'Puter API token is set, but synthesis returned empty.',
       };
     } catch (err: any) {
       return {
         available: false,
-        provider: 'Puter.js',
+        provider: `Puter.js (${provider})`,
         message: `Puter.js error: ${err.message || err}`,
       };
     }
