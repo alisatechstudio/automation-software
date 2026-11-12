@@ -1,7 +1,7 @@
 /**
  * Cleans and formats RSS feed descriptions for natural television news speech.
- * Strips HTML tags, trims photo captions/bylines, and preserves the full description
- * (up to ~80 words) to comfortably fit within a 30-second video reel.
+ * Strips HTML tags, trims photo captions/bylines, and preserves the COMPLETE description
+ * so Charon voice reads the full RSS content verbatim.
  */
 export function cleanSpeechScript(description?: string, headline?: string): string {
   const raw = (description || '').trim();
@@ -37,29 +37,8 @@ export function cleanSpeechScript(description?: string, headline?: string): stri
     return fallbackHeadline;
   }
 
-  // 4. For a 30-second reel, natural news delivery accommodates up to ~75-85 words (~450 characters).
-  // If the description is within this range, read out the complete description intact!
-  const words = clean.split(/\s+/);
-  if (words.length <= 80) {
-    return clean;
-  }
-
-  // If description is extraordinarily long (e.g. full article body), preserve full sentences up to ~80 words
-  const sentences = clean.split(/([।?!.])/);
-  let spokenScript = '';
-  for (let i = 0; i < sentences.length; i += 2) {
-    const candidate = (spokenScript ? spokenScript + ' ' : '') + sentences[i] + (sentences[i + 1] || '');
-    if (candidate.split(/\s+/).length <= 80) {
-      spokenScript = candidate;
-    } else {
-      break;
-    }
-  }
-
-  if (!spokenScript.trim()) {
-    spokenScript = words.slice(0, 75).join(' ') + '...';
-  }
-
-  return spokenScript.trim() || fallbackHeadline;
+  // Read the COMPLETE description - no word limit truncation.
+  // Charon voice reads everything from the RSS description.
+  return clean.trim() || fallbackHeadline;
 }
 

@@ -389,7 +389,7 @@ export class InputPipelineService {
             targetTheme = await getNextRollingReelTheme(db, rotKey);
             console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
           }
-          const reelDuration = source.reelDuration || 15; // 15 seconds optimal social reel duration (prevents timeouts)
+          const reelDuration = source.reelDuration || 25; // 25 seconds minimum for Instagram Reels
 
           // Check if we still have time budget to render this reel
           if (Date.now() - startTime > MAX_EXECUTION_MS - 20000) {
