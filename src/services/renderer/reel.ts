@@ -544,7 +544,7 @@ export class ReelVideoRenderer {
     const scaleY = height / refHeight;
     const needsScale = scaleX !== 1 || scaleY !== 1;
 
-    let durationSeconds = input.durationSeconds || 15; // 15 seconds optimal social reel duration (prevents cloud/proxy timeouts)
+    let durationSeconds = input.durationSeconds || 25; // 25 seconds minimum for Instagram Reels
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = Math.max(24, input.fps || 24);
 
@@ -622,8 +622,8 @@ export class ReelVideoRenderer {
         estVoiceSecs = voiceoverBuffer.length / 16000;
       }
       if (estVoiceSecs > 0) {
-        // Cap reel duration at 20 seconds maximum to prevent cloud/serverless timeouts
-        durationSeconds = Math.max(durationSeconds, Math.min(20, Math.ceil(estVoiceSecs + 1)));
+        // Ensure minimum 25 seconds for Instagram Reels
+        durationSeconds = Math.max(durationSeconds, Math.ceil(estVoiceSecs + 2));
       }
 
       const isWav = voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF';
