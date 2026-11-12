@@ -2296,6 +2296,46 @@ apiRouter.post('/tts/test', async (req: Request, res: Response) => {
   }
 });
 
+apiRouter.post('/tts/save-test-files', async (req: Request, res: Response) => {
+  try {
+    const publicDir = path.join(process.cwd(), 'public');
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+
+    const tests = [
+      { name: 'test-mms-eng.wav', text: 'Hello, this is a test of the English MMS TTS voice.', isEnglish: true, model: undefined },
+      { name: 'test-mms-ben.wav', text: 'এটি বাংলা এমএমএস টিটিএস ভয়েসের একটি পরীক্ষা।', isEnglish: false, model: undefined },
+      { name: 'test-mms-hin.wav', text: 'यह हिंदी एमएमएस टीटीएस आवाज का एक परीक्षण है।', isEnglish: true, model: 'mms-hin' },
+    ];
+
+    const results: any[] = [];
+
+    for (const test of tests) {
+      try {
+        console.log(`[TTS Test] Generating ${test.name}...`);
+        const audio = await ttsService.synthesize(test.text, {
+          isEnglish: test.isEnglish,
+          model: test.model,
+        });
+        if (audio && audio.length > 500) {
+          const filePath = path.join(publicDir, test.name);
+          fs.writeFileSync(filePath, audio);
+          results.push({ file: test.name, size: audio.length, success: true, url: `/${test.name}` });
+        } else {
+          results.push({ file: test.name, success: false, error: 'No audio returned' });
+        }
+      } catch (err: any) {
+        results.push({ file: test.name, success: false, error: err.message });
+      }
+    }
+
+    res.json({ success: true, results, publicDir });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 apiRouter.post('/settings', async (req: Request, res: Response) => {
   try {
     const body = req.body;
