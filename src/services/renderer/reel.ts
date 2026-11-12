@@ -626,7 +626,9 @@ export class ReelVideoRenderer {
         durationSeconds = Math.max(durationSeconds, Math.min(20, Math.ceil(estVoiceSecs + 1)));
       }
 
-      tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp3`);
+      const isWav = voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF';
+      const voiceExt = isWav ? '.wav' : '.mp3';
+      tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}${voiceExt}`);
       try {
         fs.writeFileSync(tempVoiceFile, voiceoverBuffer);
       } catch (e: any) {

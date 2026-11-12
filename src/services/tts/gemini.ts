@@ -74,10 +74,14 @@ export class GeminiTtsService {
 
     const endpoint = `${GeminiTtsService.API_BASE}/${model}:generateContent?key=${apiKey}`;
 
+    // Prompt directive instructs the model to read verbatim as a news broadcast,
+    // avoiding HTTP 400 "Model tried to generate text, but it should only be used for TTS"
+    const promptText = `Read aloud the following text verbatim as a professional news broadcast:\n${cleanText}`;
+
     const requestPayload = {
       contents: [
         {
-          parts: [{ text: cleanText }],
+          parts: [{ text: promptText }],
         },
       ],
       generationConfig: {
