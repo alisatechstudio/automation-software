@@ -267,8 +267,8 @@ export class InputPipelineService {
       const cutoffTime = new Date(now.getTime() - maxAgeHours * 60 * 60 * 1000);
       const maxPerSource = options?.limit || options?.maxArticlesPerSource || 1;
 
-      // Safe execution time budget: 50s on Vercel (60s timeout); 240s elsewhere
-      const MAX_EXECUTION_MS = process.env.VERCEL ? 50000 : 240000;
+      // Safe execution time budget: 55s on Vercel (60s timeout); 240s elsewhere
+      const MAX_EXECUTION_MS = process.env.VERCEL ? 55000 : 240000;
 
       const sourceResults: SourceInputResult[] = [];
       let grandTotalFetched = 0;
@@ -392,7 +392,7 @@ export class InputPipelineService {
           const reelDuration = source.reelDuration || 25; // 25 seconds minimum for Instagram Reels
 
           // Check if we still have time budget to render this reel
-          if (Date.now() - startTime > MAX_EXECUTION_MS - 20000) {
+          if (Date.now() - startTime > MAX_EXECUTION_MS - 10000) {
             console.log(`[InputCron] ⏱️ Approaching execution budget limit (${Math.round((Date.now() - startTime) / 1000)}s). Skipping further video rendering this cycle to prevent timeout.`);
             break;
           }
