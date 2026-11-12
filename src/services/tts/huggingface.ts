@@ -4,18 +4,13 @@ import { SynthesisOptions } from './types.js';
 
 export class HuggingFaceTtsService {
   private static readonly HF_API_URL = 'https://api-inference.huggingface.co/models';
-  private static readonly HIGGS_AUDIO_V2_MODEL = 'bosonai/higgs-audio-v2';
-  private static readonly HIGGS_AUDIO_V2_EN_MODEL = 'bosonai/higgs-audio-v2-en';
-
-  // Higgs Audio v2 supported voices (from model card)
-  private static readonly HIGGS_VOICES = [
-    'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer',  // OpenAI-compatible
-    'male', 'female',  // Generic
-  ];
+  private static readonly MMS_ENGLISH_MODEL = 'facebook/mms-tts-eng';
+  private static readonly MMS_BENGALI_MODEL = 'facebook/mms-tts-ben';
+  private static readonly MMS_HINDI_MODEL = 'facebook/mms-tts-hin';
 
   /**
-   * Synthesizes audio using Hugging Face Inference API with Higgs Audio v2.
-   * High-quality multilingual TTS with voice selection.
+   * Synthesizes audio using Hugging Face Inference API with Facebook MMS-TTS.
+   * Supports English, Bengali, and Hindi. Single-speaker models (no voice selection).
    */
   public async synthesize(
     text: string,
@@ -35,23 +30,21 @@ export class HuggingFaceTtsService {
       return null;
     }
 
-    // Default to English Higgs model, but allow override
+    // Select model based on language
     const isEnglish = options?.isEnglish ?? true;
-    const model = options?.model === 'higgs-v2' 
-      ? HuggingFaceTtsService.HIGGS_AUDIO_V2_MODEL 
-      : HuggingFaceTtsService.HIGGS_AUDIO_V2_EN_MODEL;
-
-    // Default to onyx (deep male) for news broadcast
-    let voice = options?.voice || 'onyx';
-    if (!HuggingFaceTtsService.HIGGS_VOICES.includes(voice.toLowerCase())) {
-      console.warn(`[HuggingFaceTTS] Voice "${voice}" not in known Higgs voices: ${HuggingFaceTtsService.HIGGS_VOICES.join(', ')}. Using onyx.`);
-      voice = 'onyx';
+    let model: string;
+    if (options?.model === 'mms-hin') {
+      model = HuggingFaceTtsService.MMS_HINDI_MODEL;
+    } else if (options?.model === 'mms-ben') {
+      model = HuggingFaceTtsService.MMS_BENGALI_MODEL;
+    } else {
+      model = isEnglish ? HuggingFaceTtsService.MMS_ENGLISH_MODEL : HuggingFaceTtsService.MMS_BENGALI_MODEL;
     }
 
-    console.log(`[HuggingFaceTTS] 🎙️ Synthesizing with ${model} (voice: ${voice}) for: "${cleanText.substring(0, 40)}..."`);
+    console.log(`[HuggingFaceTTS] 🎙️ Synthesizing with ${model} for: "${cleanText.substring(0, 40)}..."`);
 
     try {
-      const audioBuffer = await this.callInferenceAPI(cleanText, model, token, voice);
+      const audioBuffer = await this.callInferenceAPI(cleanText, model, token);
       if (audioBuffer && audioBuffer.length > 500) {
         return audioBuffer;
       }
@@ -62,24 +55,18 @@ export class HuggingFaceTtsService {
     return null;
   }
 
-  private async callInferenceAPI(text: string, model: string, token: string, voice?: string): Promise<Buffer | null> {
+  private async callInferenceAPI(text: string, model: string, token: string): Promise<Buffer | null> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      // Build request body - Higgs Audio supports voice parameter
-      const body: Record<string, any> = { inputs: text };
-      if (voice) {
-        body.parameters = { voice };
-      }
-
       const response = await fetch(`${HuggingFaceTtsService.HF_API_URL}/${model}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ inputs: text }),
         signal: controller.signal,
       });
 
@@ -140,8 +127,8 @@ export class HuggingFaceTtsService {
       if (audio && audio.length > 500) {
         return {
           available: true,
-          provider: 'Hugging Face (Higgs Audio v2)',
-          message: 'Hugging Face Higgs Audio v2 TTS is connected and synthesizing audio successfully!',
+          provider: 'Hugging Face (Facebook MMS-TTS)',
+          message: 'Hugging Face MMS-TTS is connected and synthesizing audio successfully!',
         };
       }
       return {
