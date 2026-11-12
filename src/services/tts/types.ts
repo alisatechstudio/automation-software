@@ -13,10 +13,4 @@ export interface TtsConnectionStatus {
   model?: string;
   voice?: string;
   message: string;
-  providers?: {
-    puter: boolean;
-    gemini: boolean;
-    huggingface: boolean;
-  };
 }
-

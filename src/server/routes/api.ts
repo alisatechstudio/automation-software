@@ -2245,10 +2245,8 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DISABLE_POSTER: 'true',
       REEL_DURATION_SECONDS: '30',
       DEFAULT_REEL_THEME: 'auto-category',
-      TTS_PROVIDER: config.TTS_PROVIDER || 'auto',
-      PUTER_AUTH_TOKEN: config.PUTER_AUTH_TOKEN ? '••••••••' : '',
+      TTS_PROVIDER: 'gemini',
       GEMINI_API_KEY: config.GEMINI_API_KEY ? '••••••••' : '',
-      HF_AUTH_TOKEN: config.HF_AUTH_TOKEN ? '••••••••' : '',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
       YOUTUBE_REFRESH_TOKEN: '',
@@ -2262,7 +2260,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
   }
 });
 
-// Unified Text-to-Speech (Puter.js, Qwen3, Broadcast) Endpoints
+// Text-to-Speech (Google Gemini API — Charon voice) Endpoints
 apiRouter.get('/tts/status', async (req: Request, res: Response) => {
   try {
     const result = await ttsService.testConnection();
@@ -2279,7 +2277,6 @@ apiRouter.post('/tts/test', async (req: Request, res: Response) => {
     const audio = await ttsService.synthesize(text, {
       isEnglish,
       voice: req.body.voice,
-      provider: req.body.provider,
       model: req.body.model,
       instructions: req.body.instructions,
     });
