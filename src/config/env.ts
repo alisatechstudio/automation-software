@@ -28,10 +28,7 @@ export interface AppConfig {
   DEFAULT_CAPTION_FORMAT: string;
   DEFAULT_COMMENT_FORMAT: string;
   ENABLE_VIDEO_REELS: boolean;
-  /** TTS provider: exclusively Gemini API ('gemini') */
-  TTS_PROVIDER: string;
   GEMINI_API_KEY?: string;
-  GEMINI_TTS_MODEL?: string;
   DATA_DIR: string;
   ASSETS_DIR: string;
 }
@@ -89,9 +86,7 @@ const baseConfig: AppConfig = {
   DEFAULT_COMMENT_FORMAT:
     process.env.DEFAULT_COMMENT_FORMAT || 'বিস্তারিত পড়ুন: {url}',
   ENABLE_VIDEO_REELS: process.env.ENABLE_VIDEO_REELS !== 'false',
-  TTS_PROVIDER: 'gemini',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  GEMINI_TTS_MODEL: process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,
 };

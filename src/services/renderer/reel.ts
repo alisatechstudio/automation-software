@@ -6,7 +6,7 @@ import { spawn } from 'child_process';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
-import { UnifiedTtsService } from '../tts/index.js';
+
 
 let ffmpegPath: string = '';
 try {
@@ -311,11 +311,9 @@ export function remotionSpring(options: {
 
 export class ReelVideoRenderer {
   private fontsRegistered: boolean = false;
-  private ttsService: UnifiedTtsService;
 
   constructor() {
     this.registerFonts();
-    this.ttsService = new UnifiedTtsService();
   }
 
   private registerFonts(): void {
@@ -592,25 +590,7 @@ export class ReelVideoRenderer {
     }
     const tempFile = path.join(tempOutputDir, `reel_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`);
 
-    // 3B. Synthesize voiceover reading the description (or headline if description is empty)
     let voiceoverBuffer = input.voiceoverBuffer || null;
-    const textToSpeak = (input.description && input.description.trim()) ? input.description : headline;
-    if (!voiceoverBuffer && textToSpeak) {
-      const speechScript = this.ttsService.cleanDescription(textToSpeak, headline);
-      if (speechScript) {
-        try {
-          console.log(`[ReelVideoRenderer] 🎙️ Requesting speech voiceover for: "${speechScript.substring(0, 45)}..."`);
-          voiceoverBuffer = await this.ttsService.synthesize(speechScript, {
-            isEnglish,
-          });
-          if (voiceoverBuffer) {
-            console.log(`✓ [ReelVideoRenderer] Voiceover generated successfully (${voiceoverBuffer.length} bytes)!`);
-          }
-        } catch (ttsErr: any) {
-          console.warn('[ReelVideoRenderer] TTS note:', ttsErr.message);
-        }
-      }
-    }
 
     let tempVoiceFile: string | null = null;
     if (voiceoverBuffer && voiceoverBuffer.length > 500) {

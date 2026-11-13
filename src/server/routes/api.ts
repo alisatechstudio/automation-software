@@ -18,7 +18,6 @@ import { ArticleDedupeService } from '../../services/rss/dedupe.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
 import { InputPipelineService } from '../../services/pipeline/input-pipeline.js';
 import { TikTokClient } from '../../services/tiktok/client.js';
-import { UnifiedTtsService } from '../../services/tts/index.js';
 import { AVAILABLE_TEMPLATES, REEL_TEMPLATES, generateViralReelHashtags, generateViralShortsHashtags, generateTrendingNewsHashtags, isEnglishText } from '../../config/constants.js';
 import { config } from '../../config/env.js';
 
@@ -29,7 +28,6 @@ const renderer = new PlaywrightImageRenderer();
 const canvasRenderer = new CanvasCardRenderer();
 const reelRenderer = new ReelVideoRenderer();
 const ytClient = new YouTubeClient();
-const ttsService = new UnifiedTtsService();
 const dedupeService = new ArticleDedupeService();
 const gdriveReelService = new GDriveReelService();
 const inputPipeline = new InputPipelineService();
@@ -2245,7 +2243,6 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
       DISABLE_POSTER: 'true',
       REEL_DURATION_SECONDS: '30',
       DEFAULT_REEL_THEME: 'auto-category',
-      TTS_PROVIDER: 'gemini',
       GEMINI_API_KEY: config.GEMINI_API_KEY ? '••••••••' : '',
       YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID || '',
       YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET ? '••••••••' : '',
@@ -2257,82 +2254,6 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
     res.json(settingsMap);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// Text-to-Speech (Google Gemini API — Charon voice) Endpoints
-apiRouter.get('/tts/status', async (req: Request, res: Response) => {
-  try {
-    const result = await ttsService.testConnection();
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ available: false, error: err.message });
-  }
-});
-
-apiRouter.post('/tts/test', async (req: Request, res: Response) => {
-  try {
-    const text = (req.body.text || 'This is a test of the automated text-to-speech news reader.').trim();
-    const isEnglish = req.body.isEnglish !== undefined ? Boolean(req.body.isEnglish) : isEnglishText(text);
-    const audio = await ttsService.synthesize(text, {
-      isEnglish,
-      voice: req.body.voice,
-      model: req.body.model,
-      instructions: req.body.instructions,
-    });
-    if (!audio) {
-      res.status(503).json({
-        success: false,
-        error: 'TTS synthesis did not return audio. Please verify your TTS settings or network connection.',
-      });
-      return;
-    }
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Length', audio.length);
-    res.send(audio);
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-apiRouter.post('/tts/save-test-files', async (req: Request, res: Response) => {
-  try {
-    const publicDir = path.join(process.cwd(), 'public');
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true });
-    }
-
-    const tests = [
-      { name: 'test-mms-eng.wav', text: 'Hello, this is a test of the English MMS TTS voice.', isEnglish: true, model: undefined },
-      { name: 'test-mms-ben.wav', text: 'এটি বাংলা এমএমএস টিটিএস ভয়েসের একটি পরীক্ষা।', isEnglish: false, model: undefined },
-      { name: 'test-mms-hin.wav', text: 'यह हिंदी एमएमएस टीटीएस आवाज का एक परीक्षण है।', isEnglish: true, model: 'mms-hin' },
-    ];
-
-    const results: any[] = [];
-
-    for (const test of tests) {
-      try {
-        console.log(`[TTS Test] Generating ${test.name}...`);
-        const audio = await ttsService.synthesize(test.text, {
-          isEnglish: test.isEnglish,
-          model: test.model,
-        });
-        if (audio && audio.length > 500) {
-          const filePath = path.join(publicDir, test.name);
-          fs.writeFileSync(filePath, audio);
-          results.push({ file: test.name, size: audio.length, success: true, url: `/${test.name}` });
-        } else {
-          results.push({ file: test.name, success: false, error: 'No audio returned' });
-        }
-      } catch (err: any) {
-        results.push({ file: test.name, success: false, error: err.message });
-      }
-    }
-
-    res.json({ success: true, results, publicDir });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
 });
 
 apiRouter.post('/settings', async (req: Request, res: Response) => {
