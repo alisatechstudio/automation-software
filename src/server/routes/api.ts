@@ -15,6 +15,7 @@ import { FacebookTokenService } from '../../services/facebook/token.js';
 import { FacebookGraphClient } from '../../services/facebook/client.js';
 import { YouTubeClient } from '../../services/youtube/client.js';
 import { ArticleDedupeService } from '../../services/rss/dedupe.js';
+import { RssParserService } from '../../services/rss/parser.js';
 import { GDriveReelService } from '../../services/gdrive/service.js';
 import { InputPipelineService } from '../../services/pipeline/input-pipeline.js';
 import { TikTokClient } from '../../services/tiktok/client.js';
@@ -177,6 +178,94 @@ apiRouter.post('/sources', async (req: Request, res: Response) => {
     res.status(201).json({ success: true, id });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.put('/sources/:id', async (req: Request, res: Response) => {
+  const { name, url, page_id, template_id, is_active, gdrive_folder_url, reel_theme, reel_duration } = req.body;
+  if (!name || !url || !page_id) {
+    res.status(400).json({ error: 'Name, URL, and Facebook Page are required' });
+    return;
+  }
+
+  const db = getDatabase();
+  const folderUrlOrId = (gdrive_folder_url || req.body.gdriveFolderUrlOrId || '').trim();
+  const folderId = gdriveReelService.extractFolderId(folderUrlOrId);
+
+  try {
+    const updateFields: any = {
+      name: name.trim(),
+      url: url.trim(),
+      pageId: page_id,
+      templateId: template_id || 'template-trendingnews-breaking',
+      gdriveFolderUrlOrId: folderUrlOrId,
+      gdriveFolderId: folderId,
+      reelTheme: reel_theme || req.body.reelTheme || 'canva-studio-rotate',
+      reelDuration: parseInt(reel_duration || req.body.reelDuration || '30', 10) || 30,
+      updatedAt: new Date(),
+    };
+    if (is_active !== undefined) {
+      updateFields.isActive = Boolean(is_active);
+    }
+
+    const result = await db.collection<RssSource>('rss_sources').updateOne(
+      { _id: req.params.id },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      res.status(404).json({ error: 'Source pipeline not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/sources/:id/toggle', async (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const source = await db.collection<RssSource>('rss_sources').findOne({ _id: req.params.id });
+    if (!source) {
+      res.status(404).json({ error: 'Source not found' });
+      return;
+    }
+    const currentActive = source.isActive !== undefined ? source.isActive : ((source as any).is_active ?? true);
+    const newActive = !currentActive;
+    await db.collection<RssSource>('rss_sources').updateOne(
+      { _id: req.params.id },
+      { $set: { isActive: newActive, updatedAt: new Date() } }
+    );
+    res.json({ success: true, is_active: newActive });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/sources/test-feed', async (req: Request, res: Response) => {
+  const { url } = req.body;
+  if (!url || typeof url !== 'string' || !url.trim().startsWith('http')) {
+    res.status(400).json({ success: false, error: 'A valid http/https RSS feed URL is required' });
+    return;
+  }
+  try {
+    const parser = new RssParserService();
+    const articles = await parser.fetchAndParse(url.trim(), 5);
+    res.json({
+      success: true,
+      count: articles.length,
+      sampleArticles: articles.map((a) => ({
+        title: a.title,
+        category: a.category,
+        pubDate: a.pubDate,
+        imageUrl: a.imageUrl || null,
+        link: a.link,
+      })),
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message || 'Failed to fetch or parse RSS feed' });
   }
 });
 

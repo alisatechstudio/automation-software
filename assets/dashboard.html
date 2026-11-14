@@ -496,8 +496,8 @@
           <h3 class="text-sm font-bold text-white">Configured Feed Pipelines</h3>
           <div class="flex items-center gap-1.5 bg-slate-950/80 border border-red-800/40 rounded-lg px-2.5 py-1 text-[11px] font-mono text-red-300">
             <span class="text-slate-500">Cron:</span>
-            <span class="font-bold">/api/cron/rss</span>
-            <button onclick="copyCronUrl('/api/cron/rss', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
+            <span class="font-bold">/api/cron/input</span>
+            <button onclick="copyCronUrl('/api/cron/input', this)" class="text-[10px] text-red-400 hover:text-white px-1.5 py-0.5 rounded bg-red-950 hover:bg-red-800 border border-red-700/50 transition">Copy</button>
           </div>
         </div>
         <div id="sources-list" class="space-y-2">
@@ -2471,7 +2471,7 @@
 
   <!-- Add RSS Source Popup Modal -->
   <div id="modal-add-source" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
-    <div class="glass-panel w-full max-w-lg p-4 sm:p-6 rounded-2xl border border-red-500/30 shadow-2xl space-y-4">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-6 rounded-2xl border border-red-500/30 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center font-bold text-sm">📡</div>
@@ -2489,8 +2489,12 @@
           <input type="text" id="source-name" required placeholder="e.g. BD News 24/7 or Prothom Alo" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition">
         </div>
         <div>
-          <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">RSS Feed URL <span class="text-rose-400">*</span></label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-semibold text-slate-300 uppercase font-mono">RSS Feed URL <span class="text-rose-400">*</span></label>
+            <button type="button" onclick="testSourceFeedUrl('source-url', 'source-test-result')" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-mono underline">🔍 Test Feed</button>
+          </div>
           <input type="url" id="source-url" required placeholder="https://example.com/rss.xml" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 transition font-mono">
+          <div id="source-test-result" class="hidden mt-1 p-2 rounded bg-slate-950 border border-slate-800 text-[11px] font-mono"></div>
         </div>
         <div>
           <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Facebook Page <span class="text-rose-400">*</span></label>
@@ -2507,7 +2511,11 @@
           <div>
             <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Reel Visual Theme</label>
             <select id="source-reel-theme" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
-              <option value="auto-category" selected>⚡ Auto Category-Themed</option>
+              <option value="canva-studio-rotate" selected>🔄 Canva Studio Rotation (A ➔ B ➔ C)</option>
+              <option value="canva-studio-a">👤 Canva Studio A (Fullscreen Presenter)</option>
+              <option value="canva-studio-b">🎥 Canva Studio B (Studio Split)</option>
+              <option value="canva-studio-c">🎬 Canva Studio C (Intro ➔ Photo ➔ Outro)</option>
+              <option value="auto-category">⚡ Auto Category-Themed</option>
               <option value="studio-red">Studio Red (Broadcast)</option>
               <option value="breaking-bold">Breaking Bold (Crimson)</option>
               <option value="dark-cinema">Dark Cinema (Minimal)</option>
@@ -2533,12 +2541,137 @@
             </select>
           </div>
         </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Reel Duration</label>
+          <select id="source-reel-duration" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 transition">
+            <option value="15">15 Seconds (Fast Hook)</option>
+            <option value="30" selected>30 Seconds (Standard News)</option>
+            <option value="45">45 Seconds (In-Depth)</option>
+            <option value="60">60 Seconds (Full Story)</option>
+          </select>
+        </div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-800">
           <button type="button" onclick="closeAddSourceModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Cancel</button>
           <button type="submit" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-glow-red transition active:scale-95">Save Source Pipeline</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Edit RSS Source Popup Modal -->
+  <div id="modal-edit-source" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-4 sm:p-6 rounded-2xl border border-cyan-500/30 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold text-sm">✏️</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Edit RSS News Source</h3>
+            <p class="text-[10px] text-slate-400">Update feed pipeline settings, linked Drive folder & visual theme</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeEditSourceModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form id="edit-source-form" onsubmit="handleEditSource(event)" class="space-y-3">
+        <input type="hidden" id="edit-source-id">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Source Name <span class="text-rose-400">*</span></label>
+          <input type="text" id="edit-source-name" required placeholder="e.g. BD News 24/7 or Prothom Alo" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition">
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-semibold text-slate-300 uppercase font-mono">RSS Feed URL <span class="text-rose-400">*</span></label>
+            <button type="button" onclick="testSourceFeedUrl('edit-source-url', 'edit-source-test-result')" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-mono underline">🔍 Test Feed</button>
+          </div>
+          <input type="url" id="edit-source-url" required placeholder="https://example.com/rss.xml" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition font-mono">
+          <div id="edit-source-test-result" class="hidden mt-1 p-2 rounded bg-slate-950 border border-slate-800 text-[11px] font-mono"></div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Target Facebook Page <span class="text-rose-400">*</span></label>
+          <select id="edit-source-page" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+            <option value="">Select Connected Page</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Linked Google Drive Folder (URL / ID)</label>
+          <input type="text" id="edit-source-gdrive-folder" placeholder="https://drive.google.com/drive/folders/... or Folder ID" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition font-mono">
+          <p class="text-[10px] text-slate-500 mt-0.5">Stage 1 saves reels to this folder. If empty, uses Page default Drive folder.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Reel Visual Theme</label>
+            <select id="edit-source-reel-theme" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+              <option value="canva-studio-rotate">🔄 Canva Studio Rotation (A ➔ B ➔ C)</option>
+              <option value="canva-studio-a">👤 Canva Studio A (Fullscreen Presenter)</option>
+              <option value="canva-studio-b">🎥 Canva Studio B (Studio Split)</option>
+              <option value="canva-studio-c">🎬 Canva Studio C (Intro ➔ Photo ➔ Outro)</option>
+              <option value="auto-category">⚡ Auto Category-Themed</option>
+              <option value="studio-red">Studio Red (Broadcast)</option>
+              <option value="breaking-bold">Breaking Bold (Crimson)</option>
+              <option value="dark-cinema">Dark Cinema (Minimal)</option>
+              <option value="viral-gradient">Viral Gradient (Engagement)</option>
+              <option value="rolling">Rolling Round-Robin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Design Template</label>
+            <select id="edit-source-template" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+              <optgroup label="🇺🇸 Trending News World (English / USA)">
+                <option value="template-trendingnews-breaking">Trending News - Breaking (1080x1080)</option>
+                <option value="template-trendingnews-editorial">Trending News - Editorial (1080x1080)</option>
+                <option value="template-trendingnews-viral">Trending News - Viral (1080x1080)</option>
+                <option value="template-trendingnews-landscape">Trending News - Landscape (1200x630)</option>
+              </optgroup>
+              <optgroup label="🇧🇩 BD News 24/7 (Bangla)">
+                <option value="template-canva-bdnews">BD News 24/7 Red (Canva)</option>
+                <option value="template-square-breaking">Square Breaking (1080x1080)</option>
+                <option value="template-square-editorial">Square Editorial (1080x1080)</option>
+                <option value="template-landscape-standard">Landscape Share (1200x630)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1 uppercase font-mono">Reel Duration</label>
+            <select id="edit-source-reel-duration" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 transition">
+              <option value="15">15 Seconds (Fast Hook)</option>
+              <option value="30" selected>30 Seconds (Standard News)</option>
+              <option value="45">45 Seconds (In-Depth)</option>
+              <option value="60">60 Seconds (Full Story)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 pt-5">
+            <input type="checkbox" id="edit-source-active" class="w-4 h-4 rounded text-cyan-600 bg-slate-950 border-slate-700 focus:ring-0">
+            <label for="edit-source-active" class="text-xs text-slate-200 font-semibold cursor-pointer">Pipeline Active (Scheduled Polls)</label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeEditSourceModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 text-xs hover:bg-slate-800 transition">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow transition active:scale-95">Update Source Pipeline</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Test Feed Preview Modal -->
+  <div id="modal-test-feed" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-xl p-4 sm:p-6 rounded-2xl border border-purple-500/30 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold text-sm">🔍</div>
+          <div>
+            <h3 id="test-feed-modal-title" class="text-sm font-bold text-white">Live RSS Feed Inspection</h3>
+            <p id="test-feed-modal-url" class="text-[10px] text-slate-400 font-mono truncate max-w-sm"></p>
+          </div>
+        </div>
+        <button type="button" onclick="closeTestFeedModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+      <div id="test-feed-modal-content" class="space-y-3">
+        <div class="text-xs text-slate-500 font-mono">Inspecting feed...</div>
+      </div>
     </div>
   </div>
 

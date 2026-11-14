@@ -275,18 +275,39 @@
       if (labelEl) labelEl.innerText = tabNameLabel;
     }
 
-    // Modal Add Source Functions
-    function openAddSourceModal() {
+    // Modal Source Functions
+    async function populateSourcePageSelects(selectedPageId) {
+      if (!pagesData || pagesData.length === 0) {
+        const pRes = await safeFetchJson('/api/pages');
+        pagesData = (pRes.ok && Array.isArray(pRes.data)) ? pRes.data : [];
+      }
+      const pageOptions = '<option value="">Select Connected Page</option>' +
+        pagesData.map(p => '<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>').join('');
+
+      const addSelect = document.getElementById('source-page');
+      if (addSelect) {
+        const curVal = addSelect.value;
+        addSelect.innerHTML = pageOptions;
+        if (curVal) addSelect.value = curVal;
+      }
+
+      const editSelect = document.getElementById('edit-source-page');
+      if (editSelect) {
+        editSelect.innerHTML = pageOptions;
+        if (selectedPageId) editSelect.value = selectedPageId;
+      }
+    }
+
+    async function openAddSourceModal() {
       const modal = document.getElementById('modal-add-source');
       if (modal) {
         modal.classList.remove('hidden');
-        if (typeof pagesData !== 'undefined' && pagesData.length > 0) {
-          const pageSelect = document.getElementById('source-page');
-          if (pageSelect && pageSelect.options.length <= 1) {
-            pageSelect.innerHTML = '<option value="">Select Connected Page</option>' +
-              pagesData.map(p => '<option value="' + p.id + '">' + p.name + ' (' + p.id + ')</option>').join('');
-          }
+        const testRes = document.getElementById('source-test-result');
+        if (testRes) {
+          testRes.classList.add('hidden');
+          testRes.innerHTML = '';
         }
+        await populateSourcePageSelects();
       }
     }
 
@@ -300,6 +321,185 @@
       if (modal) modal.classList.add('hidden');
     }
 
+    async function openEditSourceModal(id) {
+      const s = sourcesData.find(item => item.id === id);
+      if (!s) return;
+      const modal = document.getElementById('modal-edit-source');
+      if (!modal) return;
+
+      document.getElementById('edit-source-id').value = s.id;
+      document.getElementById('edit-source-name').value = s.name || '';
+      document.getElementById('edit-source-url').value = s.url || '';
+      document.getElementById('edit-source-gdrive-folder').value = s.gdrive_folder_url || s.gdrive_folder_id || '';
+      
+      const themeSelect = document.getElementById('edit-source-reel-theme');
+      if (themeSelect) themeSelect.value = s.reel_theme || 'canva-studio-rotate';
+
+      const tplSelect = document.getElementById('edit-source-template');
+      if (tplSelect) tplSelect.value = s.template_id || 'template-trendingnews-breaking';
+
+      const durSelect = document.getElementById('edit-source-reel-duration');
+      if (durSelect) durSelect.value = String(s.reel_duration || 30);
+
+      const activeCheck = document.getElementById('edit-source-active');
+      if (activeCheck) activeCheck.checked = s.is_active !== false;
+
+      const testRes = document.getElementById('edit-source-test-result');
+      if (testRes) {
+        testRes.classList.add('hidden');
+        testRes.innerHTML = '';
+      }
+
+      await populateSourcePageSelects(s.page_id);
+      modal.classList.remove('hidden');
+    }
+
+    function closeEditSourceModal() {
+      const modal = document.getElementById('modal-edit-source');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function handleEditSource(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-source-id').value;
+      if (!id) return;
+
+      const payload = {
+        name: document.getElementById('edit-source-name').value,
+        url: document.getElementById('edit-source-url').value,
+        page_id: document.getElementById('edit-source-page').value,
+        template_id: document.getElementById('edit-source-template').value,
+        gdrive_folder_url: document.getElementById('edit-source-gdrive-folder') ? document.getElementById('edit-source-gdrive-folder').value : '',
+        reel_theme: document.getElementById('edit-source-reel-theme') ? document.getElementById('edit-source-reel-theme').value : 'canva-studio-rotate',
+        reel_duration: document.getElementById('edit-source-reel-duration') ? document.getElementById('edit-source-reel-duration').value : '30',
+        is_active: document.getElementById('edit-source-active') ? document.getElementById('edit-source-active').checked : true,
+      };
+
+      const res = await safeFetchJson('/api/sources/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok && res.data?.success) {
+        showToast('✓ Source pipeline updated successfully!');
+        closeEditSourceModal();
+        loadSources();
+      } else {
+        showToast(res.data?.error || 'Failed to update source pipeline', true);
+      }
+    }
+
+    async function toggleSourceStatus(id) {
+      const res = await safeFetchJson('/api/sources/' + id + '/toggle', { method: 'POST' });
+      if (res.ok && res.data?.success) {
+        const statusText = res.data.is_active ? 'Active (Scheduled)' : 'Paused';
+        showToast('Source status changed: ' + statusText);
+        loadSources();
+      } else {
+        showToast(res.data?.error || 'Failed to toggle source status', true);
+      }
+    }
+
+    async function testSourceFeedUrl(inputId, resultContainerId) {
+      const input = document.getElementById(inputId);
+      const resultBox = document.getElementById(resultContainerId);
+      if (!input || !resultBox) return;
+
+      const url = (input.value || '').trim();
+      if (!url || !url.startsWith('http')) {
+        resultBox.classList.remove('hidden');
+        resultBox.className = 'mt-1.5 p-2 rounded bg-rose-950/80 border border-rose-800 text-rose-300 text-[11px] font-mono';
+        resultBox.innerHTML = '⚠️ Please enter a valid HTTP/HTTPS feed URL first.';
+        return;
+      }
+
+      resultBox.classList.remove('hidden');
+      resultBox.className = 'mt-1.5 p-2 rounded bg-slate-900 border border-cyan-800 text-cyan-300 text-[11px] font-mono flex items-center gap-2';
+      resultBox.innerHTML = '<span class="animate-spin inline-block">⏳</span> Fetching & validating RSS feed XML...';
+
+      const res = await safeFetchJson('/api/sources/test-feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      if (res.ok && res.data?.success) {
+        const count = res.data.count || 0;
+        const first = res.data.sampleArticles && res.data.sampleArticles[0];
+        resultBox.className = 'mt-1.5 p-2 rounded bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 text-[11px] font-mono space-y-1';
+        resultBox.innerHTML = '<div class="font-bold flex items-center gap-1.5 text-emerald-200">' +
+          '<span>✓ Feed Valid!</span>' +
+          '<span class="px-1.5 py-0.2 rounded bg-emerald-900 text-[10px] text-emerald-300">' + count + ' articles found</span>' +
+          '</div>' +
+          (first ? '<div class="text-[10px] text-slate-300 truncate">Latest: "' + first.title + '" (' + (first.category || 'General') + ')</div>' : '');
+      } else {
+        resultBox.className = 'mt-1.5 p-2 rounded bg-rose-950/80 border border-rose-800 text-rose-300 text-[11px] font-mono';
+        resultBox.innerHTML = '✕ Feed test failed: ' + (res.data?.error || res.error || 'Check feed URL or network connectivity');
+      }
+    }
+
+    async function inspectFeed(sourceId) {
+      const s = sourcesData.find(item => item.id === sourceId);
+      if (!s) return;
+
+      const modal = document.getElementById('modal-test-feed');
+      const titleEl = document.getElementById('test-feed-modal-title');
+      const urlEl = document.getElementById('test-feed-modal-url');
+      const contentEl = document.getElementById('test-feed-modal-content');
+      if (!modal || !contentEl) return;
+
+      if (titleEl) titleEl.innerText = 'Inspecting: ' + s.name;
+      if (urlEl) urlEl.innerText = s.url;
+      contentEl.innerHTML = '<div class="p-6 text-center text-xs text-cyan-400 font-mono flex items-center justify-center gap-2">' +
+        '<span class="animate-spin">⏳</span> Fetching live feed XML from source...</div>';
+      modal.classList.remove('hidden');
+
+      const res = await safeFetchJson('/api/sources/test-feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: s.url })
+      });
+
+      if (res.ok && res.data?.success && Array.isArray(res.data.sampleArticles)) {
+        if (res.data.sampleArticles.length === 0) {
+          contentEl.innerHTML = '<div class="p-4 rounded-lg bg-slate-900 border border-slate-800 text-xs text-amber-400 font-mono">' +
+            'Feed parsed successfully, but no news articles were returned. Check feed publication timestamps.</div>';
+          return;
+        }
+
+        contentEl.innerHTML = '<div class="space-y-2">' +
+          '<div class="text-[11px] text-slate-400 font-mono pb-1 border-b border-slate-800 flex items-center justify-between">' +
+            '<span>Showing latest ' + res.data.sampleArticles.length + ' articles:</span>' +
+            '<span class="text-emerald-400 font-bold">Total found: ' + res.data.count + '</span>' +
+          '</div>' +
+          res.data.sampleArticles.map((art, idx) => {
+            const dateStr = art.pubDate ? new Date(art.pubDate).toLocaleString() : 'Unknown date';
+            const imgBadge = art.imageUrl ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">📸 Photo Available</span>' : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 text-slate-500">No Image</span>';
+            return '<div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition space-y-1">' +
+              '<div class="flex items-center justify-between gap-2">' +
+                '<span class="text-[10px] font-mono text-cyan-400 font-bold">#' + (idx + 1) + ' [' + (art.category || 'General') + ']</span>' +
+                '<span class="text-[10px] font-mono text-slate-500">' + dateStr + '</span>' +
+              '</div>' +
+              '<div class="text-xs font-semibold text-slate-200">' + art.title + '</div>' +
+              '<div class="flex items-center justify-between gap-2 pt-1 text-[10px]">' +
+                imgBadge +
+                '<a href="' + art.link + '" target="_blank" class="text-cyan-400 hover:underline truncate max-w-xs">Open Article ↗</a>' +
+              '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      } else {
+        contentEl.innerHTML = '<div class="p-4 rounded-lg bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-mono">' +
+          'Failed to inspect feed: ' + (res.data?.error || res.error || 'Could not parse RSS XML') + '</div>';
+      }
+    }
+
+    function closeTestFeedModal() {
+      const modal = document.getElementById('modal-test-feed');
+      if (modal) modal.classList.add('hidden');
+    }
+
     // Close dropdowns on outside click or Escape
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.nav-dropdown-group')) {
@@ -310,6 +510,8 @@
       if (e.key === 'Escape') {
         closeAllNavDropdowns();
         closeAddSourceModal();
+        closeEditSourceModal();
+        closeTestFeedModal();
       }
     });
 
@@ -763,33 +965,74 @@
       const start = (page - 1) * SOURCES_PAGE_SIZE;
       const pageSources = sourcesData.slice(start, start + SOURCES_PAGE_SIZE);
 
+      // Update count badge
+      const countBadge = document.getElementById('sources-count-badge');
+      if (countBadge) {
+        const activeCount = sourcesData.filter(s => s.is_active !== false).length;
+        countBadge.innerText = activeCount + ' Active / ' + total + ' Total Sources';
+      }
+
       if (total === 0) {
-        list.innerHTML = '<div class="text-xs text-slate-500 font-mono py-4">No RSS sources added yet.</div>';
+        list.innerHTML = '<div class="text-xs text-slate-500 font-mono py-6 text-center bg-slate-950/40 rounded-xl border border-slate-800/60">' +
+          '<div class="text-2xl mb-2">📡</div>' +
+          '<div class="font-bold text-slate-400">No RSS news feeds configured yet.</div>' +
+          '<div class="text-[11px] text-slate-500 mt-1">Click "➕ Add RSS Source" to connect your first feed.</div>' +
+          '</div>';
         renderPagination('sources-pagination', 1, 0, 0, 'changeSourcesPage', SOURCES_PAGE_SIZE);
         return;
       }
 
       list.innerHTML = pageSources.map(s => {
-        const driveLabel = s.gdrive_folder_url
-          ? '📁 Drive: ' + (s.gdrive_folder_id || s.gdrive_folder_url.slice(0, 20))
-          : '📁 Drive: Page Default';
-        const themeLabel = s.reel_theme || 'auto-category';
-        return '<div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 hover:border-slate-700 transition space-y-2">' +
-          '<div class="flex items-center justify-between">' +
-            '<div class="min-w-0 flex-1 pr-3">' +
-              '<div class="font-bold text-xs text-slate-100 flex items-center gap-1.5 truncate">' +
-                '<span>' + s.name + '</span>' +
-                '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-800/50">Active</span>' +
-                '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">' + driveLabel + '</span>' +
+        const isActive = s.is_active !== false;
+        const statusBadge = isActive
+          ? '<button onclick="toggleSourceStatus(\'' + s.id + '\')" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900 transition flex items-center gap-1 shadow-sm" title="Click to pause automated polls for this feed"><span>●</span> Active</button>'
+          : '<button onclick="toggleSourceStatus(\'' + s.id + '\')" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/80 text-amber-300 border border-amber-700/60 hover:bg-amber-900 transition flex items-center gap-1 shadow-sm" title="Click to enable automated polls for this feed"><span>⏸</span> Paused</button>';
+
+        let driveBadge = '<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-900 text-slate-400 border border-slate-800">📁 Default Page Drive</span>';
+        if (s.gdrive_folder_url || s.gdrive_folder_id) {
+          const driveLink = s.gdrive_folder_url && s.gdrive_folder_url.startsWith('http')
+            ? s.gdrive_folder_url
+            : 'https://drive.google.com/drive/folders/' + (s.gdrive_folder_id || s.gdrive_folder_url);
+          const driveDisplay = s.gdrive_folder_id || 'Linked Folder';
+          driveBadge = '<a href="' + driveLink + '" target="_blank" class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-950/80 text-emerald-300 hover:text-emerald-100 border border-emerald-800/60 underline flex items-center gap-1 transition" title="Open Google Drive folder in new tab">📁 ' + driveDisplay + ' ↗</a>';
+        }
+
+        let themePretty = s.reel_theme || 'canva-studio-rotate';
+        if (themePretty === 'canva-studio-rotate') themePretty = '🔄 Canva Rotation';
+        else if (themePretty === 'canva-studio-a') themePretty = '👤 Canva Presenter';
+        else if (themePretty === 'canva-studio-b') themePretty = '🎥 Canva Split';
+        else if (themePretty === 'canva-studio-c') themePretty = '🎬 Canva Intro/Outro';
+        else if (themePretty === 'auto-category') themePretty = '⚡ Auto Category';
+
+        const durationSec = s.reel_duration || 30;
+
+        return '<div class="p-3.5 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-slate-700 transition space-y-2.5 shadow-sm">' +
+          '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">' +
+            '<div class="min-w-0 flex-1">' +
+              '<div class="font-bold text-xs text-slate-100 flex flex-wrap items-center gap-1.5">' +
+                '<span class="text-white text-sm">' + s.name + '</span>' +
+                statusBadge +
+                driveBadge +
               '</div>' +
-              '<div class="text-[11px] text-slate-400 font-mono truncate mt-0.5">' + s.url + '</div>' +
-              '<div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Page: ' + (s.page_name || s.page_id) + ' | Theme: ' + themeLabel + ' | Template: ' + s.template_id + '</div>' +
+              '<div class="flex items-center gap-2 mt-1 text-[11px] font-mono">' +
+                '<a href="' + s.url + '" target="_blank" class="text-cyan-400 hover:text-cyan-300 hover:underline truncate max-w-md block" title="Open RSS Feed URL">' + s.url + ' ↗</a>' +
+              '</div>' +
+              '<div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 font-mono mt-1">' +
+                '<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-300">📄 ' + (s.page_name || s.page_id) + '</span>' +
+                '<span class="px-1.5 py-0.2 rounded bg-purple-950/60 border border-purple-800/50 text-purple-300 font-bold">' + themePretty + '</span>' +
+                '<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">🖼️ ' + s.template_id + '</span>' +
+                '<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-amber-300">⏱️ ' + durationSec + 's</span>' +
+              '</div>' +
             '</div>' +
-            '<button data-id="' + s.id + '" onclick="deleteSource(this.dataset.id)" class="text-xs text-rose-400 hover:text-rose-300 px-2.5 py-1 bg-rose-950/40 rounded border border-rose-800/50 transition shrink-0">Delete</button>' +
+            '<div class="flex items-center gap-1.5 shrink-0 self-end sm:self-start">' +
+              '<button onclick="inspectFeed(\'' + s.id + '\')" class="text-xs text-purple-300 hover:text-purple-100 px-2.5 py-1 bg-purple-950/50 hover:bg-purple-900/60 rounded-lg border border-purple-800/60 transition flex items-center gap-1 active:scale-95 shadow" title="Inspect latest live articles from this feed"><span>🔍</span> Inspect</button>' +
+              '<button onclick="openEditSourceModal(\'' + s.id + '\')" class="text-xs text-cyan-300 hover:text-cyan-100 px-2.5 py-1 bg-cyan-950/50 hover:bg-cyan-900/60 rounded-lg border border-cyan-800/60 transition flex items-center gap-1 active:scale-95 shadow" title="Edit source configuration"><span>✏️</span> Edit</button>' +
+              '<button onclick="deleteSource(\'' + s.id + '\')" class="text-xs text-rose-400 hover:text-rose-200 px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 rounded-lg border border-rose-800/50 transition flex items-center gap-1 active:scale-95" title="Delete source"><span>🗑️</span></button>' +
+            '</div>' +
           '</div>' +
           '<div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 text-[10px]">' +
             '<div class="flex items-center gap-1.5 min-w-0">' +
-              '<span class="font-bold text-cyan-400 shrink-0">📥 Dedicated Webhook:</span>' +
+              '<span class="font-bold text-cyan-400 shrink-0">📥 Webhook:</span>' +
               '<code class="px-1.5 py-0.5 rounded bg-slate-900 text-cyan-300 font-mono border border-slate-800 truncate">/api/cron/input?sourceId=' + s.id + '</code>' +
             '</div>' +
             '<div class="flex items-center gap-1 shrink-0">' +
@@ -810,6 +1053,7 @@
       ]);
       sourcesData = (sRes.ok && Array.isArray(sRes.data)) ? sRes.data : [];
       const pages = (pRes.ok && Array.isArray(pRes.data)) ? pRes.data : [];
+      pagesData = pages;
 
       const pageSelect = document.getElementById('source-page');
       if (pageSelect) {
@@ -829,7 +1073,8 @@
         page_id: document.getElementById('source-page').value,
         template_id: document.getElementById('source-template').value,
         gdrive_folder_url: document.getElementById('source-gdrive-folder') ? document.getElementById('source-gdrive-folder').value : '',
-        reel_theme: document.getElementById('source-reel-theme') ? document.getElementById('source-reel-theme').value : 'auto-category',
+        reel_theme: document.getElementById('source-reel-theme') ? document.getElementById('source-reel-theme').value : 'canva-studio-rotate',
+        reel_duration: document.getElementById('source-reel-duration') ? document.getElementById('source-reel-duration').value : '30',
       };
 
       const res = await safeFetchJson('/api/sources', {
@@ -838,8 +1083,13 @@
         body: JSON.stringify(payload)
       });
       if (res.data?.success) {
-        showToast('Source added successfully with linked Drive folder!');
+        showToast('✓ Source added successfully with linked Drive folder!');
         document.getElementById('add-source-form').reset();
+        const testRes = document.getElementById('source-test-result');
+        if (testRes) {
+          testRes.classList.add('hidden');
+          testRes.innerHTML = '';
+        }
         closeAddSourceModal();
         loadSources();
       } else {
@@ -848,9 +1098,13 @@
     }
 
     async function deleteSource(id) {
-      if (!confirm('Delete this source?')) return;
-      await safeFetchJson('/api/sources/' + id, { method: 'DELETE' });
-      showToast('Source deleted');
+      if (!confirm('Are you sure you want to delete this RSS source pipeline?')) return;
+      const res = await safeFetchJson('/api/sources/' + id, { method: 'DELETE' });
+      if (res.ok && res.data?.success) {
+        showToast('Source deleted successfully');
+      } else {
+        showToast(res.data?.error || 'Failed to delete source', true);
+      }
       loadSources();
     }
 
