@@ -7,6 +7,7 @@ import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 import { UnifiedTtsService } from '../tts/index.js';
+import { LipSyncEngine } from './lipsync.js';
 
 
 let ffmpegPath: string = '';
@@ -694,6 +695,22 @@ export class ReelVideoRenderer {
 
     const totalFrames = durationSeconds * fps;
 
+    // 3b. Solve audio-driven lip sync trajectory for Canva Studio male presenter
+    let lipSyncFrames: number[] = [];
+    if (isCanvaTheme && anchorImages.length > 0) {
+      try {
+        const lipSyncEngine = LipSyncEngine.getInstance();
+        lipSyncFrames = lipSyncEngine.solveLipSyncTrajectory(
+          tempVoiceFile || voiceoverBuffer,
+          totalFrames,
+          fps
+        );
+        console.log(`[ReelVideoRenderer] ✓ Audio-driven lip sync solved (${lipSyncFrames.length} frames)`);
+      } catch (lipErr: any) {
+        console.warn('[ReelVideoRenderer] Lip sync calculation warning:', lipErr?.message || lipErr);
+      }
+    }
+
     // 4. Configure FFmpeg spawn arguments with high-speed raw RGBA video streaming
     const numThreads = Math.min(4, os.cpus()?.length || 2);
     const ffmpegArgs = [
@@ -805,10 +822,10 @@ export class ReelVideoRenderer {
       if (needsScale) {
         ctx.save();
         ctx.scale(scaleX, scaleY);
-        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
         ctx.restore();
       } else {
-        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       }
 
       // Zero-copy raw RGBA buffer directly from canvas memory (0ms latency, zero compression overhead)
@@ -928,23 +945,24 @@ export class ReelVideoRenderer {
     category: string,
     website: string,
     isEnglish: boolean = false,
-    anchorImages: any[] = []
+    anchorImages: any[] = [],
+    lipSyncFrames: number[] = []
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
 
     if (height >= 1280 || height > width || theme === 'vertical-916') {
-      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
 
@@ -1092,7 +1110,8 @@ export class ReelVideoRenderer {
     category: string,
     website: string,
     isEnglish: boolean = false,
-    anchorImages: any[] = []
+    anchorImages: any[] = [],
+    lipSyncFrames: number[] = []
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1113,8 +1132,11 @@ export class ReelVideoRenderer {
     ctx.fillRect(0, 0, width, height);
 
     // 2. Full-Bleed Vertical Anchor / Story Visual Stage (Y: 0 to 1320)
+    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
+      ? lipSyncFrames[f]
+      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
     const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
+      ? anchorImages[anchorFrameIndex]
       : null;
 
     const stageH = 1320;
@@ -1387,7 +1409,8 @@ export class ReelVideoRenderer {
     category: string,
     website: string,
     isEnglish: boolean = false,
-    anchorImages: any[] = []
+    anchorImages: any[] = [],
+    lipSyncFrames: number[] = []
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1475,8 +1498,11 @@ export class ReelVideoRenderer {
     const anchorW = width - 80;
     const anchorX = 40;
 
+    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
+      ? lipSyncFrames[f]
+      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
     const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
+      ? anchorImages[anchorFrameIndex]
       : null;
 
     if (anchorImg) {
@@ -1744,7 +1770,8 @@ export class ReelVideoRenderer {
     category: string,
     website: string,
     isEnglish: boolean = false,
-    anchorImages: any[] = []
+    anchorImages: any[] = [],
+    lipSyncFrames: number[] = []
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1775,8 +1802,11 @@ export class ReelVideoRenderer {
     const stageW = width - 80;
     const stageX = 40;
 
+    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
+      ? lipSyncFrames[f]
+      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
     const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
+      ? anchorImages[anchorFrameIndex]
       : null;
 
     ctx.save();
@@ -2046,18 +2076,19 @@ export class ReelVideoRenderer {
     category: string,
     website: string,
     isEnglish: boolean = false,
-    anchorImages: any[] = []
+    anchorImages: any[] = [],
+    lipSyncFrames: number[] = []
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
       return;
     }
 
