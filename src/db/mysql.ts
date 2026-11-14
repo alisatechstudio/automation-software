@@ -18,6 +18,14 @@ export const ALL_COLLECTIONS = [
   'youtube_channels',
   'gdrive_reel_configs',
   'settings',
+  'facebook_groups',
+  'reel_logs',
+  'post_logs',
+  'story_logs',
+  'youtube_upload_logs',
+  'tiktok_upload_logs',
+  'group_share_logs',
+  'jobs',
 ];
 
 function toSqlDateTime(date: Date): string {
@@ -70,7 +78,23 @@ export function matchesFilter(doc: any, filter: any): boolean {
       continue;
     }
 
-    const actual = doc ? doc[key] : undefined;
+    let actual = doc ? doc[key] : undefined;
+    if (actual === undefined && doc) {
+      if (key === 'isActive') actual = doc.is_active;
+      else if (key === 'is_active') actual = doc.isActive;
+      else if (key === 'reelTheme') actual = doc.reel_theme;
+      else if (key === 'reel_theme') actual = doc.reelTheme;
+      else if (key === 'pageId') actual = doc.page_id;
+      else if (key === 'page_id') actual = doc.pageId;
+      else if (key === 'templateId') actual = doc.template_id;
+      else if (key === 'template_id') actual = doc.templateId;
+      else if (key === 'reelDuration') actual = doc.reel_duration;
+      else if (key === 'reel_duration') actual = doc.reelDuration;
+      else if (key === 'gdriveFolderUrlOrId') actual = doc.gdrive_folder_url || doc.gdrive_folder_id;
+      else if (key === 'gdrive_folder_url') actual = doc.gdriveFolderUrlOrId;
+      else if (key === 'gdriveFolderId') actual = doc.gdrive_folder_id;
+      else if (key === 'gdrive_folder_id') actual = doc.gdriveFolderId;
+    }
 
     if (expected !== null && typeof expected === 'object' && !(expected instanceof Date)) {
       if ('$ne' in expected && actual === expected.$ne) return false;
@@ -127,6 +151,63 @@ export function applyUpdate(doc: any, update: any, isInsert: boolean = false): a
     for (const k of Object.keys(update.$set)) {
       doc[k] = update.$set[k];
     }
+
+    // Cross-synchronize camelCase & snake_case pairs based on what is being set
+    if (update.$set.reelTheme !== undefined) {
+      doc.reel_theme = update.$set.reelTheme;
+      doc.reelTheme = update.$set.reelTheme;
+    } else if (update.$set.reel_theme !== undefined) {
+      doc.reelTheme = update.$set.reel_theme;
+      doc.reel_theme = update.$set.reel_theme;
+    }
+
+    if (update.$set.isActive !== undefined) {
+      doc.is_active = update.$set.isActive;
+      doc.isActive = update.$set.isActive;
+    } else if (update.$set.is_active !== undefined) {
+      doc.isActive = update.$set.is_active;
+      doc.is_active = update.$set.is_active;
+    }
+
+    if (update.$set.pageId !== undefined) {
+      doc.page_id = update.$set.pageId;
+      doc.pageId = update.$set.pageId;
+    } else if (update.$set.page_id !== undefined) {
+      doc.pageId = update.$set.page_id;
+      doc.page_id = update.$set.page_id;
+    }
+
+    if (update.$set.templateId !== undefined) {
+      doc.template_id = update.$set.templateId;
+      doc.templateId = update.$set.templateId;
+    } else if (update.$set.template_id !== undefined) {
+      doc.templateId = update.$set.template_id;
+      doc.template_id = update.$set.template_id;
+    }
+
+    if (update.$set.reelDuration !== undefined) {
+      doc.reel_duration = update.$set.reelDuration;
+      doc.reelDuration = update.$set.reelDuration;
+    } else if (update.$set.reel_duration !== undefined) {
+      doc.reelDuration = update.$set.reel_duration;
+      doc.reel_duration = update.$set.reel_duration;
+    }
+
+    if (update.$set.gdriveFolderUrlOrId !== undefined) {
+      doc.gdrive_folder_url = update.$set.gdriveFolderUrlOrId;
+      doc.gdriveFolderUrlOrId = update.$set.gdriveFolderUrlOrId;
+    } else if (update.$set.gdrive_folder_url !== undefined) {
+      doc.gdriveFolderUrlOrId = update.$set.gdrive_folder_url;
+      doc.gdrive_folder_url = update.$set.gdrive_folder_url;
+    }
+
+    if (update.$set.gdriveFolderId !== undefined) {
+      doc.gdrive_folder_id = update.$set.gdriveFolderId;
+      doc.gdriveFolderId = update.$set.gdriveFolderId;
+    } else if (update.$set.gdrive_folder_id !== undefined) {
+      doc.gdriveFolderId = update.$set.gdrive_folder_id;
+      doc.gdrive_folder_id = update.$set.gdrive_folder_id;
+    }
   }
 
   if (update.$inc) {
@@ -146,6 +227,7 @@ export function applyUpdate(doc: any, update: any, isInsert: boolean = false): a
   }
 
   doc.updatedAt = new Date();
+  doc.updated_at = doc.updatedAt;
   return doc;
 }
 
@@ -215,6 +297,20 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
     private db: MySqlDatabase
   ) {}
 
+  public async ensureTable(): Promise<void> {
+    try {
+      await this.db.pool.query(`
+        CREATE TABLE IF NOT EXISTS \`${this.tableName}\` (
+          \`_id\` VARCHAR(191) NOT NULL PRIMARY KEY,
+          \`data\` LONGTEXT NOT NULL,
+          \`createdAt\` DATETIME NULL,
+          \`updatedAt\` DATETIME NULL,
+          INDEX \`idx_created\` (\`createdAt\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+    } catch {}
+  }
+
   public async createIndex(keys: any, options?: any): Promise<string> {
     // MySQL handles primary key and index on createdAt.
     return 'ok';
@@ -223,14 +319,22 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
   public async findOne(filter: any = {}, options?: { sort?: any }): Promise<T | null> {
     // Fast path: direct lookup by _id if single primary key equality query
     if (filter && filter._id && typeof filter._id === 'string' && Object.keys(filter).length === 1) {
-      const [rows]: any = await this.db.pool.query(
-        `SELECT data FROM \`${this.tableName}\` WHERE \`_id\` = ? LIMIT 1`,
-        [filter._id]
-      );
-      if (rows && rows.length > 0) {
-        return rowToDoc<T>(rows[0]);
+      try {
+        const [rows]: any = await this.db.pool.query(
+          `SELECT data FROM \`${this.tableName}\` WHERE \`_id\` = ? LIMIT 1`,
+          [filter._id]
+        );
+        if (rows && rows.length > 0) {
+          return rowToDoc<T>(rows[0]);
+        }
+        return null;
+      } catch (err: any) {
+        if (err?.code === 'ER_NO_SUCH_TABLE' || err?.errno === 1146) {
+          await this.ensureTable();
+          return null;
+        }
+        throw err;
       }
-      return null;
     }
 
     const docs = await this._executeFind(filter, options?.sort || null, 1, 0);
@@ -242,12 +346,20 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
   }
 
   public async countDocuments(filter: any = {}): Promise<number> {
-    if (!filter || Object.keys(filter).length === 0) {
-      const [rows]: any = await this.db.pool.query(`SELECT COUNT(*) as cnt FROM \`${this.tableName}\``);
-      return Number(rows[0]?.cnt || 0);
+    try {
+      if (!filter || Object.keys(filter).length === 0) {
+        const [rows]: any = await this.db.pool.query(`SELECT COUNT(*) as cnt FROM \`${this.tableName}\``);
+        return Number(rows[0]?.cnt || 0);
+      }
+      const docs = await this._executeFind(filter, null, 0, 0);
+      return docs.length;
+    } catch (err: any) {
+      if (err?.code === 'ER_NO_SUCH_TABLE' || err?.errno === 1146) {
+        await this.ensureTable();
+        return 0;
+      }
+      return 0;
     }
-    const docs = await this._executeFind(filter, null, 0, 0);
-    return docs.length;
   }
 
   public async insertOne(doc: any): Promise<{ insertedId: string; acknowledged: boolean }> {
@@ -263,12 +375,26 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
     const updatedSql = toSqlDateTime(doc.updatedAt);
     const jsonStr = JSON.stringify(doc);
 
-    await this.db.pool.query(
-      `INSERT INTO \`${this.tableName}\` (\`_id\`, \`data\`, \`createdAt\`, \`updatedAt\`) 
-       VALUES (?, ?, ?, ?) 
-       ON DUPLICATE KEY UPDATE \`data\` = VALUES(\`data\`), \`updatedAt\` = VALUES(\`updatedAt\`)`,
-      [doc._id, jsonStr, createdSql, updatedSql]
-    );
+    try {
+      await this.db.pool.query(
+        `INSERT INTO \`${this.tableName}\` (\`_id\`, \`data\`, \`createdAt\`, \`updatedAt\`) 
+         VALUES (?, ?, ?, ?) 
+         ON DUPLICATE KEY UPDATE \`data\` = VALUES(\`data\`), \`updatedAt\` = VALUES(\`updatedAt\`)`,
+        [doc._id, jsonStr, createdSql, updatedSql]
+      );
+    } catch (err: any) {
+      if (err?.code === 'ER_NO_SUCH_TABLE' || err?.errno === 1146) {
+        await this.ensureTable();
+        await this.db.pool.query(
+          `INSERT INTO \`${this.tableName}\` (\`_id\`, \`data\`, \`createdAt\`, \`updatedAt\`) 
+           VALUES (?, ?, ?, ?) 
+           ON DUPLICATE KEY UPDATE \`data\` = VALUES(\`data\`), \`updatedAt\` = VALUES(\`updatedAt\`)`,
+          [doc._id, jsonStr, createdSql, updatedSql]
+        );
+      } else {
+        throw err;
+      }
+    }
 
     return { insertedId: doc._id, acknowledged: true };
   }
@@ -353,9 +479,17 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
   }
 
   public async deleteMany(filter: any): Promise<{ deletedCount: number; acknowledged: boolean }> {
-    if (!filter || Object.keys(filter).length === 0) {
-      const [res]: any = await this.db.pool.query(`DELETE FROM \`${this.tableName}\``);
-      return { deletedCount: res.affectedRows || 0, acknowledged: true };
+    try {
+      if (!filter || Object.keys(filter).length === 0) {
+        const [res]: any = await this.db.pool.query(`DELETE FROM \`${this.tableName}\``);
+        return { deletedCount: res.affectedRows || 0, acknowledged: true };
+      }
+    } catch (err: any) {
+      if (err?.code === 'ER_NO_SUCH_TABLE' || err?.errno === 1146) {
+        await this.ensureTable();
+        return { deletedCount: 0, acknowledged: true };
+      }
+      throw err;
     }
 
     const docs = await this._executeFind(filter, null, 0, 0);
@@ -503,17 +637,25 @@ export class MySqlCollection<T = any> implements AppCollection<T> {
     let rows: any[] = [];
 
     // Direct primary key optimization
-    if (filter && filter._id && typeof filter._id === 'string' && Object.keys(filter).length === 1) {
-      const [r]: any = await this.db.pool.query(
-        `SELECT data FROM \`${this.tableName}\` WHERE \`_id\` = ?`,
-        [filter._id]
-      );
-      rows = r;
-    } else {
-      const [r]: any = await this.db.pool.query(
-        `SELECT data FROM \`${this.tableName}\``
-      );
-      rows = r;
+    try {
+      if (filter && filter._id && typeof filter._id === 'string' && Object.keys(filter).length === 1) {
+        const [r]: any = await this.db.pool.query(
+          `SELECT data FROM \`${this.tableName}\` WHERE \`_id\` = ?`,
+          [filter._id]
+        );
+        rows = r;
+      } else {
+        const [r]: any = await this.db.pool.query(
+          `SELECT data FROM \`${this.tableName}\``
+        );
+        rows = r;
+      }
+    } catch (err: any) {
+      if (err?.code === 'ER_NO_SUCH_TABLE' || err?.errno === 1146) {
+        await this.ensureTable();
+        return [];
+      }
+      throw err;
     }
 
     let docs = rows.map((r) => rowToDoc<T>(r)).filter(Boolean) as T[];

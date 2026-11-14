@@ -125,20 +125,42 @@ apiRouter.get('/sources', async (req: Request, res: Response) => {
     const pages = await db.collection<FacebookPage>('facebook_pages').find({}).toArray();
     const pageMap = new Map(pages.map((p) => [p._id, p.name]));
 
-    const sources = rawSources.map((s: any) => ({
-      id: s._id,
-      name: s.name,
-      url: s.url,
-      page_id: s.pageId || s.page_id,
-      template_id: s.templateId || s.template_id,
-      gdrive_folder_url: s.gdriveFolderUrlOrId || s.gdrive_folder_url || s.gdriveFolderId || '',
-      gdrive_folder_id: s.gdriveFolderId || s.gdrive_folder_id || '',
-      reel_theme: s.reelTheme || s.reel_theme || 'auto-category',
-      reel_duration: s.reelDuration || s.reel_duration || 30,
-      is_active: s.isActive !== undefined ? s.isActive : (s.is_active ?? true),
-      created_at: s.createdAt || s.created_at || new Date(),
-      page_name: pageMap.get(s.pageId || s.page_id) || 'Unknown Page',
-    }));
+    const sources = rawSources.map((s: any) => {
+      const pageId = s.pageId || s.page_id || '';
+      const templateId = s.templateId || s.template_id || 'template-trendingnews-breaking';
+      const folderUrlOrId = s.gdriveFolderUrlOrId || s.gdrive_folder_url || s.gdriveFolderId || s.gdrive_folder_id || '';
+      const folderId = s.gdriveFolderId || s.gdrive_folder_id || gdriveReelService.extractFolderId(folderUrlOrId);
+      const reelTheme = s.reelTheme || s.reel_theme || 'canva-studio-rotate';
+      const reelDuration = parseInt(String(s.reelDuration || s.reel_duration || 30), 10) || 30;
+      const isActive = s.isActive !== undefined ? Boolean(s.isActive) : (s.is_active !== undefined ? Boolean(s.is_active) : true);
+      const createdAt = s.createdAt || s.created_at || new Date();
+      const pageName = pageMap.get(pageId) || 'Unknown Page';
+
+      return {
+        id: s._id,
+        _id: s._id,
+        name: s.name || '',
+        url: s.url || '',
+        page_id: pageId,
+        pageId: pageId,
+        page_name: pageName,
+        pageName: pageName,
+        template_id: templateId,
+        templateId: templateId,
+        gdrive_folder_url: folderUrlOrId,
+        gdriveFolderUrlOrId: folderUrlOrId,
+        gdrive_folder_id: folderId,
+        gdriveFolderId: folderId,
+        reel_theme: reelTheme,
+        reelTheme: reelTheme,
+        reel_duration: reelDuration,
+        reelDuration: reelDuration,
+        is_active: isActive,
+        isActive: isActive,
+        created_at: createdAt,
+        createdAt: createdAt,
+      };
+    });
 
     res.json(sources);
   } catch (err: any) {
@@ -147,66 +169,91 @@ apiRouter.get('/sources', async (req: Request, res: Response) => {
 });
 
 apiRouter.post('/sources', async (req: Request, res: Response) => {
-  const { name, url, page_id, template_id, is_active, gdrive_folder_url, reel_theme, reel_duration } = req.body;
-  if (!name || !url || !page_id) {
+  const { name, url, page_id, pageId, template_id, templateId, is_active, isActive, gdrive_folder_url, gdriveFolderUrlOrId, reel_theme, reelTheme, reel_duration, reelDuration } = req.body;
+  const targetPageId = (page_id || pageId || '').trim();
+  if (!name || !url || !targetPageId) {
     res.status(400).json({ error: 'Name, URL, and Facebook Page are required' });
     return;
   }
 
   const db = getDatabase();
   const id = crypto.randomUUID();
-  const folderUrlOrId = (gdrive_folder_url || req.body.gdriveFolderUrlOrId || '').trim();
+  const folderUrlOrId = (gdrive_folder_url || gdriveFolderUrlOrId || req.body.gdrive_folder_id || req.body.gdriveFolderId || '').trim();
   const folderId = gdriveReelService.extractFolderId(folderUrlOrId);
+  const cleanTheme = (reel_theme || reelTheme || 'canva-studio-rotate').trim();
+  const cleanDuration = parseInt(String(reel_duration || reelDuration || '30'), 10) || 30;
+  const cleanTemplate = (template_id || templateId || 'template-trendingnews-breaking').trim();
+  const activeBool = is_active !== undefined ? Boolean(is_active) : (isActive !== undefined ? Boolean(isActive) : true);
 
   try {
-    const doc: RssSource = {
+    const doc: any = {
       _id: id,
       name: name.trim(),
       url: url.trim(),
-      pageId: page_id,
-      templateId: template_id || 'template-square-breaking',
+      pageId: targetPageId,
+      page_id: targetPageId,
+      templateId: cleanTemplate,
+      template_id: cleanTemplate,
       gdriveFolderUrlOrId: folderUrlOrId,
+      gdrive_folder_url: folderUrlOrId,
       gdriveFolderId: folderId,
-      reelTheme: reel_theme || req.body.reelTheme || 'auto-category',
-      reelDuration: parseInt(reel_duration || req.body.reelDuration || '30', 10) || 30,
-      isActive: is_active !== undefined ? Boolean(is_active) : true,
+      gdrive_folder_id: folderId,
+      reelTheme: cleanTheme,
+      reel_theme: cleanTheme,
+      reelDuration: cleanDuration,
+      reel_duration: cleanDuration,
+      isActive: activeBool,
+      is_active: activeBool,
       createdAt: new Date(),
+      created_at: new Date(),
       updatedAt: new Date(),
+      updated_at: new Date(),
     };
 
-    await db.collection<RssSource>('rss_sources').insertOne(doc as any);
-    res.status(201).json({ success: true, id });
+    await db.collection<RssSource>('rss_sources').insertOne(doc);
+    res.status(201).json({ success: true, id, source: doc });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
 });
 
 apiRouter.put('/sources/:id', async (req: Request, res: Response) => {
-  const { name, url, page_id, template_id, is_active, gdrive_folder_url, reel_theme, reel_duration } = req.body;
-  if (!name || !url || !page_id) {
+  const { name, url, page_id, pageId, template_id, templateId, is_active, isActive, gdrive_folder_url, gdriveFolderUrlOrId, reel_theme, reelTheme, reel_duration, reelDuration } = req.body;
+  const targetPageId = (page_id || pageId || '').trim();
+  if (!name || !url || !targetPageId) {
     res.status(400).json({ error: 'Name, URL, and Facebook Page are required' });
     return;
   }
 
   const db = getDatabase();
-  const folderUrlOrId = (gdrive_folder_url || req.body.gdriveFolderUrlOrId || '').trim();
+  const folderUrlOrId = (gdrive_folder_url || gdriveFolderUrlOrId || req.body.gdrive_folder_id || req.body.gdriveFolderId || '').trim();
   const folderId = gdriveReelService.extractFolderId(folderUrlOrId);
+  const cleanTheme = (reel_theme || reelTheme || 'canva-studio-rotate').trim();
+  const cleanDuration = parseInt(String(reel_duration || reelDuration || '30'), 10) || 30;
+  const cleanTemplate = (template_id || templateId || 'template-trendingnews-breaking').trim();
+  const activeBool = is_active !== undefined ? Boolean(is_active) : (isActive !== undefined ? Boolean(isActive) : true);
 
   try {
     const updateFields: any = {
       name: name.trim(),
       url: url.trim(),
-      pageId: page_id,
-      templateId: template_id || 'template-trendingnews-breaking',
+      pageId: targetPageId,
+      page_id: targetPageId,
+      templateId: cleanTemplate,
+      template_id: cleanTemplate,
       gdriveFolderUrlOrId: folderUrlOrId,
+      gdrive_folder_url: folderUrlOrId,
       gdriveFolderId: folderId,
-      reelTheme: reel_theme || req.body.reelTheme || 'canva-studio-rotate',
-      reelDuration: parseInt(reel_duration || req.body.reelDuration || '30', 10) || 30,
+      gdrive_folder_id: folderId,
+      reelTheme: cleanTheme,
+      reel_theme: cleanTheme,
+      reelDuration: cleanDuration,
+      reel_duration: cleanDuration,
+      isActive: activeBool,
+      is_active: activeBool,
       updatedAt: new Date(),
+      updated_at: new Date(),
     };
-    if (is_active !== undefined) {
-      updateFields.isActive = Boolean(is_active);
-    }
 
     const result = await db.collection<RssSource>('rss_sources').updateOne(
       { _id: req.params.id },
@@ -218,7 +265,7 @@ apiRouter.put('/sources/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ success: true });
+    res.json({ success: true, updated: updateFields });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -232,13 +279,13 @@ apiRouter.post('/sources/:id/toggle', async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Source not found' });
       return;
     }
-    const currentActive = source.isActive !== undefined ? source.isActive : ((source as any).is_active ?? true);
+    const currentActive = source.isActive !== undefined ? Boolean(source.isActive) : (Boolean((source as any).is_active ?? true));
     const newActive = !currentActive;
     await db.collection<RssSource>('rss_sources').updateOne(
       { _id: req.params.id },
-      { $set: { isActive: newActive, updatedAt: new Date() } }
+      { $set: { isActive: newActive, is_active: newActive, updatedAt: new Date(), updated_at: new Date() } }
     );
-    res.json({ success: true, is_active: newActive });
+    res.json({ success: true, is_active: newActive, isActive: newActive });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -571,16 +618,36 @@ apiRouter.post('/groups', async (req: Request, res: Response) => {
 apiRouter.put('/groups/:id', async (req: Request, res: Response) => {
   try {
     const groupId = req.params.id;
-    const { name, categories, auto_share, page_id, access_token, delay_seconds } = req.body;
+    const { name, categories, auto_share, autoShare, page_id, pageId, access_token, accessToken, delay_seconds, delaySeconds } = req.body;
 
     const db = getDatabase();
-    const updateFields: any = { updatedAt: new Date() };
+    const updateFields: any = { updatedAt: new Date(), updated_at: new Date() };
 
     if (name !== undefined) updateFields.name = String(name).trim();
-    if (auto_share !== undefined) updateFields.autoShare = Boolean(auto_share);
-    if (page_id !== undefined) updateFields.pageId = String(page_id).trim();
-    if (access_token !== undefined) updateFields.accessToken = access_token ? String(access_token).trim() : null;
-    if (delay_seconds !== undefined) updateFields.delaySeconds = parseInt(delay_seconds, 10) || 5;
+
+    const autoShareVal = auto_share !== undefined ? Boolean(auto_share) : (autoShare !== undefined ? Boolean(autoShare) : undefined);
+    if (autoShareVal !== undefined) {
+      updateFields.autoShare = autoShareVal;
+      updateFields.auto_share = autoShareVal;
+    }
+
+    const pageIdVal = page_id !== undefined ? String(page_id).trim() : (pageId !== undefined ? String(pageId).trim() : undefined);
+    if (pageIdVal !== undefined) {
+      updateFields.pageId = pageIdVal;
+      updateFields.page_id = pageIdVal;
+    }
+
+    const tokenVal = access_token !== undefined ? (access_token ? String(access_token).trim() : null) : (accessToken !== undefined ? (accessToken ? String(accessToken).trim() : null) : undefined);
+    if (tokenVal !== undefined) {
+      updateFields.accessToken = tokenVal;
+      updateFields.access_token = tokenVal;
+    }
+
+    const delayVal = delay_seconds !== undefined ? (parseInt(delay_seconds, 10) || 5) : (delaySeconds !== undefined ? (parseInt(delaySeconds, 10) || 5) : undefined);
+    if (delayVal !== undefined) {
+      updateFields.delaySeconds = delayVal;
+      updateFields.delay_seconds = delayVal;
+    }
 
     if (categories !== undefined) {
       if (Array.isArray(categories)) {
@@ -595,7 +662,7 @@ apiRouter.put('/groups/:id', async (req: Request, res: Response) => {
       { $set: updateFields }
     );
 
-    res.json({ success: true, groupId });
+    res.json({ success: true, groupId, updated: updateFields });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1021,43 +1088,21 @@ apiRouter.get('/reels/settings', async (req: Request, res: Response) => {
 apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
   try {
     const { autoPostReels, disablePoster, postPosterToStories, reelDuration, reelTheme } = req.body;
-    const db = getDatabase();
-    const settingsCol = db.collection<Setting>('settings');
 
     if (autoPostReels !== undefined) {
-      await settingsCol.updateOne(
-        { _id: 'AUTO_POST_REELS' },
-        { $set: { value: Boolean(autoPostReels) ? 'true' : 'false', updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await setDbSetting('AUTO_POST_REELS', Boolean(autoPostReels) ? 'true' : 'false');
     }
     if (disablePoster !== undefined) {
-      await settingsCol.updateOne(
-        { _id: 'DISABLE_POSTER' },
-        { $set: { value: Boolean(disablePoster) ? 'true' : 'false', updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await setDbSetting('DISABLE_POSTER', Boolean(disablePoster) ? 'true' : 'false');
     }
     if (postPosterToStories !== undefined) {
-      await settingsCol.updateOne(
-        { _id: 'POST_POSTER_TO_STORIES' },
-        { $set: { value: Boolean(postPosterToStories) ? 'true' : 'false', updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await setDbSetting('POST_POSTER_TO_STORIES', Boolean(postPosterToStories) ? 'true' : 'false');
     }
     if (reelDuration !== undefined) {
-      await settingsCol.updateOne(
-        { _id: 'REEL_DURATION_SECONDS' },
-        { $set: { value: String(reelDuration), updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await setDbSetting('REEL_DURATION_SECONDS', String(reelDuration));
     }
     if (reelTheme !== undefined) {
-      await settingsCol.updateOne(
-        { _id: 'DEFAULT_REEL_THEME' },
-        { $set: { value: String(reelTheme), updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await setDbSetting('DEFAULT_REEL_THEME', String(reelTheme));
     }
 
     res.json({
@@ -1066,7 +1111,7 @@ apiRouter.post('/reels/settings', async (req: Request, res: Response) => {
       disablePoster: disablePoster !== undefined ? Boolean(disablePoster) : true,
       postPosterToStories: postPosterToStories !== undefined ? Boolean(postPosterToStories) : true,
       reelDuration: reelDuration ? parseInt(String(reelDuration), 10) : 30,
-      reelTheme: reelTheme || 'auto-category',
+      reelTheme: reelTheme || 'canva-studio-rotate',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -2451,19 +2496,34 @@ apiRouter.post('/youtube/channels', async (req: Request, res: Response) => {
   }
 });
 
-// 3. Update Channel Settings
-apiRouter.patch('/youtube/channels/:id', async (req: Request, res: Response) => {
+// 3. Update Channel Settings (Support both PATCH and PUT)
+apiRouter.all('/youtube/channels/:id', async (req: Request, res: Response, next: any) => {
+  if (req.method !== 'PATCH' && req.method !== 'PUT') {
+    return next();
+  }
   try {
     const { id } = req.params;
     const { targetPageId, targetPageName, language, autoUpload, isActive, title } = req.body;
     const db = getDatabase();
 
-    const updateFields: any = { updatedAt: new Date() };
-    if (targetPageId !== undefined) updateFields.targetPageId = targetPageId;
-    if (targetPageName !== undefined) updateFields.targetPageName = targetPageName;
+    const updateFields: any = { updatedAt: new Date(), updated_at: new Date() };
+    if (targetPageId !== undefined) {
+      updateFields.targetPageId = targetPageId;
+      updateFields.target_page_id = targetPageId;
+    }
+    if (targetPageName !== undefined) {
+      updateFields.targetPageName = targetPageName;
+      updateFields.target_page_name = targetPageName;
+    }
     if (language !== undefined) updateFields.language = language;
-    if (autoUpload !== undefined) updateFields.autoUpload = Boolean(autoUpload);
-    if (isActive !== undefined) updateFields.isActive = Boolean(isActive);
+    if (autoUpload !== undefined) {
+      updateFields.autoUpload = Boolean(autoUpload);
+      updateFields.auto_upload = Boolean(autoUpload);
+    }
+    if (isActive !== undefined) {
+      updateFields.isActive = Boolean(isActive);
+      updateFields.is_active = Boolean(isActive);
+    }
     if (title !== undefined) updateFields.title = String(title).trim();
 
     await db.collection<YouTubeChannel>('youtube_channels').updateOne(
@@ -2471,7 +2531,7 @@ apiRouter.patch('/youtube/channels/:id', async (req: Request, res: Response) => 
       { $set: updateFields }
     );
 
-    res.json({ success: true, message: 'YouTube channel updated successfully' });
+    res.json({ success: true, message: 'YouTube channel updated successfully', updated: updateFields });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

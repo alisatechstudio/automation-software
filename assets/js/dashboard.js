@@ -322,27 +322,28 @@
     }
 
     async function openEditSourceModal(id) {
-      const s = sourcesData.find(item => item.id === id);
+      const s = sourcesData.find(item => item.id === id || item._id === id);
       if (!s) return;
       const modal = document.getElementById('modal-edit-source');
       if (!modal) return;
 
-      document.getElementById('edit-source-id').value = s.id;
+      document.getElementById('edit-source-id').value = s.id || s._id;
       document.getElementById('edit-source-name').value = s.name || '';
       document.getElementById('edit-source-url').value = s.url || '';
-      document.getElementById('edit-source-gdrive-folder').value = s.gdrive_folder_url || s.gdrive_folder_id || '';
+      document.getElementById('edit-source-gdrive-folder').value = s.gdriveFolderUrlOrId || s.gdrive_folder_url || s.gdriveFolderId || s.gdrive_folder_id || '';
       
       const themeSelect = document.getElementById('edit-source-reel-theme');
-      if (themeSelect) themeSelect.value = s.reel_theme || 'canva-studio-rotate';
+      const curTheme = s.reelTheme || s.reel_theme || 'canva-studio-rotate';
+      if (themeSelect) themeSelect.value = curTheme;
 
       const tplSelect = document.getElementById('edit-source-template');
-      if (tplSelect) tplSelect.value = s.template_id || 'template-trendingnews-breaking';
+      if (tplSelect) tplSelect.value = s.templateId || s.template_id || 'template-trendingnews-breaking';
 
       const durSelect = document.getElementById('edit-source-reel-duration');
-      if (durSelect) durSelect.value = String(s.reel_duration || 30);
+      if (durSelect) durSelect.value = String(s.reelDuration || s.reel_duration || 30);
 
       const activeCheck = document.getElementById('edit-source-active');
-      if (activeCheck) activeCheck.checked = s.is_active !== false;
+      if (activeCheck) activeCheck.checked = s.isActive !== undefined ? Boolean(s.isActive) : (s.is_active !== false);
 
       const testRes = document.getElementById('edit-source-test-result');
       if (testRes) {
@@ -350,7 +351,7 @@
         testRes.innerHTML = '';
       }
 
-      await populateSourcePageSelects(s.page_id);
+      await populateSourcePageSelects(s.pageId || s.page_id);
       modal.classList.remove('hidden');
     }
 
@@ -364,15 +365,28 @@
       const id = document.getElementById('edit-source-id').value;
       if (!id) return;
 
+      const themeVal = document.getElementById('edit-source-reel-theme') ? document.getElementById('edit-source-reel-theme').value : 'canva-studio-rotate';
+      const durationVal = document.getElementById('edit-source-reel-duration') ? document.getElementById('edit-source-reel-duration').value : '30';
+      const pageIdVal = document.getElementById('edit-source-page') ? document.getElementById('edit-source-page').value : '';
+      const tplVal = document.getElementById('edit-source-template') ? document.getElementById('edit-source-template').value : 'template-trendingnews-breaking';
+      const driveFolderVal = document.getElementById('edit-source-gdrive-folder') ? document.getElementById('edit-source-gdrive-folder').value.trim() : '';
+      const activeBool = document.getElementById('edit-source-active') ? document.getElementById('edit-source-active').checked : true;
+
       const payload = {
-        name: document.getElementById('edit-source-name').value,
-        url: document.getElementById('edit-source-url').value,
-        page_id: document.getElementById('edit-source-page').value,
-        template_id: document.getElementById('edit-source-template').value,
-        gdrive_folder_url: document.getElementById('edit-source-gdrive-folder') ? document.getElementById('edit-source-gdrive-folder').value : '',
-        reel_theme: document.getElementById('edit-source-reel-theme') ? document.getElementById('edit-source-reel-theme').value : 'canva-studio-rotate',
-        reel_duration: document.getElementById('edit-source-reel-duration') ? document.getElementById('edit-source-reel-duration').value : '30',
-        is_active: document.getElementById('edit-source-active') ? document.getElementById('edit-source-active').checked : true,
+        name: document.getElementById('edit-source-name').value.trim(),
+        url: document.getElementById('edit-source-url').value.trim(),
+        page_id: pageIdVal,
+        pageId: pageIdVal,
+        template_id: tplVal,
+        templateId: tplVal,
+        gdrive_folder_url: driveFolderVal,
+        gdriveFolderUrlOrId: driveFolderVal,
+        reel_theme: themeVal,
+        reelTheme: themeVal,
+        reel_duration: durationVal,
+        reelDuration: durationVal,
+        is_active: activeBool,
+        isActive: activeBool,
       };
 
       const res = await safeFetchJson('/api/sources/' + id, {
@@ -1067,14 +1081,27 @@
 
     async function handleAddSource(e) {
       e.preventDefault();
+      const themeVal = document.getElementById('source-reel-theme') ? document.getElementById('source-reel-theme').value : 'canva-studio-rotate';
+      const durationVal = document.getElementById('source-reel-duration') ? document.getElementById('source-reel-duration').value : '30';
+      const pageIdVal = document.getElementById('source-page') ? document.getElementById('source-page').value : '';
+      const tplVal = document.getElementById('source-template') ? document.getElementById('source-template').value : 'template-trendingnews-breaking';
+      const driveFolderVal = document.getElementById('source-gdrive-folder') ? document.getElementById('source-gdrive-folder').value.trim() : '';
+
       const payload = {
-        name: document.getElementById('source-name').value,
-        url: document.getElementById('source-url').value,
-        page_id: document.getElementById('source-page').value,
-        template_id: document.getElementById('source-template').value,
-        gdrive_folder_url: document.getElementById('source-gdrive-folder') ? document.getElementById('source-gdrive-folder').value : '',
-        reel_theme: document.getElementById('source-reel-theme') ? document.getElementById('source-reel-theme').value : 'canva-studio-rotate',
-        reel_duration: document.getElementById('source-reel-duration') ? document.getElementById('source-reel-duration').value : '30',
+        name: document.getElementById('source-name').value.trim(),
+        url: document.getElementById('source-url').value.trim(),
+        page_id: pageIdVal,
+        pageId: pageIdVal,
+        template_id: tplVal,
+        templateId: tplVal,
+        gdrive_folder_url: driveFolderVal,
+        gdriveFolderUrlOrId: driveFolderVal,
+        reel_theme: themeVal,
+        reelTheme: themeVal,
+        reel_duration: durationVal,
+        reelDuration: durationVal,
+        is_active: true,
+        isActive: true,
       };
 
       const res = await safeFetchJson('/api/sources', {
@@ -1689,32 +1716,51 @@
       reelDebounceTimer = setTimeout(updateReelFramePreview, 350);
     }
 
-    function onReelThemeChanged() {
+    function onReelThemeChanged(persist = false) {
       const select = document.getElementById('reel-theme-select');
-      const theme = select ? select.value : 'auto-category';
+      const theme = select ? select.value : 'canva-studio-rotate';
       const dur = document.getElementById('reel-duration-select')?.value || '30';
       const badgeEl = document.getElementById('reel-theme-badge');
       const durBadge = document.getElementById('reel-duration-badge');
 
       if (badgeEl) {
-        if (theme === 'auto-category') {
+        if (theme === 'canva-studio-rotate') {
+          badgeEl.innerText = '🔄 Canva Rotation';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-purple-950 text-purple-300 border border-purple-800';
+        } else if (theme === 'canva-studio-a') {
+          badgeEl.innerText = '👤 Canva Presenter';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-indigo-950 text-indigo-300 border border-indigo-800';
+        } else if (theme === 'canva-studio-b') {
+          badgeEl.innerText = '🎥 Canva Split';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800';
+        } else if (theme === 'canva-studio-c') {
+          badgeEl.innerText = '🎬 Canva Intro/Outro';
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-pink-950 text-pink-300 border border-pink-800';
+        } else if (theme === 'auto-category') {
           badgeEl.innerText = 'Smart Category';
           badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-amber-950 text-amber-400 border border-amber-800';
-        } else if (theme === 'vertical-916') {
-          badgeEl.innerText = '9:16 Vertical';
-          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
         } else {
-          badgeEl.innerText = '1:1 Square';
-          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800';
+          badgeEl.innerText = theme;
+          badgeEl.className = 'px-1.5 py-0.2 text-[9px] font-mono rounded bg-slate-900 text-slate-300 border border-slate-700';
         }
       }
 
       if (durBadge) durBadge.innerText = dur + 's • 24fps • AAC';
       updateReelFramePreview();
+
+      if (persist) {
+        safeFetchJson('/api/reels/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reelTheme: theme, reelDuration: parseInt(dur, 10) || 30 })
+        }).then(r => {
+          if (r.ok) showToast('✓ Default Reel settings saved');
+        }).catch(() => {});
+      }
     }
 
-    function onReelDurationChanged() {
-      onReelThemeChanged();
+    function onReelDurationChanged(persist = false) {
+      onReelThemeChanged(persist);
     }
 
     function updateReelFramePreview() {
@@ -1787,6 +1833,18 @@
           const postStories = res.data.postPosterToStories !== false;
           const toggleStories = document.getElementById('toggle-post-stories');
           if (toggleStories) toggleStories.checked = postStories;
+
+          if (res.data.reelTheme) {
+            const themeSelect = document.getElementById('reel-theme-select');
+            if (themeSelect) themeSelect.value = res.data.reelTheme;
+          }
+
+          if (res.data.reelDuration) {
+            const durSelect = document.getElementById('reel-duration-select');
+            if (durSelect) durSelect.value = String(res.data.reelDuration);
+          }
+
+          onReelThemeChanged(false);
         }
       } catch (e) {}
     }

@@ -188,10 +188,6 @@ export class InputPipelineService {
       // 1. Determine active sources to process
       let allSources: RssSource[] = [];
       try {
-        await sourcesCol.updateMany(
-          { name: { $regex: /bd news|trending news/i } },
-          { $set: { reelTheme: 'auto-category' } }
-        );
         allSources = await sourcesCol.find({}).toArray();
       } catch (findErr: any) {
         console.error('[InputCron] Error fetching RSS sources:', findErr.message);
@@ -383,8 +379,8 @@ export class InputPipelineService {
           const isBdNews = sourceName.toLowerCase().includes('bd news');
           const isTrendingNews = sourceName.toLowerCase().includes('trending') || isEnglish;
 
-          let targetTheme = source.reelTheme;
-          if (!targetTheme || targetTheme === 'auto-category' || targetTheme === 'rolling') {
+          let targetTheme = source.reelTheme || (source as any).reel_theme;
+          if (!targetTheme) {
             targetTheme = 'canva-studio-rotate';
           }
           if (targetTheme === 'rolling') {
