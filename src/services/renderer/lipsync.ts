@@ -142,7 +142,7 @@ export class LipSyncEngine {
     // Default resting / natural loop fallback if audio is missing
     if (!audioSource) {
       for (let f = 0; f < totalFrames; f++) {
-        mouthFrames[f] = 28; // resting closed lips
+        mouthFrames[f] = 84; // resting closed lips (openness = 0.000)
         targetOpenness[f] = 0.0;
       }
       return { baseFrames, mouthFrames, targetOpenness, totalFrames };
@@ -283,19 +283,19 @@ export class LipSyncEngine {
     this.compCtx.clearRect(0, 0, frameW, frameH);
     this.compCtx.drawImage(baseImg, 0, 0);
 
-    // Mouth mask centered at X: 540, Y: 222
+    // Mouth mask centered at X: 568, Y: 375 (matching studio news anchor mouth position)
     this.maskCtx.clearRect(0, 0, frameW, frameH);
     this.maskCtx.drawImage(mouthImg, 0, 0);
 
     this.maskCtx.globalCompositeOperation = 'destination-in';
-    const grad = this.maskCtx.createRadialGradient(540, 222, 10, 540, 222, 38);
+    const grad = this.maskCtx.createRadialGradient(568, 375, 10, 568, 375, 38);
     grad.addColorStop(0, 'rgba(0,0,0,1)');
     grad.addColorStop(0.65, 'rgba(0,0,0,0.85)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
 
     this.maskCtx.fillStyle = grad;
     this.maskCtx.beginPath();
-    this.maskCtx.ellipse(540, 222, 42, 28, 0, 0, Math.PI * 2);
+    this.maskCtx.ellipse(568, 375, 42, 28, 0, 0, Math.PI * 2);
     this.maskCtx.fill();
 
     this.maskCtx.globalCompositeOperation = 'source-over';

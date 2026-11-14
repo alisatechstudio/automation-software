@@ -1143,7 +1143,8 @@ export class ReelVideoRenderer {
           const srcW = img.width;
           const srcH = img.height;
           const cropW = Math.round(srcH * (width / stageH));
-          const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
+          const cropCenterX = Math.round(srcW * 0.526); // Studio anchor face center (~568 on 1080px frame)
+          const cropX = Math.max(0, Math.min(srcW - cropW, Math.round(cropCenterX - cropW / 2)));
           ctx.drawImage(img, cropX, 0, cropW, srcH, 0, 0, width, stageH);
         });
       } else {
