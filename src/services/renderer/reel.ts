@@ -7,7 +7,7 @@ import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 import { UnifiedTtsService } from '../tts/index.js';
-import { LipSyncEngine } from './lipsync.js';
+import { LipSyncEngine, LipSyncTrajectory } from './lipsync.js';
 
 
 let ffmpegPath: string = '';
@@ -696,16 +696,16 @@ export class ReelVideoRenderer {
     const totalFrames = durationSeconds * fps;
 
     // 3b. Solve audio-driven lip sync trajectory for Canva Studio male presenter
-    let lipSyncFrames: number[] = [];
+    let lipSyncData: LipSyncTrajectory | null = null;
     if (isCanvaTheme && anchorImages.length > 0) {
       try {
         const lipSyncEngine = LipSyncEngine.getInstance();
-        lipSyncFrames = lipSyncEngine.solveLipSyncTrajectory(
+        lipSyncData = lipSyncEngine.solveLipSyncTrajectory(
           tempVoiceFile || voiceoverBuffer,
           totalFrames,
           fps
         );
-        console.log(`[ReelVideoRenderer] ✓ Audio-driven lip sync solved (${lipSyncFrames.length} frames)`);
+        console.log(`[ReelVideoRenderer] ✓ Upgraded syllable lip sync solved (${lipSyncData.totalFrames} frames)`);
       } catch (lipErr: any) {
         console.warn('[ReelVideoRenderer] Lip sync calculation warning:', lipErr?.message || lipErr);
       }
@@ -822,10 +822,10 @@ export class ReelVideoRenderer {
       if (needsScale) {
         ctx.save();
         ctx.scale(scaleX, scaleY);
-        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
         ctx.restore();
       } else {
-        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       }
 
       // Zero-copy raw RGBA buffer directly from canvas memory (0ms latency, zero compression overhead)
@@ -946,23 +946,23 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false,
     anchorImages: any[] = [],
-    lipSyncFrames: number[] = []
+    lipSyncData: LipSyncTrajectory | null = null
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
 
     if (height >= 1280 || height > width || theme === 'vertical-916') {
-      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
 
@@ -1111,7 +1111,7 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false,
     anchorImages: any[] = [],
-    lipSyncFrames: number[] = []
+    lipSyncData: LipSyncTrajectory | null = null
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1132,23 +1132,20 @@ export class ReelVideoRenderer {
     ctx.fillRect(0, 0, width, height);
 
     // 2. Full-Bleed Vertical Anchor / Story Visual Stage (Y: 0 to 1320)
-    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
-      ? lipSyncFrames[f]
-      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[anchorFrameIndex]
-      : null;
-
     const stageH = 1320;
-    const stageVisual = anchorImg || articleImg;
+    const hasAnchor = anchorImages && anchorImages.length > 0;
+    const stageVisual = hasAnchor || articleImg;
     if (stageVisual) {
       ctx.save();
-      if (anchorImg) {
-        const srcW = anchorImg.width;
-        const srcH = anchorImg.height;
-        const cropW = Math.round(srcH * (width / stageH));
-        const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
-        ctx.drawImage(anchorImg, cropX, 0, cropW, srcH, 0, 0, width, stageH);
+      if (hasAnchor) {
+        const lipSyncEngine = LipSyncEngine.getInstance();
+        lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
+          const srcW = img.width;
+          const srcH = img.height;
+          const cropW = Math.round(srcH * (width / stageH));
+          const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
+          ctx.drawImage(img, cropX, 0, cropW, srcH, 0, 0, width, stageH);
+        });
       } else {
         const zoom = 1.0 + progress * 0.08;
         const panY = Math.sin(progress * Math.PI) * 12;
@@ -1410,7 +1407,7 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false,
     anchorImages: any[] = [],
-    lipSyncFrames: number[] = []
+    lipSyncData: LipSyncTrajectory | null = null
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1498,22 +1495,18 @@ export class ReelVideoRenderer {
     const anchorW = width - 80;
     const anchorX = 40;
 
-    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
-      ? lipSyncFrames[f]
-      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[anchorFrameIndex]
-      : null;
-
-    if (anchorImg) {
+    if (anchorImages && anchorImages.length > 0) {
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
       ctx.clip();
 
-      const srcW = anchorImg.width;
-      const srcH = anchorImg.height;
-      ctx.drawImage(anchorImg, 0, 0, srcW, srcH, anchorX, anchorY, anchorW, anchorH);
+      const lipSyncEngine = LipSyncEngine.getInstance();
+      lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
+        const srcW = img.width;
+        const srcH = img.height;
+        ctx.drawImage(img, 0, 0, srcW, srcH, anchorX, anchorY, anchorW, anchorH);
+      });
 
       // Dark gradient at bottom of anchor frame
       const aGrad = ctx.createLinearGradient(0, anchorY + anchorH - 140, 0, anchorY + anchorH);
@@ -1771,7 +1764,7 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false,
     anchorImages: any[] = [],
-    lipSyncFrames: number[] = []
+    lipSyncData: LipSyncTrajectory | null = null
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1802,23 +1795,19 @@ export class ReelVideoRenderer {
     const stageW = width - 80;
     const stageX = 40;
 
-    const anchorFrameIndex = lipSyncFrames && lipSyncFrames[f] !== undefined
-      ? lipSyncFrames[f]
-      : (anchorImages.length > 0 ? (f % anchorImages.length) : 0);
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[anchorFrameIndex]
-      : null;
-
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(stageX, stageY, stageW, stageH, 22);
     ctx.clip();
 
-    if (showAnchor && anchorImg) {
+    if (showAnchor && anchorImages && anchorImages.length > 0) {
       // Draw news anchor
-      const srcW = anchorImg.width;
-      const srcH = anchorImg.height;
-      ctx.drawImage(anchorImg, 0, 0, srcW, srcH, stageX, stageY, stageW, stageH);
+      const lipSyncEngine = LipSyncEngine.getInstance();
+      lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
+        const srcW = img.width;
+        const srcH = img.height;
+        ctx.drawImage(img, 0, 0, srcW, srcH, stageX, stageY, stageW, stageH);
+      });
 
       // Dark gradient at bottom of anchor window
       const aGrad = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
@@ -2077,18 +2066,18 @@ export class ReelVideoRenderer {
     website: string,
     isEnglish: boolean = false,
     anchorImages: any[] = [],
-    lipSyncFrames: number[] = []
+    lipSyncData: LipSyncTrajectory | null = null
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncFrames);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
       return;
     }
 

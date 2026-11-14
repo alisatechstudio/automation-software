@@ -1,10 +1,12 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { createCanvas } from '@napi-rs/canvas';
 
 // Resolve ffmpeg path (prefer @ffmpeg-installer/ffmpeg if available)
 let ffmpegBinPath = 'ffmpeg';
 try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
   if (ffmpegInstaller && ffmpegInstaller.path) {
     ffmpegBinPath = ffmpegInstaller.path;
@@ -14,53 +16,55 @@ try {
 }
 
 /**
- * Pre-analyzed mouth openness metrics for the 127 Bangladeshi male news presenter frames.
+ * Pre-analyzed mouth cavity openness metrics for the 127 Bangladeshi male news presenter frames (1080x608).
  * Index corresponds to frame_0001.jpg (0) through frame_0127.jpg (126).
- * Values normalized between 0.0 (fully closed mouth) and 1.0 (wide open vowel).
+ * Values normalized between 0.0 (fully closed lips) and 1.0 (wide open vowel).
  */
 export const ANCHOR_MOUTH_OPENNESS: readonly number[] = Object.freeze([
-  0.204, 0.204, 0.196, 0.192, 0.188, 0.237, 0.237, 0.254, 0.287, 0.300,
-  0.371, 0.350, 0.375, 0.308, 0.271, 0.300, 0.063, 0.025, 0.029, 0.021,
-  0.204, 0.304, 0.025, 0.025, 0.029, 0.042, 0.046, 0.046, 0.000, 0.058,
-  0.087, 0.142, 0.133, 0.167, 0.258, 0.362, 0.358, 0.367, 0.188, 0.087,
-  0.104, 0.108, 0.163, 0.163, 0.171, 0.237, 0.263, 0.246, 0.275, 0.267,
-  0.283, 0.271, 0.246, 0.271, 0.212, 0.146, 0.121, 0.138, 0.179, 0.225,
-  0.304, 0.258, 0.237, 0.267, 0.675, 0.275, 0.125, 0.117, 0.175, 0.158,
-  0.113, 0.113, 0.125, 0.179, 0.237, 0.254, 0.150, 0.138, 0.129, 0.121,
-  0.071, 0.017, 0.033, 0.017, 0.021, 0.008, 0.000, 0.004, 0.029, 0.138,
-  0.104, 0.054, 0.083, 0.079, 0.008, 0.071, 0.075, 0.013, 0.037, 0.087,
-  0.075, 0.121, 0.087, 0.004, 0.154, 0.000, 0.000, 0.000, 0.000, 0.033,
-  0.679, 1.000, 0.871, 0.854, 0.617, 0.483, 0.563, 0.738, 0.579, 0.604,
-  0.575, 0.588, 0.596, 0.621, 0.417, 0.204, 0.204
+  0.238, 0.217, 0.176, 0.146, 0.183, 0.198, 0.198, 0.161, 0.198, 0.195,
+  0.248, 0.297, 0.350, 0.378, 0.644, 0.836, 0.498, 0.167, 0.198, 0.594,
+  0.876, 0.929, 0.653, 0.279, 0.065, 0.074, 0.043, 0.028, 0.158, 0.226,
+  0.084, 0.025, 0.065, 0.080, 0.080, 0.121, 0.133, 0.124, 0.084, 0.056,
+  0.071, 0.056, 0.068, 0.074, 0.071, 0.155, 0.183, 0.158, 0.176, 0.164,
+  0.176, 0.167, 0.176, 0.443, 0.567, 0.393, 0.421, 0.409, 0.477, 0.539,
+  0.567, 0.415, 0.263, 0.325, 0.582, 0.164, 0.099, 0.316, 0.678, 0.598,
+  0.576, 0.495, 0.443, 0.263, 0.192, 0.170, 0.087, 0.080, 0.068, 0.059,
+  0.062, 0.037, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.053,
+  0.099, 0.019, 0.022, 0.025, 0.031, 0.084, 0.084, 0.000, 0.003, 0.012,
+  0.000, 0.006, 0.006, 0.037, 0.158, 0.012, 0.022, 0.022, 0.009, 0.635,
+  1.000, 0.796, 0.737, 0.777, 0.687, 0.777, 0.746, 0.851, 0.879, 0.913,
+  0.879, 0.889, 0.867, 0.876, 0.650, 0.409, 0.381
 ]);
 
-/**
- * Natural closed-mouth resting zones in the male news presenter footage.
- * Within these clusters, mouth openness is <= 0.05, and micro-movements
- * represent natural breathing and resting posture without freeze-framing.
- */
-interface ClosedCluster {
-  min: number;
-  max: number;
-  center: number;
+export interface LipSyncTrajectory {
+  baseFrames: number[];
+  mouthFrames: number[];
+  targetOpenness: number[];
+  totalFrames: number;
 }
-
-const CLOSED_CLUSTERS: readonly ClosedCluster[] = Object.freeze([
-  { min: 22, max: 28, center: 25 },
-  { min: 81, max: 88, center: 85 },
-  { min: 105, max: 109, center: 107 }
-]);
 
 export class LipSyncEngine {
   private static instance: LipSyncEngine | null = null;
   private readonly opennessTable: readonly number[];
   private readonly numFrames: number;
 
+  // Pre-allocated canvases for high-speed zero-flicker compositing
+  private readonly compCanvas: any;
+  private readonly compCtx: any;
+  private readonly maskCanvas: any;
+  private readonly maskCtx: any;
+
   constructor(customOpenness?: number[]) {
     this.opennessTable = customOpenness && customOpenness.length > 0
       ? customOpenness
       : ANCHOR_MOUTH_OPENNESS;
     this.numFrames = this.opennessTable.length;
+
+    // Anchor frame resolution: 1080 x 608
+    this.compCanvas = createCanvas(1080, 608);
+    this.compCtx = this.compCanvas.getContext('2d');
+    this.maskCanvas = createCanvas(1080, 608);
+    this.maskCtx = this.maskCanvas.getContext('2d');
   }
 
   public static getInstance(): LipSyncEngine {
@@ -68,22 +72,6 @@ export class LipSyncEngine {
       LipSyncEngine.instance = new LipSyncEngine();
     }
     return LipSyncEngine.instance;
-  }
-
-  /**
-   * Finds the nearest natural closed-mouth cluster to a given frame position.
-   */
-  private getNearestClosedCluster(frame: number): ClosedCluster {
-    let best = CLOSED_CLUSTERS[0];
-    let minDist = Math.abs(frame - best.center);
-    for (const c of CLOSED_CLUSTERS) {
-      const d = Math.abs(frame - c.center);
-      if (d < minDist) {
-        minDist = d;
-        best = c;
-      }
-    }
-    return best;
   }
 
   /**
@@ -96,12 +84,12 @@ export class LipSyncEngine {
         if (!fs.existsSync(audioSource)) return null;
         pcmBuffer = execSync(
           `"${ffmpegBinPath}" -v error -i "${audioSource}" -f s16le -ac 1 -ar 16000 -`,
-          { maxBuffer: 32 * 1024 * 1024 }
+          { maxBuffer: 64 * 1024 * 1024 }
         );
       } else if (Buffer.isBuffer(audioSource) && audioSource.length > 100) {
         pcmBuffer = execSync(
           `"${ffmpegBinPath}" -v error -i pipe:0 -f s16le -ac 1 -ar 16000 -`,
-          { input: audioSource, maxBuffer: 32 * 1024 * 1024 }
+          { input: audioSource, maxBuffer: 64 * 1024 * 1024 }
         );
       } else {
         return null;
@@ -120,39 +108,53 @@ export class LipSyncEngine {
   }
 
   /**
-   * Computes an audio-driven lip sync trajectory matching spoken words to video frames.
+   * Computes high-fidelity audio-driven syllable lip sync trajectory matching spoken words to video frames.
    *
    * @param audioSource Path to voiceover audio file or audio Buffer
    * @param totalFrames Total number of video frames in the reel (e.g. 600 frames for 25s at 24fps)
    * @param fps Video frame rate (default 24)
-   * @returns Array of length `totalFrames` with the exact anchor frame index (0..126) for each frame
+   * @returns LipSyncTrajectory containing base head pose frames, syllable-matched mouth frames, and openness curve
    */
   public solveLipSyncTrajectory(
     audioSource: string | Buffer | null | undefined,
     totalFrames: number,
     fps: number = 24
-  ): number[] {
-    const trajectory = new Array<number>(totalFrames);
+  ): LipSyncTrajectory {
+    const baseFrames = new Array<number>(totalFrames);
+    const mouthFrames = new Array<number>(totalFrames);
+    const targetOpenness = new Array<number>(totalFrames);
+
+    // Continuous natural ping-pong loop for base head & body movement
+    let basePlayhead = 24;
+    let baseDir = 1;
+    for (let f = 0; f < totalFrames; f++) {
+      basePlayhead += baseDir;
+      if (basePlayhead >= this.numFrames - 2) {
+        basePlayhead = this.numFrames - 2;
+        baseDir = -1;
+      } else if (basePlayhead <= 2) {
+        basePlayhead = 2;
+        baseDir = 1;
+      }
+      baseFrames[f] = basePlayhead;
+    }
 
     // Default resting / natural loop fallback if audio is missing
     if (!audioSource) {
-      let restingPos = 24;
-      let dir = 1;
       for (let f = 0; f < totalFrames; f++) {
-        restingPos += dir;
-        if (restingPos >= 28) { restingPos = 28; dir = -1; }
-        else if (restingPos <= 22) { restingPos = 22; dir = 1; }
-        trajectory[f] = restingPos;
+        mouthFrames[f] = 28; // resting closed lips
+        targetOpenness[f] = 0.0;
       }
-      return trajectory;
+      return { baseFrames, mouthFrames, targetOpenness, totalFrames };
     }
 
     const samples = this.decodeToPcm(audioSource);
     if (!samples || samples.length === 0) {
       for (let f = 0; f < totalFrames; f++) {
-        trajectory[f] = f % this.numFrames;
+        mouthFrames[f] = baseFrames[f];
+        targetOpenness[f] = 0.0;
       }
-      return trajectory;
+      return { baseFrames, mouthFrames, targetOpenness, totalFrames };
     }
 
     const samplesPerFrame = Math.round(16000 / fps);
@@ -178,83 +180,127 @@ export class LipSyncEngine {
       energies[f] = rms;
     }
 
-    // 2. Perceptual noise floor & non-linear mouth openness target
-    const silenceThreshold = 380;
-    const targetOpenness = new Float32Array(totalFrames);
+    // 2. Perceptual noise floor & crisp syllable target openness
+    const silenceThreshold = 350;
+    const rawTarget = new Float32Array(totalFrames);
 
     for (let f = 0; f < totalFrames; f++) {
       if (energies[f] < silenceThreshold) {
-        targetOpenness[f] = 0.0;
+        rawTarget[f] = 0.0;
       } else {
         const norm = (energies[f] - silenceThreshold) / Math.max(1, maxRms - silenceThreshold);
-        targetOpenness[f] = Math.min(1.0, Math.pow(norm, 0.72) * 1.25);
+        // Non-linear perceptual scaling with power 0.65 for sharp syllable dynamics
+        rawTarget[f] = Math.min(1.0, Math.pow(norm, 0.65) * 1.35);
       }
     }
 
-    // 3. Asymmetric physical jaw kinematics (rapid attack for opening, gradual decay for closing)
+    // 3. Syllable-responsive jaw kinematics (rapid attack 0.85 for vowel bursts, snappy decay 0.55 for consonant closure)
     const smoothed = new Float32Array(totalFrames);
     for (let f = 0; f < totalFrames; f++) {
       const prev = f > 0 ? smoothed[f - 1] : 0;
-      const target = targetOpenness[f];
-      const factor = target > prev ? 0.75 : 0.40;
+      const target = rawTarget[f];
+      const factor = target > prev ? 0.85 : 0.55;
       smoothed[f] = prev + (target - prev) * factor;
+      targetOpenness[f] = smoothed[f];
     }
 
-    // 4. Trajectory solver
-    let playhead = 24; // Start in calm resting posture
-    let direction = 1; // 1 = forward, -1 = backward
-    let restingDirection = 1;
-
+    // 4. Syllable-driven viseme selection conditioned on base head pose
     for (let f = 0; f < totalFrames; f++) {
+      const bIdx = baseFrames[f];
       const targetO = smoothed[f];
-      const isSilent = targetO < 0.08;
 
-      if (isSilent) {
-        // In silence: smoothly settle into the nearest resting closed loop
-        const cluster = this.getNearestClosedCluster(playhead);
-        if (playhead < cluster.min) {
-          playhead = Math.min(cluster.min, playhead + 1);
-        } else if (playhead > cluster.max) {
-          playhead = Math.max(cluster.max, playhead - 1);
-        } else {
-          // Living micro-breathing inside closed zone without freeze-framing
-          playhead += restingDirection;
-          if (playhead >= cluster.max) {
-            playhead = cluster.max;
-            restingDirection = -1;
-          } else if (playhead <= cluster.min) {
-            playhead = cluster.min;
-            restingDirection = 1;
+      // Local search window [bIdx - 25, bIdx + 25] ensures exact head-pose and lighting alignment
+      const windowStart = Math.max(0, bIdx - 25);
+      const windowEnd = Math.min(this.numFrames - 1, bIdx + 25);
+
+      if (targetO < 0.06) {
+        // SILENCE / PAUSE: Guarantee fully closed mouth
+        let bestClosed = bIdx;
+        let minClosedO = Infinity;
+        for (let c = windowStart; c <= windowEnd; c++) {
+          if (this.opennessTable[c] < minClosedO) {
+            minClosedO = this.opennessTable[c];
+            bestClosed = c;
           }
         }
-        trajectory[f] = playhead;
+        mouthFrames[f] = bestClosed;
       } else {
-        // In active speech: advance naturally along ping-pong trajectory
-        if (playhead >= this.numFrames - 3) {
-          direction = -1;
-        } else if (playhead <= 2) {
-          direction = 1;
-        }
-
-        let step = 1;
-        // Accentuate mouth opening on strong vowel peaks
-        if (targetO > 0.60) {
-          const cand1 = playhead + 1 * direction;
-          const cand2 = playhead + 2 * direction;
-          if (cand2 >= 0 && cand2 < this.numFrames) {
-            const o1 = this.opennessTable[cand1] || 0;
-            const o2 = this.opennessTable[cand2] || 0;
-            if (o2 > o1) {
-              step = 2;
-            }
+        // ACTIVE SPEECH: Find viseme matching syllable openness
+        let bestCand = bIdx;
+        let minDiff = Infinity;
+        for (let c = windowStart; c <= windowEnd; c++) {
+          const diff = Math.abs(this.opennessTable[c] - targetO);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestCand = c;
           }
         }
-
-        playhead = Math.max(0, Math.min(this.numFrames - 1, playhead + step * direction));
-        trajectory[f] = playhead;
+        mouthFrames[f] = bestCand;
       }
     }
 
-    return trajectory;
+    return { baseFrames, mouthFrames, targetOpenness, totalFrames };
+  }
+
+  /**
+   * Draws a lip-synced news anchor frame using feathered elliptical mouth blending.
+   *
+   * @param f Current video frame index
+   * @param anchorImages Array of preloaded anchor image elements
+   * @param lipSyncData Computed trajectory from solveLipSyncTrajectory
+   * @param drawFn Callback that receives the final composite element (image or canvas) to render onto the destination context
+   */
+  public drawAnchorFrame(
+    f: number,
+    anchorImages: any[],
+    lipSyncData: LipSyncTrajectory | null | undefined,
+    drawFn: (compositeElement: any) => void
+  ): void {
+    if (!anchorImages || anchorImages.length === 0) return;
+
+    if (!lipSyncData || !lipSyncData.baseFrames || lipSyncData.baseFrames.length === 0) {
+      // Fallback: draw sequential frame
+      const fallbackImg = anchorImages[f % anchorImages.length];
+      drawFn(fallbackImg);
+      return;
+    }
+
+    const bIdx = lipSyncData.baseFrames[f] ?? (f % anchorImages.length);
+    const mIdx = lipSyncData.mouthFrames[f] ?? bIdx;
+    const baseImg = anchorImages[bIdx] || anchorImages[0];
+    const mouthImg = anchorImages[mIdx] || baseImg;
+
+    // If base and mouth are already the same frame, draw directly with zero compositing overhead
+    if (bIdx === mIdx || !mouthImg) {
+      drawFn(baseImg);
+      return;
+    }
+
+    // Composite mouth onto base head using smooth feathered elliptical gradient
+    const frameW = 1080;
+    const frameH = 608;
+
+    this.compCtx.clearRect(0, 0, frameW, frameH);
+    this.compCtx.drawImage(baseImg, 0, 0);
+
+    // Mouth mask centered at X: 540, Y: 222
+    this.maskCtx.clearRect(0, 0, frameW, frameH);
+    this.maskCtx.drawImage(mouthImg, 0, 0);
+
+    this.maskCtx.globalCompositeOperation = 'destination-in';
+    const grad = this.maskCtx.createRadialGradient(540, 222, 10, 540, 222, 38);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(0.65, 'rgba(0,0,0,0.85)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    this.maskCtx.fillStyle = grad;
+    this.maskCtx.beginPath();
+    this.maskCtx.ellipse(540, 222, 42, 28, 0, 0, Math.PI * 2);
+    this.maskCtx.fill();
+
+    this.maskCtx.globalCompositeOperation = 'source-over';
+    this.compCtx.drawImage(this.maskCanvas, 0, 0);
+
+    drawFn(this.compCanvas);
   }
 }
