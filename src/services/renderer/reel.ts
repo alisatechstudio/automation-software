@@ -336,31 +336,10 @@ export class ReelVideoRenderer {
   }
 
   public static async getAnchorImages(): Promise<any[]> {
-    if (ReelVideoRenderer.cachedAnchorImages && ReelVideoRenderer.cachedAnchorImages.length > 0) {
-      return ReelVideoRenderer.cachedAnchorImages;
-    }
-    const candidatePaths = [
-      path.join(config.ASSETS_DIR, 'video', 'anchor_frames'),
-      path.join(process.cwd(), 'assets', 'video', 'anchor_frames'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'video', 'anchor_frames'),
-    ];
-    const anchorFramesDir = candidatePaths.find((p) => fs.existsSync(p));
-    if (!anchorFramesDir) return [];
-    try {
-      const files = fs.readdirSync(anchorFramesDir).filter((f) => f.endsWith('.jpg')).sort();
-      const images: any[] = [];
-      for (const f of files) {
-        try {
-          images.push(await loadImage(path.join(anchorFramesDir, f)));
-        } catch (_) {}
-      }
-      if (images.length > 0) {
-        ReelVideoRenderer.cachedAnchorImages = images;
-      }
-      return images;
-    } catch (_) {
-      return [];
-    }
+    // Option 3: High-Monetization Broadcast Documentary Format.
+    // Stock female presenter video disabled to eliminate mismatched presenter gender.
+    // Full focus given to authoritative male voiceover + high-resolution news subject imagery.
+    return [];
   }
 
   constructor() {
@@ -1112,37 +1091,61 @@ export class ReelVideoRenderer {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Full-Bleed Vertical Anchor Stage (Y: 0 to 1320)
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
-      : null;
-
-    const anchorStageH = 1320;
-    if (anchorImg) {
+    // 2. Full-Bleed Vertical Story Visual Stage (Y: 0 to 1320)
+    const stageH = 1320;
+    if (articleImg) {
       ctx.save();
-      const srcW = anchorImg.width;
-      const srcH = Math.round(anchorImg.height * 0.84);
-      const cropW = Math.round(srcH * (width / anchorStageH));
-      const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
-
-      ctx.drawImage(anchorImg, cropX, 0, cropW, srcH, 0, 0, width, anchorStageH);
+      const zoom = 1.0 + progress * 0.08;
+      const panY = Math.sin(progress * Math.PI) * 12;
+      this.drawZoomedImage(ctx, articleImg, 0, 0, width, stageH, zoom, panY);
 
       // Top subtle broadcast vignette for header bug clarity
-      const topVig = ctx.createLinearGradient(0, 0, 0, 220);
-      topVig.addColorStop(0, 'rgba(0,0,0,0.85)');
-      topVig.addColorStop(0.7, 'rgba(0,0,0,0.35)');
+      const topVig = ctx.createLinearGradient(0, 0, 0, 240);
+      topVig.addColorStop(0, 'rgba(0,0,0,0.88)');
+      topVig.addColorStop(0.7, 'rgba(0,0,0,0.45)');
       topVig.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = topVig;
-      ctx.fillRect(0, 0, width, 220);
+      ctx.fillRect(0, 0, width, 240);
 
       // Bottom dramatic studio gradient transitioning to headline card
-      const botVig = ctx.createLinearGradient(0, anchorStageH - 350, 0, anchorStageH);
+      const botVig = ctx.createLinearGradient(0, stageH - 350, 0, stageH);
       botVig.addColorStop(0, 'rgba(0,0,0,0)');
       botVig.addColorStop(0.5, 'rgba(15, 23, 42, 0.7)');
       botVig.addColorStop(1, '#090d16');
       ctx.fillStyle = botVig;
-      ctx.fillRect(0, anchorStageH - 350, width, 350);
+      ctx.fillRect(0, stageH - 350, width, 350);
+
+      // Animated Live Audio Equalizer (giving visual feedback that male presenter voiceover is actively speaking)
+      const eqX = width - 210;
+      const eqY = stageH - 50;
+      const numBars = 7;
+      const barW = 8;
+      const barGap = 6;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect(eqX - 18, eqY - 32, numBars * (barW + barGap) + 26, 44, 22);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      for (let i = 0; i < numBars; i++) {
+        const hScale = Math.abs(Math.sin(f * 0.25 + i * 0.85) * 0.7 + Math.cos(f * 0.18 - i * 0.45) * 0.3);
+        const bH = Math.max(8, Math.round(hScale * 26));
+        const bX = eqX + i * (barW + barGap);
+        const bY = eqY - bH + 2;
+        const barGrad = ctx.createLinearGradient(bX, bY, bX, eqY);
+        barGrad.addColorStop(0, strapAccent || '#38bdf8');
+        barGrad.addColorStop(1, '#ffffff');
+        ctx.fillStyle = barGrad;
+        ctx.beginPath();
+        ctx.roundRect(bX, bY, barW, bH, 4);
+        ctx.fill();
+      }
       ctx.restore();
+    } else {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, stageH);
     }
 
     // 3. Top Header Bug (Y: 60 to 140)
@@ -1432,28 +1435,23 @@ export class ReelVideoRenderer {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
 
-    // 3. Stage 1: The Canva Presenter Video Window (Y: 160 to 750, H: 590)
+    // 3. Stage 1: Newsroom Subject Visual with Ken Burns Motion & Audio Equalizer (Y: 160 to 750, H: 590)
     const anchorY = 160;
     const anchorH = 590;
     const anchorW = width - 80;
     const anchorX = 40;
 
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
-      : null;
-
-    if (anchorImg) {
+    if (articleImg) {
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
       ctx.clip();
 
-      // Cleanly crop out bottom 16% of anchor to eliminate Canva English text
-      const srcW = anchorImg.width;
-      const srcH = Math.round(anchorImg.height * 0.84);
-      ctx.drawImage(anchorImg, 0, 0, srcW, srcH, anchorX, anchorY, anchorW, anchorH);
+      const zoom = 1.05 + progress * 0.08;
+      const panY = Math.cos(progress * Math.PI) * 10;
+      this.drawZoomedImage(ctx, articleImg, anchorX, anchorY, anchorW, anchorH, zoom, panY);
 
-      // Dark gradient at bottom of anchor frame
+      // Gradient overlay
       const aGrad = ctx.createLinearGradient(0, anchorY + anchorH - 140, 0, anchorY + anchorH);
       aGrad.addColorStop(0, 'rgba(0,0,0,0)');
       aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
@@ -1461,7 +1459,7 @@ export class ReelVideoRenderer {
       ctx.fillStyle = aGrad;
       ctx.fillRect(anchorX, anchorY + anchorH - 140, anchorW, 140);
 
-      // Full-width Anchor Newsroom Ticker Bar (Completely covers Canva English lower-third)
+      // Full-width Broadcast Ticker Bar
       const tickerY = anchorY + anchorH - 82;
       const tickerH = 70;
       ctx.fillStyle = '#0f172a';
@@ -1483,16 +1481,20 @@ export class ReelVideoRenderer {
       ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(isEnglish ? 'STUDIO ANCHOR • LIVE SPECIAL' : 'স্টুডিও উপস্থাপক • সরাসরি সংবাদ বুলেটিন', anchorX + 56, tickerY + tickerH / 2);
+      ctx.fillText(isEnglish ? 'BROADCAST DESK • SPECIAL DISPATCH' : 'সম্প্রচার ডেস্ক • বিশেষ তথ্য বুলেটিন', anchorX + 56, tickerY + tickerH / 2);
 
-      ctx.fillStyle = strapAccent;
-      ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(brandText, anchorX + anchorW - 32, tickerY + tickerH / 2);
+      // Soundwave bars inside ticker bar right side
+      const eqX = anchorX + anchorW - 130;
+      const eqY = tickerY + tickerH / 2 + 10;
+      for (let i = 0; i < 5; i++) {
+        const bH = 8 + Math.abs(Math.sin(f * 0.3 + i * 0.8)) * 18;
+        ctx.fillStyle = strapAccent || '#facc15';
+        ctx.fillRect(eqX + i * 12, eqY - bH, 6, bH);
+      }
 
       ctx.restore();
 
-      // Outer glow border for anchor window
+      // Outer glow border
       ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -1691,11 +1693,6 @@ export class ReelVideoRenderer {
     const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
     const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : (category || 'বিশেষ খবর');
 
-    // Determine current phase: Intro (0-20%), Story (20-82%), Outro (82-100%)
-    const isIntro = progress < 0.20;
-    const isOutro = progress > 0.82;
-    const showAnchor = isIntro || isOutro || !articleImg;
-
     // 1. Dark Studio Background
     const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
     bgGrad.addColorStop(0, '#090d16');
@@ -1711,30 +1708,33 @@ export class ReelVideoRenderer {
     const stageW = width - 80;
     const stageX = 40;
 
-    const anchorImg = anchorImages && anchorImages.length > 0
-      ? anchorImages[f % anchorImages.length]
-      : null;
-
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(stageX, stageY, stageW, stageH, 22);
     ctx.clip();
 
-    if (showAnchor && anchorImg) {
-      // Draw Canva news anchor
-      const srcW = anchorImg.width;
-      const srcH = Math.round(anchorImg.height * 0.84);
-      ctx.drawImage(anchorImg, 0, 0, srcW, srcH, stageX, stageY, stageW, stageH);
+    if (articleImg) {
+      // Documentary deep-dive: Article news photo with cinematic Ken Burns motion
+      const zoom = 1.0 + progress * 0.09;
+      const panY = Math.sin(progress * Math.PI) * 14;
+      this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY);
 
-      // Dark gradient at bottom of anchor window
-      const aGrad = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
-      aGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
-      aGrad.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
-      ctx.fillStyle = aGrad;
-      ctx.fillRect(stageX, stageY + stageH - 150, stageW, 150);
+      // Top subtle vignette
+      const topVig = ctx.createLinearGradient(0, stageY, 0, stageY + 160);
+      topVig.addColorStop(0, 'rgba(0,0,0,0.7)');
+      topVig.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = topVig;
+      ctx.fillRect(stageX, stageY, stageW, 160);
 
-      // Presenter phase banner
+      // Bottom vignette for studio lower banner
+      const artVig = ctx.createLinearGradient(0, stageY + stageH - 180, 0, stageY + stageH);
+      artVig.addColorStop(0, 'rgba(0,0,0,0)');
+      artVig.addColorStop(0.5, 'rgba(15, 23, 42, 0.7)');
+      artVig.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
+      ctx.fillStyle = artVig;
+      ctx.fillRect(stageX, stageY + stageH - 180, stageW, 180);
+
+      // Broadcast phase banner
       const bannerY = stageY + stageH - 74;
       const bannerH = 60;
       ctx.fillStyle = '#0f172a';
@@ -1745,7 +1745,7 @@ export class ReelVideoRenderer {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = isIntro ? '#ef4444' : '#10b981';
+      ctx.fillStyle = '#10b981';
       ctx.beginPath();
       ctx.arc(stageX + 40, bannerY + bannerH / 2, 8, 0, Math.PI * 2);
       ctx.fill();
@@ -1754,37 +1754,20 @@ export class ReelVideoRenderer {
       ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      const phaseTitle = isIntro
-        ? (isEnglish ? 'STUDIO ANCHOR • BREAKING DISPATCH' : '🎙️ স্টুডিও উপস্থাপক • প্রধান সংবাদ')
-        : (isEnglish ? 'STUDIO ANCHOR • CONCLUDING UPDATE' : '🎙️ স্টুডিও উপস্থাপক • সর্বশেষ আপডেট');
+      const phaseTitle = isEnglish ? 'SPECIAL REPORT • FULL STORY' : '🎙️ বিশেষ প্রতিবেদন • বিস্তারিত সংবাদ';
       ctx.fillText(phaseTitle, stageX + 58, bannerY + bannerH / 2);
 
-      ctx.fillStyle = strapAccent;
-      ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(brandText, stageX + stageW - 36, bannerY + bannerH / 2);
-    } else if (articleImg) {
-      // Story deep-dive: Article news photo with Ken Burns zoom
-      const bodyProgress = (progress - 0.20) / 0.62;
-      const zoom = 1.0 + bodyProgress * 0.08;
-      const panY = Math.sin(bodyProgress * Math.PI) * 12;
-      this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY);
-
-      // Vignette
-      const artVig = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
-      artVig.addColorStop(0, 'rgba(0,0,0,0)');
-      artVig.addColorStop(1, 'rgba(0,0,0,0.85)');
-      ctx.fillStyle = artVig;
-      ctx.fillRect(stageX, stageY + stageH - 150, stageW, 150);
-
-      // Live Audio Equalizer
-      const eqX = stageX + stageW - 180;
-      const eqY = stageY + stageH - 40;
+      // Animated Live Audio Equalizer in banner
+      const eqX = stageX + stageW - 170;
+      const eqY = bannerY + bannerH / 2 + 12;
       for (let i = 0; i < 6; i++) {
-        const bH = 10 + Math.abs(Math.sin(f * 0.35 + i * 0.8)) * 26;
+        const bH = 10 + Math.abs(Math.sin(f * 0.35 + i * 0.8)) * 22;
         ctx.fillStyle = strapAccent || '#38bdf8';
         ctx.fillRect(eqX + i * 14, eqY - bH, 8, bH);
       }
+    } else {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(stageX, stageY, stageW, stageH);
     }
     ctx.restore();
 
