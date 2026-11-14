@@ -38,7 +38,7 @@ export class EdgeTtsService {
     const isEn = options?.isEnglish !== undefined ? options.isEnglish : !this.isBengali(cleanText);
     const voice = options?.voice || (isEn ? EdgeTtsService.ENGLISH_VOICE : EdgeTtsService.BENGALI_VOICE);
 
-    const tempDir = os.tmpdir();
+    const tempDir = process.env.VERCEL ? '/tmp' : os.tmpdir();
     const tempFile = path.join(tempDir, `edge_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp3`);
 
     console.log(`[EdgeTTS] 🎙️ Synthesizing (${voice}): "${cleanText.substring(0, 50)}..."`);
@@ -48,6 +48,7 @@ export class EdgeTtsService {
         voice,
         lang: isEn ? 'en-US' : 'bn-BD',
         outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+        timeout: 15000,
       });
 
       await tts.ttsPromise(cleanText, tempFile);
