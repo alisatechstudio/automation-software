@@ -2254,6 +2254,7 @@ apiRouter.get('/settings', async (req: Request, res: Response) => {
     res.json(settingsMap);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
 });
 
 apiRouter.post('/settings', async (req: Request, res: Response) => {
