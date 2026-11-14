@@ -383,7 +383,7 @@ export class InputPipelineService {
           const isBdNews = sourceName.toLowerCase().includes('bd news');
           const isTrendingNews = sourceName.toLowerCase().includes('trending') || isEnglish;
 
-          let targetTheme = source.reelTheme || 'auto-category';
+          let targetTheme = source.reelTheme || 'canva-studio-rotate';
           if (targetTheme === 'rolling') {
             const rotKey = isTrendingNews ? 'trending_news' : (isBdNews ? 'bd_news' : sourceName);
             targetTheme = await getNextRollingReelTheme(db, rotKey);
