@@ -99,6 +99,7 @@ export interface ReelTemplateDefinition {
 
 export const REEL_THEME_KEYS = [
   'auto-category',
+  'canva-studio-b',
   'cat-bangladesh',
   'cat-politics',
   'cat-economy',
@@ -310,6 +311,15 @@ export const REEL_TEMPLATES: Record<string, ReelTemplateDefinition> = {
     height: 1920,
     aspectRatio: '9:16',
     badgeColor: '#6366f1',
+  },
+  'canva-studio-b': {
+    id: 'canva-studio-b',
+    name: '🎥 Canva Studio Anchor B (লাইভ স্টুডিও উপস্থাপক + সংবাদ ছবি)',
+    description: '1080x1920 Full HD (9:16 Vertical): Animated Canva news anchor video on top, dynamic news photo in middle, kinetic headline card on bottom',
+    width: 1080,
+    height: 1920,
+    aspectRatio: '9:16',
+    badgeColor: '#ea580c',
   },
 };
 
