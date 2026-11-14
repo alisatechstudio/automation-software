@@ -489,10 +489,8 @@ export class ReelVideoRenderer {
     const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
-    if (theme === 'canva-studio-rotate' || theme === 'rolling') {
-      theme = ReelVideoRenderer.resolveRotationTheme(theme);
-    } else if (theme === 'auto-category') {
-      theme = resolveCategoryTheme(category);
+    if (!theme || theme === 'canva-studio-rotate' || theme === 'rolling' || theme === 'auto-category') {
+      theme = ReelVideoRenderer.resolveRotationTheme('canva-studio-rotate');
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
@@ -573,10 +571,8 @@ export class ReelVideoRenderer {
     const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
-    if (theme === 'canva-studio-rotate' || theme === 'rolling') {
-      theme = ReelVideoRenderer.resolveRotationTheme(theme);
-    } else if (theme === 'auto-category') {
-      theme = resolveCategoryTheme(category);
+    if (!theme || theme === 'canva-studio-rotate' || theme === 'rolling' || theme === 'auto-category') {
+      theme = ReelVideoRenderer.resolveRotationTheme('canva-studio-rotate');
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
@@ -1034,26 +1030,18 @@ export class ReelVideoRenderer {
 
         ctx.save();
         if (f >= wordStartF && f < wordStartF + 9) {
-          // Kinetic Word Entrance: Remotion spring-driven pop-in with slight bounce & accent glow
+          // Kinetic Word Entrance: Remotion spring-driven slide & fade (preserves Bengali typography without word collision)
           const springVal = remotionSpring({
             frame: f - wordStartF,
             fps: 24,
-            config: { damping: 11, stiffness: 125, mass: 0.5 },
+            config: { damping: 14, stiffness: 140, mass: 0.5 },
           });
-          const scale = 0.8 + springVal * 0.2; // 0.8 -> 1.0 with overshoot
-          const offsetY = (1 - Math.min(1, springVal)) * 9;   // 9px -> 0px
+          const offsetY = (1 - Math.min(1, springVal)) * 6;
           const alpha = Math.min(1, springVal * 1.3);
 
           ctx.globalAlpha = alpha;
-          ctx.translate(wordX + wordW / 2, lineY + fontSize / 2 + offsetY);
-          ctx.scale(scale, scale);
-          ctx.translate(-(wordX + wordW / 2), -(lineY + fontSize / 2 + offsetY));
-
-          // Active popping word glows in accent color
-          ctx.fillStyle = accentColor || '#f59e0b';
-          ctx.shadowColor = accentColor || '#f59e0b';
-          ctx.shadowBlur = 10;
-          ctx.fillText(word, wordX, lineY);
+          ctx.fillStyle = headlineColor || '#0f172a';
+          ctx.fillText(word, wordX, lineY + offsetY);
         } else {
           // Settled word in crisp headline color
           ctx.fillStyle = headlineColor || '#0f172a';
