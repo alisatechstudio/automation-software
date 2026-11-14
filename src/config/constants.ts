@@ -99,7 +99,10 @@ export interface ReelTemplateDefinition {
 
 export const REEL_THEME_KEYS = [
   'auto-category',
+  'canva-studio-rotate',
+  'canva-studio-a',
   'canva-studio-b',
+  'canva-studio-c',
   'cat-bangladesh',
   'cat-politics',
   'cat-economy',
@@ -312,14 +315,41 @@ export const REEL_TEMPLATES: Record<string, ReelTemplateDefinition> = {
     aspectRatio: '9:16',
     badgeColor: '#6366f1',
   },
+  'canva-studio-rotate': {
+    id: 'canva-studio-rotate',
+    name: '🔄 Canva Studio Auto-Rotation (A ➔ B ➔ C ঘুরিয়ে ঘুরিয়ে)',
+    description: '1080x1920 Full HD (9:16 Vertical): Automatically rotates across Fullscreen Presenter (A), Studio Split (B), and Intro/B-roll/Outro (C) on every reel',
+    width: 1080,
+    height: 1920,
+    aspectRatio: '9:16',
+    badgeColor: '#ec4899',
+  },
+  'canva-studio-a': {
+    id: 'canva-studio-a',
+    name: '👤 Canva Studio A (ফুলস্ক্রিন উপস্থাপক + লাইভ ট্র্যাকার)',
+    description: '1080x1920 Full HD (9:16 Vertical): Full-screen vertical news presenter with sleek Bangla breaking ticker and floating headline card',
+    width: 1080,
+    height: 1920,
+    aspectRatio: '9:16',
+    badgeColor: '#2563eb',
+  },
   'canva-studio-b': {
     id: 'canva-studio-b',
-    name: '🎥 Canva Studio Anchor B (লাইভ স্টুডিও উপস্থাপক + সংবাদ ছবি)',
+    name: '🎥 Canva Studio B (স্প্লিট স্টুডিও + সংবাদ ছবি)',
     description: '1080x1920 Full HD (9:16 Vertical): Animated Canva news anchor video on top, dynamic news photo in middle, kinetic headline card on bottom',
     width: 1080,
     height: 1920,
     aspectRatio: '9:16',
     badgeColor: '#ea580c',
+  },
+  'canva-studio-c': {
+    id: 'canva-studio-c',
+    name: '🎬 Canva Studio C (উপস্থাপক ইন্ট্রো ➔ সংবাদ ছবি ➔ আউটরো)',
+    description: '1080x1920 Full HD (9:16 Vertical): 0-5s Anchor Intro ➔ Full-bleed article photo with Ken Burns zoom ➔ Anchor sign-off outro',
+    width: 1080,
+    height: 1920,
+    aspectRatio: '9:16',
+    badgeColor: '#10b981',
   },
 };
 

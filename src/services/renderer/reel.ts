@@ -20,7 +20,10 @@ try {
 
 export type ReelTheme =
   | 'auto-category'
+  | 'canva-studio-rotate'
+  | 'canva-studio-a'
   | 'canva-studio-b'
+  | 'canva-studio-c'
   | 'cat-bangladesh'
   | 'cat-politics'
   | 'cat-economy'
@@ -315,6 +318,22 @@ export class ReelVideoRenderer {
   private fontsRegistered: boolean = false;
   private ttsService: UnifiedTtsService;
   private static cachedAnchorImages: any[] | null = null;
+  private static rotationCounter: number = 0;
+
+  public static resolveRotationTheme(theme: ReelTheme | string): ReelTheme | string {
+    if (theme === 'canva-studio-rotate' || theme === 'rolling') {
+      const rotationPool: Array<'canva-studio-a' | 'canva-studio-b' | 'canva-studio-c'> = [
+        'canva-studio-a',
+        'canva-studio-b',
+        'canva-studio-c',
+      ];
+      const selected = rotationPool[ReelVideoRenderer.rotationCounter % rotationPool.length];
+      ReelVideoRenderer.rotationCounter++;
+      console.log(`[ReelVideoRenderer] 🔄 Rotation selected: ${selected} (run #${ReelVideoRenderer.rotationCounter})`);
+      return selected;
+    }
+    return theme;
+  }
 
   public static async getAnchorImages(): Promise<any[]> {
     if (ReelVideoRenderer.cachedAnchorImages && ReelVideoRenderer.cachedAnchorImages.length > 0) {
@@ -470,10 +489,10 @@ export class ReelVideoRenderer {
     const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
-    if (theme === 'auto-category') {
+    if (theme === 'canva-studio-rotate' || theme === 'rolling') {
+      theme = ReelVideoRenderer.resolveRotationTheme(theme);
+    } else if (theme === 'auto-category') {
       theme = resolveCategoryTheme(category);
-    } else if (theme === 'rolling') {
-      theme = 'viral-gradient';
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
@@ -502,7 +521,8 @@ export class ReelVideoRenderer {
     }
 
     const logoImg = await this.loadLogoImage(isEnglish);
-    const anchorImages = (theme === 'canva-studio-b')
+    const isCanvaTheme = typeof theme === 'string' && theme.startsWith('canva-studio');
+    const anchorImages = isCanvaTheme
       ? await ReelVideoRenderer.getAnchorImages()
       : [];
     const canvas = createCanvas(width, height);
@@ -553,10 +573,10 @@ export class ReelVideoRenderer {
     const website = (input.website || defaultSite).replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     let theme = rawTheme;
-    if (theme === 'auto-category') {
+    if (theme === 'canva-studio-rotate' || theme === 'rolling') {
+      theme = ReelVideoRenderer.resolveRotationTheme(theme);
+    } else if (theme === 'auto-category') {
       theme = resolveCategoryTheme(category);
-    } else if (theme === 'rolling') {
-      theme = 'viral-gradient';
     }
 
     // All Reels are 9:16 vertical format by default (required by Meta Reels, YouTube Shorts, and TikTok).
@@ -596,7 +616,8 @@ export class ReelVideoRenderer {
     const logoImg = await this.loadLogoImage(isEnglish);
 
     // 2b. Preload anchor frames for Canva Studio B template
-    const anchorImages = (theme === 'canva-studio-b')
+    const isCanvaTheme = typeof theme === 'string' && theme.startsWith('canva-studio');
+    const anchorImages = isCanvaTheme
       ? await ReelVideoRenderer.getAnchorImages()
       : [];
 
@@ -913,8 +934,16 @@ export class ReelVideoRenderer {
     isEnglish: boolean = false,
     anchorImages: any[] = []
   ): void {
+    if (theme === 'canva-studio-a') {
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      return;
+    }
     if (theme === 'canva-studio-b') {
       this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      return;
+    }
+    if (theme === 'canva-studio-c') {
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
       return;
     }
 
@@ -1055,6 +1084,263 @@ export class ReelVideoRenderer {
         wordX += wordW + spaceWidth;
       }
     }
+    ctx.restore();
+  }
+
+  /**
+   * Full-Screen News Presenter (Style A):
+   * Features full-bleed vertical news anchor video, sleek breaking news ticker strap,
+   * floating studio headline card, and safe zone mobile footer.
+   */
+  private renderCanvaStudioAFrame(
+    ctx: any,
+    width: number,
+    height: number,
+    progress: number,
+    f: number,
+    articleImg: any,
+    logoImg: any,
+    headline: string,
+    category: string,
+    website: string,
+    isEnglish: boolean = false,
+    anchorImages: any[] = []
+  ): void {
+    const activeCategoryKey = resolveCategoryTheme(category);
+    const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
+
+    const strapBg = catStyle.badgeBg || '#ea580c';
+    const strapAccent = catStyle.badgeDot || '#facc15';
+    const deskName = isEnglish ? `${catStyle.id.replace('cat-', '').toUpperCase()} DESK` : `${catStyle.banglaName} ডেস্ক`;
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : (category || 'বিশেষ খবর');
+
+    // 1. Dark Studio Ambiance Background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(0.35, '#0f172a');
+    bgGrad.addColorStop(0.7, '#1e1b4b');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Full-Bleed Vertical Anchor Stage (Y: 0 to 1320)
+    const anchorImg = anchorImages && anchorImages.length > 0
+      ? anchorImages[f % anchorImages.length]
+      : null;
+
+    const anchorStageH = 1320;
+    if (anchorImg) {
+      ctx.save();
+      const srcW = anchorImg.width;
+      const srcH = Math.round(anchorImg.height * 0.84);
+      const cropW = Math.round(srcH * (width / anchorStageH));
+      const cropX = Math.max(0, Math.round((srcW - cropW) / 2));
+
+      ctx.drawImage(anchorImg, cropX, 0, cropW, srcH, 0, 0, width, anchorStageH);
+
+      // Top subtle broadcast vignette for header bug clarity
+      const topVig = ctx.createLinearGradient(0, 0, 0, 220);
+      topVig.addColorStop(0, 'rgba(0,0,0,0.85)');
+      topVig.addColorStop(0.7, 'rgba(0,0,0,0.35)');
+      topVig.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = topVig;
+      ctx.fillRect(0, 0, width, 220);
+
+      // Bottom dramatic studio gradient transitioning to headline card
+      const botVig = ctx.createLinearGradient(0, anchorStageH - 350, 0, anchorStageH);
+      botVig.addColorStop(0, 'rgba(0,0,0,0)');
+      botVig.addColorStop(0.5, 'rgba(15, 23, 42, 0.7)');
+      botVig.addColorStop(1, '#090d16');
+      ctx.fillStyle = botVig;
+      ctx.fillRect(0, anchorStageH - 350, width, 350);
+      ctx.restore();
+    }
+
+    // 3. Top Header Bug (Y: 60 to 140)
+    const logoCenterY = 100;
+    const logoRadius = 38;
+    if (logoImg) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(80, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logoImg, 80 - logoRadius, logoCenterY - logoRadius, logoRadius * 2, logoRadius * 2);
+      ctx.restore();
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + Math.sin(f * 0.2) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(80, logoCenterY, logoRadius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = isEnglish ? 'bold 30px sans-serif' : 'bold 36px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(brandText, 132, logoCenterY);
+    ctx.shadowBlur = 0;
+
+    // Category Pill (Top Right)
+    const pillLabel = isEnglish ? `LIVE • ${displayCategory}` : `${displayCategory} • লাইভ`;
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+    const pillW = ctx.measureText(pillLabel).width + 55;
+    const pillX = width - 45 - pillW;
+    const pillY = 75;
+    const pillH = 50;
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillW, pillH, 25);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = strapAccent;
+    ctx.beginPath();
+    ctx.arc(pillX + 24, pillY + pillH / 2, 6 + Math.sin(f * 0.3) * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
+
+    // 4. Floating Breaking News Ticker Strap (Y: 1210 to 1278, H: 68)
+    const strapY = 1210;
+    const strapH = 68;
+    ctx.save();
+    ctx.fillStyle = strapBg;
+    ctx.fillRect(0, strapY, width, strapH);
+
+    ctx.fillStyle = strapAccent;
+    ctx.fillRect(0, strapY, width, 4);
+
+    const shimmerPos = ((f * 18) % (width + 400)) - 200;
+    const sGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
+    sGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    sGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.35)');
+    sGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = sGrad;
+    ctx.fillRect(0, strapY, width, strapH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isEnglish ? '🔴 BREAKING NEWS • LIVE UPDATE' : '🔴 ব্রেকিং নিউজ | LIVE BROADCAST', 45, strapY + strapH / 2);
+
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = catStyle.shimmerColor || '#fed7aa';
+    ctx.fillText(deskName, width - 45, strapY + strapH / 2);
+    ctx.restore();
+
+    // 5. Floating Studio Headline Card (Y: 1295 to 1740, H: 445)
+    const cardX = 40;
+    const cardY = 1295;
+    const cardW = width - 80;
+    const cardH = 445;
+
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 12;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 24);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Card Border & Top Category Bar
+    ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, 8, [24, 24, 0, 0]);
+    ctx.fill();
+
+    // Bengali Headline Typography
+    let fontSize = 52;
+    if (headline.length > 55) fontSize = 46;
+    if (headline.length > 85) fontSize = 40;
+    if (headline.length > 115) fontSize = 35;
+
+    ctx.fillStyle = catStyle.headlineColor || '#1e3a8a';
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const maxW = cardW - 80;
+    const lines = this.wrapText(ctx, headline, maxW);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.34));
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = cardY + 20 + (cardH - 70 - totalTextHeight) / 2;
+
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      catStyle.headlineColor || '#1e3a8a',
+      strapAccent || '#f59e0b',
+      f,
+      'center'
+    );
+
+    // Mini Live Ticker row inside lower portion of card
+    const cardBadgeY = cardY + cardH - 52;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.06)';
+    ctx.beginPath();
+    ctx.roundRect(cardX + 24, cardBadgeY, cardW - 48, 38, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = isEnglish ? 'bold 18px sans-serif' : 'bold 20px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎙️ সরাসরি স্টুডিও থেকে লাইভ পরিবেশনা', cardX + 42, cardBadgeY + 19);
+
+    // Audio frequency bars in card
+    const eqX = cardX + cardW - 140;
+    const eqY = cardBadgeY + 28;
+    for (let i = 0; i < 5; i++) {
+      const bH = 6 + Math.abs(Math.sin(f * 0.35 + i * 0.9)) * 18;
+      ctx.fillStyle = strapBg;
+      ctx.fillRect(eqX + i * 12, eqY - bH, 6, bH);
+    }
+    ctx.restore();
+
+    // 6. Footer Safe Bar (Y: 1765 to 1860)
+    ctx.save();
+    const footerY = 1765;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.roundRect(40, footerY, width - 80, 8, 4);
+    ctx.fill();
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(40, footerY, (width - 80) * progress, 8, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      isEnglish ? '🔴 FOLLOW & SHARE • TRENDING NEWS WORLD' : '🔴 ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ',
+      width / 2,
+      footerY + 45
+    );
     ctx.restore();
   }
 
@@ -1389,6 +1675,301 @@ export class ReelVideoRenderer {
   }
 
   /**
+   * Anchor Intro ➔ News B-Roll / Photo ➔ Anchor Outro (Style C):
+   * Features dynamic transition from Anchor introduction (0-20% duration)
+   * into full-bleed article photo with Ken Burns zoom (20-80% duration),
+   * then cross-fading back to the Anchor for the conclusion (80-100% duration).
+   */
+  private renderCanvaStudioCFrame(
+    ctx: any,
+    width: number,
+    height: number,
+    progress: number,
+    f: number,
+    articleImg: any,
+    logoImg: any,
+    headline: string,
+    category: string,
+    website: string,
+    isEnglish: boolean = false,
+    anchorImages: any[] = []
+  ): void {
+    const activeCategoryKey = resolveCategoryTheme(category);
+    const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
+
+    const strapBg = catStyle.badgeBg || '#ea580c';
+    const strapAccent = catStyle.badgeDot || '#facc15';
+    const deskName = isEnglish ? `${catStyle.id.replace('cat-', '').toUpperCase()} DESK` : `${catStyle.banglaName} ডেস্ক`;
+    const brandText = isEnglish ? 'TRENDING NEWS WORLD' : 'বিডি নিউজ ২৪/৭';
+    const displayCategory = isEnglish ? (isEnglishText(category) ? category.toUpperCase() : 'BREAKING NEWS') : (category || 'বিশেষ খবর');
+
+    // Determine current phase: Intro (0-20%), Story (20-82%), Outro (82-100%)
+    const isIntro = progress < 0.20;
+    const isOutro = progress > 0.82;
+    const showAnchor = isIntro || isOutro || !articleImg;
+
+    // 1. Dark Studio Background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(0.35, '#0f172a');
+    bgGrad.addColorStop(0.7, '#1e1b4b');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Stage (Y: 140 to 1180, H: 1040)
+    const stageY = 140;
+    const stageH = 1040;
+    const stageW = width - 80;
+    const stageX = 40;
+
+    const anchorImg = anchorImages && anchorImages.length > 0
+      ? anchorImages[f % anchorImages.length]
+      : null;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(stageX, stageY, stageW, stageH, 22);
+    ctx.clip();
+
+    if (showAnchor && anchorImg) {
+      // Draw Canva news anchor
+      const srcW = anchorImg.width;
+      const srcH = Math.round(anchorImg.height * 0.84);
+      ctx.drawImage(anchorImg, 0, 0, srcW, srcH, stageX, stageY, stageW, stageH);
+
+      // Dark gradient at bottom of anchor window
+      const aGrad = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
+      aGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
+      aGrad.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
+      ctx.fillStyle = aGrad;
+      ctx.fillRect(stageX, stageY + stageH - 150, stageW, 150);
+
+      // Presenter phase banner
+      const bannerY = stageY + stageH - 74;
+      const bannerH = 60;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.roundRect(stageX + 16, bannerY, stageW - 32, bannerH, 12);
+      ctx.fill();
+      ctx.strokeStyle = strapBg;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = isIntro ? '#ef4444' : '#10b981';
+      ctx.beginPath();
+      ctx.arc(stageX + 40, bannerY + bannerH / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const phaseTitle = isIntro
+        ? (isEnglish ? 'STUDIO ANCHOR • BREAKING DISPATCH' : '🎙️ স্টুডিও উপস্থাপক • প্রধান সংবাদ')
+        : (isEnglish ? 'STUDIO ANCHOR • CONCLUDING UPDATE' : '🎙️ স্টুডিও উপস্থাপক • সর্বশেষ আপডেট');
+      ctx.fillText(phaseTitle, stageX + 58, bannerY + bannerH / 2);
+
+      ctx.fillStyle = strapAccent;
+      ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(brandText, stageX + stageW - 36, bannerY + bannerH / 2);
+    } else if (articleImg) {
+      // Story deep-dive: Article news photo with Ken Burns zoom
+      const bodyProgress = (progress - 0.20) / 0.62;
+      const zoom = 1.0 + bodyProgress * 0.08;
+      const panY = Math.sin(bodyProgress * Math.PI) * 12;
+      this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY);
+
+      // Vignette
+      const artVig = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
+      artVig.addColorStop(0, 'rgba(0,0,0,0)');
+      artVig.addColorStop(1, 'rgba(0,0,0,0.85)');
+      ctx.fillStyle = artVig;
+      ctx.fillRect(stageX, stageY + stageH - 150, stageW, 150);
+
+      // Live Audio Equalizer
+      const eqX = stageX + stageW - 180;
+      const eqY = stageY + stageH - 40;
+      for (let i = 0; i < 6; i++) {
+        const bH = 10 + Math.abs(Math.sin(f * 0.35 + i * 0.8)) * 26;
+        ctx.fillStyle = strapAccent || '#38bdf8';
+        ctx.fillRect(eqX + i * 14, eqY - bH, 8, bH);
+      }
+    }
+    ctx.restore();
+
+    // Stage border
+    ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(stageX, stageY, stageW, stageH, 22);
+    ctx.stroke();
+
+    // 3. Top Header Bug (Y: 60 to 140)
+    const logoCenterY = 100;
+    const logoRadius = 38;
+    if (logoImg) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(80, logoCenterY, logoRadius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logoImg, 80 - logoRadius, logoCenterY - logoRadius, logoRadius * 2, logoRadius * 2);
+      ctx.restore();
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + Math.sin(f * 0.2) * 0.3})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(80, logoCenterY, logoRadius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = isEnglish ? 'bold 30px sans-serif' : 'bold 36px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(brandText, 132, logoCenterY);
+
+    // Category Pill (Top Right)
+    const pillLabel = isEnglish ? `LIVE • ${displayCategory}` : `${displayCategory} • বিশেষ প্রতিবেদন`;
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+    const pillW = ctx.measureText(pillLabel).width + 55;
+    const pillX = width - 45 - pillW;
+    const pillY = 75;
+    const pillH = 50;
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillW, pillH, 25);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = strapAccent;
+    ctx.beginPath();
+    ctx.arc(pillX + 24, pillY + pillH / 2, 6 + Math.sin(f * 0.3) * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
+
+    // 4. Divider Category Strap (Y: 1195 to 1265, H: 70)
+    const strapY = 1195;
+    const strapH = 70;
+    ctx.save();
+    ctx.fillStyle = strapBg;
+    ctx.fillRect(0, strapY, width, strapH);
+
+    ctx.fillStyle = strapAccent;
+    ctx.fillRect(0, strapY, width, 4);
+
+    const shimmerPos = ((f * 18) % (width + 400)) - 200;
+    const sGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
+    sGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    sGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.35)');
+    sGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = sGrad;
+    ctx.fillRect(0, strapY, width, strapH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isEnglish ? '⚡ SPECIAL REPORT • FULL COVERAGE' : '⚡ বিশেষ প্রতিবেদন | FULL COVERAGE', 45, strapY + strapH / 2);
+
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = catStyle.shimmerColor || '#fed7aa';
+    ctx.fillText(deskName, width - 45, strapY + strapH / 2);
+    ctx.restore();
+
+    // 5. Studio Headline Card (Y: 1285 to 1740, H: 455)
+    const cardX = 40;
+    const cardY = 1285;
+    const cardW = width - 80;
+    const cardH = 455;
+
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 25;
+    ctx.shadowOffsetY = 10;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 24);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Card Border & Top Category Bar
+    ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, 8, [24, 24, 0, 0]);
+    ctx.fill();
+
+    // Headline Typography
+    let fontSize = 50;
+    if (headline.length > 55) fontSize = 44;
+    if (headline.length > 85) fontSize = 38;
+    if (headline.length > 115) fontSize = 34;
+
+    ctx.fillStyle = catStyle.headlineColor || '#1e3a8a';
+    ctx.font = isEnglish ? `bold ${fontSize}px sans-serif` : `bold ${fontSize}px "Hind Siliguri", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const maxW = cardW - 80;
+    const lines = this.wrapText(ctx, headline, maxW);
+    const lineHeight = Math.round(fontSize * (isEnglish ? 1.25 : 1.34));
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = cardY + 20 + (cardH - 60 - totalTextHeight) / 2;
+
+    this.drawKineticHeadlineText(
+      ctx,
+      lines,
+      width,
+      startY,
+      lineHeight,
+      fontSize,
+      catStyle.headlineColor || '#1e3a8a',
+      strapAccent || '#f59e0b',
+      f,
+      'center'
+    );
+    ctx.restore();
+
+    // 6. Footer Safe Bar (Y: 1765 to 1860)
+    ctx.save();
+    const footerY = 1765;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.roundRect(40, footerY, width - 80, 8, 4);
+    ctx.fill();
+
+    ctx.fillStyle = strapBg;
+    ctx.beginPath();
+    ctx.roundRect(40, footerY, (width - 80) * progress, 8, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = isEnglish ? 'bold 20px sans-serif' : 'bold 22px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      isEnglish ? '🔴 FOLLOW & SHARE • TRENDING NEWS WORLD' : '🔴 ফলো ও শেয়ার করুন • BD News 24/7 অফিসিয়াল পেইজ',
+      width / 2,
+      footerY + 45
+    );
+    ctx.restore();
+  }
+
+  /**
    * Broadcast-grade unified 9:16 vertical fullscreen Reel (1080x1920) with theme-specific
    * color schemes, typography, and live television studio graphics (Somoy TV / Jamuna TV / BBC style).
    * Specifically tuned for mobile safe zones (Facebook / Instagram Reels / YouTube Shorts) & ultra-crisp display.
@@ -1408,8 +1989,16 @@ export class ReelVideoRenderer {
     isEnglish: boolean = false,
     anchorImages: any[] = []
   ): void {
+    if (theme === 'canva-studio-a') {
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      return;
+    }
     if (theme === 'canva-studio-b') {
       this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+      return;
+    }
+    if (theme === 'canva-studio-c') {
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
       return;
     }
 
