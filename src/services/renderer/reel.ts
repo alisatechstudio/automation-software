@@ -7,7 +7,6 @@ import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 import { UnifiedTtsService } from '../tts/index.js';
-import { LipSyncEngine, LipSyncTrajectory } from './lipsync.js';
 
 
 let ffmpegPath: string = '';
@@ -337,31 +336,7 @@ export class ReelVideoRenderer {
   }
 
   public static async getAnchorImages(): Promise<any[]> {
-    if (ReelVideoRenderer.cachedAnchorImages && ReelVideoRenderer.cachedAnchorImages.length > 0) {
-      return ReelVideoRenderer.cachedAnchorImages;
-    }
-    const candidatePaths = [
-      path.join(config.ASSETS_DIR, 'video', 'anchor_frames'),
-      path.join(process.cwd(), 'assets', 'video', 'anchor_frames'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'video', 'anchor_frames'),
-    ];
-    const anchorFramesDir = candidatePaths.find((p) => fs.existsSync(p));
-    if (!anchorFramesDir) return [];
-    try {
-      const files = fs.readdirSync(anchorFramesDir).filter((f) => f.endsWith('.jpg')).sort();
-      const images: any[] = [];
-      for (const f of files) {
-        try {
-          images.push(await loadImage(path.join(anchorFramesDir, f)));
-        } catch (_) {}
-      }
-      if (images.length > 0) {
-        ReelVideoRenderer.cachedAnchorImages = images;
-      }
-      return images;
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 
   constructor() {
@@ -522,10 +497,6 @@ export class ReelVideoRenderer {
     }
 
     const logoImg = await this.loadLogoImage(isEnglish);
-    const isCanvaTheme = typeof theme === 'string' && theme.startsWith('canva-studio');
-    const anchorImages = isCanvaTheme
-      ? await ReelVideoRenderer.getAnchorImages()
-      : [];
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
@@ -535,7 +506,7 @@ export class ReelVideoRenderer {
     if (scaleX !== 1 || scaleY !== 1) {
       ctx.scale(scaleX, scaleY);
     }
-    this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 60, articleImg, logoImg, headline, category, website, isEnglish, anchorImages);
+    this.renderFrameByTheme(theme, ctx, refWidth, refHeight, 0.4, 60, articleImg, logoImg, headline, category, website, isEnglish);
     ctx.restore();
     return canvas.toBuffer('image/jpeg', 96);
   }
@@ -615,12 +586,6 @@ export class ReelVideoRenderer {
     // 2. Preload channel logo (English or Bengali channel)
     const logoImg = await this.loadLogoImage(isEnglish);
 
-    // 2b. Preload anchor frames for Canva Studio B template
-    const isCanvaTheme = typeof theme === 'string' && theme.startsWith('canva-studio');
-    const anchorImages = isCanvaTheme
-      ? await ReelVideoRenderer.getAnchorImages()
-      : [];
-
     // 3. Audio soundtrack check - resolve dedicated category audio or category audio filter
     const activeCategoryStyle = CATEGORY_STYLES[theme] || CATEGORY_STYLES[resolveCategoryTheme(category)];
     const catAudioSlug = (activeCategoryStyle?.id || theme).replace('cat-', '');
@@ -697,22 +662,6 @@ export class ReelVideoRenderer {
     }
 
     const totalFrames = durationSeconds * fps;
-
-    // 3b. Solve audio-driven lip sync trajectory for Canva Studio male presenter
-    let lipSyncData: LipSyncTrajectory | null = null;
-    if (isCanvaTheme && anchorImages.length > 0) {
-      try {
-        const lipSyncEngine = LipSyncEngine.getInstance();
-        lipSyncData = lipSyncEngine.solveLipSyncTrajectory(
-          tempVoiceFile || voiceoverBuffer,
-          totalFrames,
-          fps
-        );
-        console.log(`[ReelVideoRenderer] ✓ Upgraded syllable lip sync solved (${lipSyncData.totalFrames} frames)`);
-      } catch (lipErr: any) {
-        console.warn('[ReelVideoRenderer] Lip sync calculation warning:', lipErr?.message || lipErr);
-      }
-    }
 
     // 4. Configure FFmpeg spawn arguments with low-resource featherweight settings
     const numThreads = Math.min(2, os.cpus()?.length || 1);
@@ -830,10 +779,10 @@ export class ReelVideoRenderer {
       if (needsScale) {
         ctx.save();
         ctx.scale(scaleX, scaleY);
-        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+        this.renderFrameByTheme(theme, ctx, refWidth, refHeight, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
         ctx.restore();
       } else {
-        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+        this.renderFrameByTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       }
 
       // Zero-copy raw RGBA buffer directly from canvas memory (0ms latency, zero compression overhead)
@@ -952,25 +901,23 @@ export class ReelVideoRenderer {
     headline: string,
     category: string,
     website: string,
-    isEnglish: boolean = false,
-    anchorImages: any[] = [],
-    lipSyncData: LipSyncTrajectory | null = null
+    isEnglish: boolean = false
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
 
     if (height >= 1280 || height > width || theme === 'vertical-916') {
-      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderVerticalFrameWithTheme(theme, ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
 
@@ -1267,9 +1214,7 @@ export class ReelVideoRenderer {
     headline: string,
     category: string,
     website: string,
-    isEnglish: boolean = false,
-    anchorImages: any[] = [],
-    lipSyncData: LipSyncTrajectory | null = null
+    isEnglish: boolean = false
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1289,29 +1234,15 @@ export class ReelVideoRenderer {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Full-Bleed Vertical Anchor / Story Visual Stage (Y: 0 to 1320)
+    // 2. Full-Bleed Vertical Story Visual Stage (Y: 0 to 1320)
     const stageH = 1320;
-    const hasAnchor = anchorImages && anchorImages.length > 0;
-    const stageVisual = hasAnchor || articleImg;
-    if (stageVisual) {
+    if (articleImg) {
       ctx.save();
-      if (hasAnchor) {
-        const lipSyncEngine = LipSyncEngine.getInstance();
-        lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
-          const srcW = img.width;
-          const srcH = img.height;
-          const cropW = Math.round(srcH * (width / stageH));
-          const cropCenterX = Math.round(srcW * 0.526); // Studio anchor face center (~568 on 1080px frame)
-          const cropX = Math.max(0, Math.min(srcW - cropW, Math.round(cropCenterX - cropW / 2)));
-          ctx.drawImage(img, cropX, 0, cropW, srcH, 0, 0, width, stageH);
-        });
-      } else {
-        const easedProgress = 1 - Math.pow(1 - progress, 2.2);
-        const zoom = 1.0 + easedProgress * 0.16;
-        const panY = Math.sin(progress * Math.PI) * 28;
-        const panX = (progress - 0.5) * 24;
-        this.drawZoomedImage(ctx, articleImg, 0, 0, width, stageH, zoom, panY, panX);
-      }
+      const easedProgress = 1 - Math.pow(1 - progress, 2.2);
+      const zoom = 1.0 + easedProgress * 0.16;
+      const panY = Math.sin(progress * Math.PI) * 28;
+      const panX = (progress - 0.5) * 24;
+      this.drawZoomedImage(ctx, articleImg, 0, 0, width, stageH, zoom, panY, panX);
 
       // Top subtle broadcast vignette for header bug clarity
       const topVig = ctx.createLinearGradient(0, 0, 0, 240);
@@ -1538,9 +1469,9 @@ export class ReelVideoRenderer {
 
   /**
    * Broadcast Studio Split (Style B):
-   * Features animated Canva news anchor video on upper stage,
-   * animated category divider strap, dynamic news photo with Ken Burns zoom,
-   * high-contrast studio headline card, and safe zone mobile footer.
+   * Features full-height hero news photo stage with Ken Burns motion,
+   * live broadcast scrolling ticker marquee, high-contrast studio headline card
+   * with word-by-word karaoke highlighting, and safe zone mobile footer.
    */
   private renderCanvaStudioBFrame(
     ctx: any,
@@ -1553,9 +1484,7 @@ export class ReelVideoRenderer {
     headline: string,
     category: string,
     website: string,
-    isEnglish: boolean = false,
-    anchorImages: any[] = [],
-    lipSyncData: LipSyncTrajectory | null = null
+    isEnglish: boolean = false
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1637,114 +1566,15 @@ export class ReelVideoRenderer {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
 
-    // 3. Stage 1: The Newsroom Male Presenter Window (Y: 160 to 750, H: 590)
-    const anchorY = 160;
-    const anchorH = 590;
-    const anchorW = width - 80;
-    const anchorX = 40;
-
-    if (anchorImages && anchorImages.length > 0) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
-      ctx.clip();
-
-      const lipSyncEngine = LipSyncEngine.getInstance();
-      lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
-        const srcW = img.width;
-        const srcH = img.height;
-        ctx.drawImage(img, 0, 0, srcW, srcH, anchorX, anchorY, anchorW, anchorH);
-      });
-
-      // Dark gradient at bottom of anchor frame
-      const aGrad = ctx.createLinearGradient(0, anchorY + anchorH - 140, 0, anchorY + anchorH);
-      aGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
-      aGrad.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
-      ctx.fillStyle = aGrad;
-      ctx.fillRect(anchorX, anchorY + anchorH - 140, anchorW, 140);
-
-      // Full-width Anchor Newsroom Ticker Bar
-      const tickerY = anchorY + anchorH - 82;
-      const tickerH = 70;
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.roundRect(anchorX + 12, tickerY, anchorW - 24, tickerH, 14);
-      ctx.fill();
-      ctx.strokeStyle = strapBg;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Red live pulse dot
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(anchorX + 38, tickerY + tickerH / 2, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Ticker text
-      ctx.fillStyle = '#ffffff';
-      ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(isEnglish ? 'STUDIO ANCHOR • LIVE SPECIAL' : 'স্টুডিও উপস্থাপক • সরাসরি সংবাদ বুলেটিন', anchorX + 56, tickerY + tickerH / 2);
-
-      // Speech Equalizer bars
-      const eqX = anchorX + anchorW - 130;
-      const eqY = tickerY + tickerH / 2 + 10;
-      for (let i = 0; i < 5; i++) {
-        const bH = 8 + Math.abs(Math.sin(f * 0.35 + i * 0.8)) * 18;
-        ctx.fillStyle = strapAccent || '#facc15';
-        ctx.fillRect(eqX + i * 12, eqY - bH, 6, bH);
-      }
-
-      ctx.restore();
-
-      // Outer glow border for anchor window
-      ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
-      ctx.stroke();
-    } else if (articleImg) {
-      // Fallback to article image if no anchor frames
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
-      ctx.clip();
-
-      const zoom = 1.05 + progress * 0.08;
-      const panY = Math.cos(progress * Math.PI) * 10;
-      this.drawZoomedImage(ctx, articleImg, anchorX, anchorY, anchorW, anchorH, zoom, panY);
-
-      const aGrad = ctx.createLinearGradient(0, anchorY + anchorH - 140, 0, anchorY + anchorH);
-      aGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
-      aGrad.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
-      ctx.fillStyle = aGrad;
-      ctx.fillRect(anchorX, anchorY + anchorH - 140, anchorW, 140);
-      ctx.restore();
-
-      ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.roundRect(anchorX, anchorY, anchorW, anchorH, 20);
-      ctx.stroke();
-    }
-
-    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 765 to 833, H: 68)
-    const strapY = 765;
-    const strapH = 68;
-    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
-
-    // 5. Stage 2: News Article Photo with Ken Burns Motion (Y: 850 to 1335, H: 485)
-    const artX = 40;
-    const artY = 850;
-    const artW = width - 80;
-    const artH = 485;
+    // 3. Hero News Article Photo Stage (Y: 160 to 1180, H: 1020)
+    const heroX = 40;
+    const heroY = 160;
+    const heroW = width - 80;
+    const heroH = 1020;
 
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(artX, artY, artW, artH, 20);
+    ctx.roundRect(heroX, heroY, heroW, heroH, 22);
     ctx.clip();
 
     if (articleImg) {
@@ -1752,18 +1582,18 @@ export class ReelVideoRenderer {
       const zoom = 1.0 + easedProgress * 0.16;
       const panY = Math.sin(progress * Math.PI) * 28;
       const panX = (progress - 0.5) * 24;
-      this.drawZoomedImage(ctx, articleImg, artX, artY, artW, artH, zoom, panY, panX);
+      this.drawZoomedImage(ctx, articleImg, heroX, heroY, heroW, heroH, zoom, panY, panX);
 
       // Dark gradient vignette
-      const artVig = ctx.createLinearGradient(0, artY + artH - 120, 0, artY + artH);
+      const artVig = ctx.createLinearGradient(0, heroY + heroH - 140, 0, heroY + heroH);
       artVig.addColorStop(0, 'rgba(0,0,0,0)');
       artVig.addColorStop(1, 'rgba(0,0,0,0.85)');
       ctx.fillStyle = artVig;
-      ctx.fillRect(artX, artY + artH - 120, artW, 120);
+      ctx.fillRect(heroX, heroY + heroH - 140, heroW, 140);
 
       // Equalizer bars in corner
-      const eqX = artX + artW - 170;
-      const eqY = artY + artH - 35;
+      const eqX = heroX + heroW - 170;
+      const eqY = heroY + heroH - 35;
       for (let i = 0; i < 6; i++) {
         const bH = 10 + Math.abs(Math.sin(f * 0.3 + i * 0.8)) * 25;
         ctx.fillStyle = strapAccent || '#38bdf8';
@@ -1771,26 +1601,31 @@ export class ReelVideoRenderer {
       }
     } else {
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(artX, artY, artW, artH);
+      ctx.fillRect(heroX, heroY, heroW, heroH);
       ctx.fillStyle = '#94a3b8';
-      ctx.font = isEnglish ? 'bold 32px sans-serif' : 'bold 34px "Hind Siliguri", sans-serif';
+      ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 40px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(brandText + ' • ' + displayCategory, artX + artW / 2, artY + artH / 2);
+      ctx.fillText(brandText + ' • ' + displayCategory, heroX + heroW / 2, heroY + heroH / 2);
     }
     ctx.restore();
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = catStyle.cardBorder || 'rgba(234, 88, 12, 0.6)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(artX, artY, artW, artH, 20);
+    ctx.roundRect(heroX, heroY, heroW, heroH, 22);
     ctx.stroke();
 
-    // 6. Stage 3: Studio Headline Card (Y: 1355 to 1740, H: 385)
+    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 1195 to 1263, H: 68)
+    const strapY = 1195;
+    const strapH = 68;
+    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
+
+    // 5. Studio Headline Card (Y: 1280 to 1740, H: 460)
     const cardX = 40;
-    const cardY = 1355;
+    const cardY = 1280;
     const cardW = width - 80;
-    const cardH = 385;
+    const cardH = 460;
 
     ctx.save();
     ctx.fillStyle = '#ffffff';
@@ -1847,7 +1682,7 @@ export class ReelVideoRenderer {
     );
     ctx.restore();
 
-    // 7. Footer Safe Bar (Y: 1765 to 1860)
+    // 6. Footer Safe Bar (Y: 1765 to 1860)
     ctx.save();
     const footerY = 1765;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -1873,10 +1708,10 @@ export class ReelVideoRenderer {
   }
 
   /**
-   * Anchor Intro ➔ News B-Roll / Photo ➔ Anchor Outro (Style C):
-   * Features dynamic transition from Anchor introduction (0-20% duration)
-   * into full-bleed article photo with Ken Burns zoom (20-80% duration),
-   * then cross-fading back to the Anchor for the conclusion (80-100% duration).
+   * Broadcast Studio Full Story (Style C):
+   * Features dynamic hero news article photo stage with Ken Burns motion,
+   * live broadcast scrolling ticker marquee, floating studio headline card
+   * with word-by-word karaoke highlighting, and safe zone mobile footer.
    */
   private renderCanvaStudioCFrame(
     ctx: any,
@@ -1889,9 +1724,7 @@ export class ReelVideoRenderer {
     headline: string,
     category: string,
     website: string,
-    isEnglish: boolean = false,
-    anchorImages: any[] = [],
-    lipSyncData: LipSyncTrajectory | null = null
+    isEnglish: boolean = false
   ): void {
     const activeCategoryKey = resolveCategoryTheme(category);
     const catStyle = CATEGORY_STYLES[activeCategoryKey] || CATEGORY_STYLES['cat-sports'];
@@ -1911,11 +1744,6 @@ export class ReelVideoRenderer {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Determine current phase: Intro (0-20%), Story (20-80%), Outro (80-100%)
-    const isIntro = progress < 0.20;
-    const isOutro = progress > 0.80;
-    const showAnchor = isIntro || isOutro || !articleImg;
-
     // 2. Stage (Y: 140 to 1180, H: 1040)
     const stageY = 140;
     const stageH = 1040;
@@ -1927,63 +1755,11 @@ export class ReelVideoRenderer {
     ctx.roundRect(stageX, stageY, stageW, stageH, 22);
     ctx.clip();
 
-    if (showAnchor && anchorImages && anchorImages.length > 0) {
-      // Draw news anchor
-      const lipSyncEngine = LipSyncEngine.getInstance();
-      lipSyncEngine.drawAnchorFrame(f, anchorImages, lipSyncData, (img) => {
-        const srcW = img.width;
-        const srcH = img.height;
-        ctx.drawImage(img, 0, 0, srcW, srcH, stageX, stageY, stageW, stageH);
-      });
-
-      // Dark gradient at bottom of anchor window
-      const aGrad = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
-      aGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      aGrad.addColorStop(0.3, 'rgba(15, 23, 42, 0.7)');
-      aGrad.addColorStop(1, 'rgba(15, 23, 42, 0.98)');
-      ctx.fillStyle = aGrad;
-      ctx.fillRect(stageX, stageY + stageH - 150, stageW, 150);
-
-      // Presenter phase banner
-      const bannerY = stageY + stageH - 74;
-      const bannerH = 60;
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.roundRect(stageX + 16, bannerY, stageW - 32, bannerH, 12);
-      ctx.fill();
-      ctx.strokeStyle = strapBg;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = isIntro ? '#ef4444' : '#10b981';
-      ctx.beginPath();
-      ctx.arc(stageX + 40, bannerY + bannerH / 2, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      const phaseTitle = isIntro
-        ? (isEnglish ? 'STUDIO ANCHOR • BREAKING DISPATCH' : '🎙️ স্টুডিও উপস্থাপক • প্রধান সংবাদ')
-        : (isEnglish ? 'STUDIO ANCHOR • CONCLUDING UPDATE' : '🎙️ স্টুডিও উপস্থাপক • সর্বশেষ আপডেট');
-      ctx.fillText(phaseTitle, stageX + 58, bannerY + bannerH / 2);
-
-      // Animated Live Audio Equalizer in banner
-      const eqX = stageX + stageW - 170;
-      const eqY = bannerY + bannerH / 2 + 12;
-      for (let i = 0; i < 6; i++) {
-        const bH = 10 + Math.abs(Math.sin(f * 0.35 + i * 0.8)) * 22;
-        ctx.fillStyle = strapAccent || '#38bdf8';
-        ctx.fillRect(eqX + i * 14, eqY - bH, 8, bH);
-      }
-    } else if (articleImg) {
-      // Story deep-dive: Article news photo with Ken Burns zoom
-      const bodyProgress = Math.max(0, Math.min(1, (progress - 0.20) / 0.60));
-      const easedProgress = 1 - Math.pow(1 - bodyProgress, 2.2);
+    if (articleImg) {
+      const easedProgress = 1 - Math.pow(1 - progress, 2.2);
       const zoom = 1.0 + easedProgress * 0.16;
-      const panY = Math.sin(bodyProgress * Math.PI) * 28;
-      const panX = (bodyProgress - 0.5) * 24;
+      const panY = Math.sin(progress * Math.PI) * 28;
+      const panX = (progress - 0.5) * 24;
       this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY, panX);
 
       // Vignette
@@ -2004,6 +1780,11 @@ export class ReelVideoRenderer {
     } else {
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(stageX, stageY, stageW, stageH);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = isEnglish ? 'bold 36px sans-serif' : 'bold 40px "Hind Siliguri", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(brandText + ' • ' + displayCategory, stageX + stageW / 2, stageY + stageH / 2);
     }
     ctx.restore();
 
@@ -2170,20 +1951,18 @@ export class ReelVideoRenderer {
     headline: string,
     category: string,
     website: string,
-    isEnglish: boolean = false,
-    anchorImages: any[] = [],
-    lipSyncData: LipSyncTrajectory | null = null
+    isEnglish: boolean = false
   ): void {
     if (theme === 'canva-studio-a') {
-      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioAFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
     if (theme === 'canva-studio-b') {
-      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioBFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
     if (theme === 'canva-studio-c') {
-      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish, anchorImages, lipSyncData);
+      this.renderCanvaStudioCFrame(ctx, width, height, progress, f, articleImg, logoImg, headline, category, website, isEnglish);
       return;
     }
 
