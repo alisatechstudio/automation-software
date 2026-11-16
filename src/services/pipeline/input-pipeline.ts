@@ -263,8 +263,8 @@ export class InputPipelineService {
       const cutoffTime = new Date(now.getTime() - maxAgeHours * 60 * 60 * 1000);
       const maxPerSource = options?.limit || options?.maxArticlesPerSource || 1;
 
-      // Safe execution time budget: 25s on Vercel (cron-job.org 30s HTTP timeout); 240s elsewhere
-      const MAX_EXECUTION_MS = process.env.VERCEL ? 25000 : 240000;
+      // Safe execution time budget: 50s on Vercel (within Vercel serverless limits); 240s elsewhere
+      const MAX_EXECUTION_MS = process.env.VERCEL ? 50000 : 240000;
 
       const sourceResults: SourceInputResult[] = [];
       let grandTotalFetched = 0;
@@ -388,7 +388,7 @@ export class InputPipelineService {
             targetTheme = await getNextRollingReelTheme(db, rotKey);
             console.log(`[InputCron] 🔄 Rolling Rotation (${rotKey}) selected next theme: "${targetTheme}" for "${item.title}"`);
           }
-          const reelDuration = source.reelDuration || 25; // 25 seconds minimum for Instagram Reels
+          const reelDuration = source.reelDuration || 15; // 15s optimal reel duration for high-speed serverless execution
 
           // Check if we still have time budget to render this reel
           if (Date.now() - startTime > MAX_EXECUTION_MS - 5000) {
