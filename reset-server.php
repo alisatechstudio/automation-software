@@ -81,14 +81,51 @@ echo "[2/3] Checking available process termination execution methods...\n";
 $disabledFunctions = explode(',', (string)ini_get('disable_functions'));
 $disabledFunctions = array_map('trim', $disabledFunctions);
 
+$canPosix = function_exists('posix_kill') && !in_array('posix_kill', $disabledFunctions);
 $canExec = function_exists('exec') && !in_array('exec', $disabledFunctions);
 $canShellExec = function_exists('shell_exec') && !in_array('shell_exec', $disabledFunctions);
 $canSystem = function_exists('system') && !in_array('system', $disabledFunctions);
 $canPassthru = function_exists('passthru') && !in_array('passthru', $disabledFunctions);
 
-echo "  > Function status: exec=" . ($canExec ? 'ENABLED' : 'DISABLED') . 
+echo "  > Function status: posix=" . ($canPosix ? 'ENABLED' : 'DISABLED') . 
+     ", exec=" . ($canExec ? 'ENABLED' : 'DISABLED') . 
      ", shell_exec=" . ($canShellExec ? 'ENABLED' : 'DISABLED') . 
      ", system=" . ($canSystem ? 'ENABLED' : 'DISABLED') . "\n";
+
+$killedCount = 0;
+
+// Method A: Native PHP POSIX Process Scan via /proc (Works even if exec/shell is blocked!)
+if ($canPosix && is_dir('/proc')) {
+    echo "  > Scanning /proc for user processes via native POSIX...\n";
+    $entries = @scandir('/proc');
+    if ($entries) {
+        foreach ($entries as $entry) {
+            if (!ctype_digit($entry)) continue;
+            $pid = (int)$entry;
+            if ($pid === getmypid()) continue; // Do not kill current script
+
+            $cmdlineFile = "/proc/$pid/cmdline";
+            if (!file_exists($cmdlineFile)) continue;
+
+            $cmd = @file_get_contents($cmdlineFile);
+            if (!$cmd) continue;
+
+            $cmdClean = str_replace("\0", " ", $cmd);
+            if (
+                strpos($cmdClean, 'node') !== false ||
+                strpos($cmdClean, 'npm') !== false ||
+                strpos($cmdClean, 'ffmpeg') !== false ||
+                strpos($cmdClean, 'tsc') !== false
+            ) {
+                if (@posix_kill($pid, 9)) {
+                    echo "    [KILLED PID $pid]: " . substr(trim($cmdClean), 0, 70) . "...\n";
+                    $killedCount++;
+                }
+            }
+        }
+    }
+    echo "  > Terminated $killedCount process(es) via native POSIX!\n";
+}
 
 $commands = [
     "pkill -9 -u " . escapeshellarg($user) . " -f node",
@@ -101,7 +138,7 @@ $commands = [
 
 $executed = false;
 if ($canExec || $canShellExec || $canSystem || $canPassthru) {
-    echo "  > Terminating stuck node, npm, and selector processes...\n";
+    echo "  > Terminating stuck node, npm, and selector processes via shell...\n";
     foreach ($commands as $cmd) {
         $out = [];
         $ret = 0;
@@ -126,10 +163,10 @@ if ($canExec || $canShellExec || $canSystem || $canPassthru) {
             echo "    > $cmd failed: " . $t->getMessage() . "\n";
         }
     }
-} else {
+} elseif ($killedCount === 0) {
     echo "  > NOTICE: Shell execution is disabled in PHP by your hosting policy.\n";
     echo "    To kill processes manually, use cPanel -> Terminal and run:\n";
-    echo "    pkill -9 -u $user -f node\n";
+    echo "    killall -9 node npm\n";
 }
 echo "\n";
 
