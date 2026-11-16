@@ -143,19 +143,25 @@ export async function initMySql(): Promise<any> {
 }
 
 export async function initMongo(): Promise<any> {
-  const uri = process.env.MONGODB_URI || process.env.MONGODB_URL || config.MONGODB_URI;
+  const rawUri = process.env.MONGODB_URI || process.env.MONGODB_URL || config.MONGODB_URI;
 
-  if (!uri) {
+  if (!rawUri) {
     throw new Error('MONGODB_URI environment variable is missing.');
+  }
+
+  // Sanitize URI: strip surrounding quotes and whitespace if pasted with quotes
+  let uri = rawUri.trim();
+  if ((uri.startsWith('"') && uri.endsWith('"')) || (uri.startsWith("'") && uri.endsWith("'"))) {
+    uri = uri.slice(1, -1).trim();
   }
 
   console.log(`[MongoDB] Connecting with pool to ${maskUri(uri)}...`);
 
   const options: MongoClientOptions = {
     appName: 'devrel.vercel.integration',
-    maxIdleTimeMS: 5000,
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
+    maxIdleTimeMS: 10000,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
   };
 
   const client = new MongoClient(uri, options);

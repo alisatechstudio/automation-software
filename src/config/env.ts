@@ -48,12 +48,12 @@ const dataDir = process.env.DATA_DIR || (isVercel ? '/tmp/data' : path.join(root
 const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 
 const resolvedDbType: 'mysql' | 'mongodb' =
-  process.env.DB_TYPE === 'mysql'
+  isVercel
+    ? (process.env.DB_TYPE === 'mysql' && process.env.MYSQL_HOST && process.env.MYSQL_HOST !== '127.0.0.1' ? 'mysql' : 'mongodb')
+    : process.env.DB_TYPE === 'mysql'
     ? 'mysql'
     : process.env.DB_TYPE === 'mongodb'
     ? 'mongodb'
-    : isVercel
-    ? (process.env.MYSQL_DATABASE && !process.env.MONGODB_URI ? 'mysql' : 'mongodb')
     : (process.env.MONGODB_URI || process.env.MONGODB_URL ? 'mongodb' : (process.env.MYSQL_DATABASE ? 'mysql' : 'mongodb'));
 
 const baseConfig: AppConfig = {
