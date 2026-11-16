@@ -45,11 +45,10 @@ foreach ($searchPaths as $dir) {
             $filename = $fileInfo->getFilename();
             $path = $fileInfo->getPathname();
 
-            // Match .lock, *.lock, or automation.lock
+            // Match .lock, *.lock, or app.lock (exclude package-lock.json)
             if (
-                $filename === '.lock' ||
-                substr($filename, -5) === '.lock' ||
-                strpos($filename, 'lock') !== false
+                $filename !== 'package-lock.json' &&
+                ($filename === '.lock' || substr($filename, -5) === '.lock' || substr($filename, -9) === '-lock.pid')
             ) {
                 // Ensure it's a lock file and owned by or writable by user
                 if ($fileInfo->isFile() && is_writable($path)) {
