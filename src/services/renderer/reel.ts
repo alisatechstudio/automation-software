@@ -420,7 +420,7 @@ export class ReelVideoRenderer {
   }
 
   /**
-   * Helper to draw an article image with Ken Burns slow zoom
+   * Helper to draw an article image with cinematic Ken Burns dynamic motion
    */
   private drawZoomedImage(
     ctx: any,
@@ -430,7 +430,8 @@ export class ReelVideoRenderer {
     w: number,
     h: number,
     zoom: number = 1.0,
-    panY: number = 0
+    panY: number = 0,
+    panX: number = 0
   ) {
     if (!img) return;
     const imgRatio = img.width / img.height;
@@ -446,7 +447,7 @@ export class ReelVideoRenderer {
       drawH = drawW / imgRatio;
     }
 
-    const drawX = x - (drawW - w) / 2;
+    const drawX = x - (drawW - w) / 2 + panX;
     const drawY = y - (drawH - h) / 2 + panY;
 
     ctx.save();
@@ -998,10 +999,11 @@ export class ReelVideoRenderer {
   }
 
   /**
-   * Renders broadcast-grade animated kinetic headline text:
-   * - Sequential word-by-word pop-in entrance with elastic scale & micro-bounce (0-1.5s)
-   * - High-contrast text readability on mobile screens
-   * - Periodic specular light beam / sheen sweep across Bengali & English typography (every 4s)
+   * Renders broadcast-grade animated kinetic headline text with:
+   * - Sequential word-by-word spring entrance (0-1.5s)
+   * - Continuous CapCut/Hormozi-style Word-by-Word Karaoke Highlighting synced to audio speech
+   * - High-contrast text readability on mobile screens with soft highlight pill and scale pop
+   * - Periodic specular light beam / sheen sweep across typography
    */
   private drawKineticHeadlineText(
     ctx: any,
@@ -1014,7 +1016,8 @@ export class ReelVideoRenderer {
     accentColor: string,
     f: number,
     align: 'center' | 'left' = 'center',
-    leftOffset: number = 0
+    leftOffset: number = 0,
+    progress: number = 0
   ): void {
     ctx.save();
     ctx.textBaseline = 'top';
@@ -1028,6 +1031,13 @@ export class ReelVideoRenderer {
     const sweepCycle = f % 96;
     const isSweeping = f >= 45 && sweepCycle >= 48 && sweepCycle <= 76;
     const sweepProgress = isSweeping ? (sweepCycle - 48) / 28 : -1;
+
+    // Active speech synchronization: map progress (from 6% to 92%) across total word count
+    const speechProgress = Math.min(1, Math.max(0, (progress - 0.06) / 0.86));
+    const activeWordIdx = Math.min(totalWords - 1, Math.floor(speechProgress * totalWords));
+    const wordPhase = (speechProgress * totalWords) - activeWordIdx; // 0.0 -> 1.0 within this word
+
+    const isLightCard = !headlineColor.startsWith('#f') && !headlineColor.startsWith('#e') && !headlineColor.startsWith('rgba(255');
 
     let globalWordIdx = 0;
 
@@ -1044,10 +1054,10 @@ export class ReelVideoRenderer {
         const currentWordIdx = globalWordIdx;
         globalWordIdx++;
 
-        // Calculate reveal timing for this word across first 36 frames (~1.5s at 24fps)
+        // Calculate entrance timing for this word across first 36 frames (~1.5s at 24fps)
         const wordStartF = Math.round(currentWordIdx * (36 / Math.max(1, totalWords)));
 
-        // If in animation phase and word hasn't appeared yet, skip
+        // If in entrance phase and word hasn't appeared yet, skip
         if (f < wordStartF) {
           wordX += wordW + spaceWidth;
           continue;
@@ -1055,7 +1065,7 @@ export class ReelVideoRenderer {
 
         ctx.save();
         if (f >= wordStartF && f < wordStartF + 9) {
-          // Kinetic Word Entrance: Remotion spring-driven slide & fade (preserves Bengali typography without word collision)
+          // Kinetic Word Entrance: Remotion spring-driven slide & fade
           const springVal = remotionSpring({
             frame: f - wordStartF,
             fps: 24,
@@ -1068,35 +1078,176 @@ export class ReelVideoRenderer {
           ctx.fillStyle = headlineColor || '#0f172a';
           ctx.fillText(word, wordX, lineY + offsetY);
         } else {
-          // Settled word in crisp headline color
-          ctx.fillStyle = headlineColor || '#0f172a';
+          const isCurrentActive = currentWordIdx === activeWordIdx && f >= 36;
+          const isSpoken = currentWordIdx < activeWordIdx;
 
-          // Check if periodic light gleam is sweeping over this word
-          if (isSweeping) {
-            const sweepX = width * 0.12 + sweepProgress * (width * 0.76);
-            const dist = Math.abs(wordX + wordW / 2 - sweepX);
-            if (dist < 130) {
-              const sheenIntensity = 1 - dist / 130;
-              ctx.fillText(word, wordX, lineY);
+          if (isCurrentActive) {
+            // ========================================================
+            // ACTIVE WORD KARAOKE HIGHLIGHT (CapCut / Hormozi Style)
+            // ========================================================
+            const popScale = 1.0 + Math.sin(wordPhase * Math.PI) * 0.10;
+            const centerX = wordX + wordW / 2;
+            const centerY = lineY + fontSize / 2;
 
-              // Specular white light sheen overlay
-              ctx.fillStyle = `rgba(255, 255, 255, ${sheenIntensity * 0.8})`;
-              ctx.shadowColor = '#ffffff';
-              ctx.shadowBlur = Math.round(sheenIntensity * 14);
-              ctx.fillText(word, wordX, lineY);
-              ctx.restore();
-              wordX += wordW + spaceWidth;
-              continue;
+            // Highlight Pill Background
+            ctx.save();
+            ctx.fillStyle = isLightCard ? 'rgba(254, 240, 138, 0.75)' : 'rgba(245, 158, 11, 0.30)';
+            ctx.beginPath();
+            ctx.roundRect(wordX - 6, lineY - 2, wordW + 12, Math.round(fontSize * 1.25), 8);
+            ctx.fill();
+
+            // Word with scale pop & glow
+            ctx.translate(centerX, centerY);
+            ctx.scale(popScale, popScale);
+            ctx.translate(-centerX, -centerY);
+
+            ctx.fillStyle = isLightCard ? (accentColor || '#c2410c') : '#facc15';
+            ctx.shadowColor = accentColor || '#f59e0b';
+            ctx.shadowBlur = 12;
+            ctx.fillText(word, wordX, lineY);
+            ctx.restore();
+          } else {
+            // Already spoken or upcoming word
+            if (isSpoken) {
+              // Settled in crisp high-contrast color
+              ctx.globalAlpha = 1.0;
+              ctx.fillStyle = headlineColor || '#0f172a';
+            } else {
+              // Upcoming word with slight softness for focal contrast
+              ctx.globalAlpha = 0.82;
+              ctx.fillStyle = headlineColor || '#0f172a';
             }
-          }
 
-          ctx.fillText(word, wordX, lineY);
+            // Check if periodic light gleam is sweeping over this word
+            if (isSweeping) {
+              const sweepX = width * 0.12 + sweepProgress * (width * 0.76);
+              const dist = Math.abs(wordX + wordW / 2 - sweepX);
+              if (dist < 130) {
+                const sheenIntensity = 1 - dist / 130;
+                ctx.fillText(word, wordX, lineY);
+
+                // Specular white light sheen overlay
+                ctx.fillStyle = `rgba(255, 255, 255, ${sheenIntensity * 0.8})`;
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = Math.round(sheenIntensity * 14);
+                ctx.fillText(word, wordX, lineY);
+                ctx.restore();
+                wordX += wordW + spaceWidth;
+                continue;
+              }
+            }
+
+            ctx.fillText(word, wordX, lineY);
+          }
         }
         ctx.restore();
 
         wordX += wordW + spaceWidth;
       }
     }
+    ctx.restore();
+  }
+
+  /**
+   * Renders a television broadcast scrolling news marquee ticker with a fixed live badge and smooth edge gradients
+   */
+  private drawScrollingTicker(
+    ctx: any,
+    width: number,
+    y: number,
+    height: number,
+    strapBg: string,
+    strapAccent: string,
+    categoryName: string,
+    f: number,
+    isEnglish: boolean
+  ): void {
+    ctx.save();
+
+    // 1. Base Ticker Strap
+    ctx.fillStyle = strapBg || '#b91c1c';
+    ctx.fillRect(0, y, width, height);
+
+    // 2. Top Accent Glow Bar
+    ctx.fillStyle = strapAccent || '#facc15';
+    ctx.fillRect(0, y, width, 4);
+
+    // 3. Fixed Broadcast Live Badge on Left
+    const badgeW = isEnglish ? 220 : 250;
+    const badgeBg = '#090d16';
+    ctx.fillStyle = badgeBg;
+    ctx.fillRect(0, y, badgeW, height);
+
+    // Pulsing Live Dot inside Badge
+    const dotX = 35;
+    const dotY = y + height / 2;
+    const pulse = (Math.sin(f * 0.25) + 1) / 2;
+
+    // Outer pulsating glow ring
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1 - pulse * 0.7;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 6 + pulse * 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    // Solid inner red dot
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Badge Label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = isEnglish ? 'bold 22px sans-serif' : 'bold 24px "Hind Siliguri", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isEnglish ? 'BREAKING' : 'ব্রেকিং নিউজ', 52, dotY);
+
+    // Vertical Divider Line after Badge
+    ctx.fillStyle = strapAccent || '#facc15';
+    ctx.fillRect(badgeW, y, 3, height);
+
+    // 4. Scrolling News Marquee (clipped to right of badge)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(badgeW + 10, y, width - badgeW - 10, height);
+    ctx.clip();
+
+    const cleanCat = (categoryName || '').replace('ব্রেকিং নিউজ', 'বিশেষ খবর').trim() || (isEnglish ? 'NEWS' : 'বিশেষ খবর');
+    const tickerText = isEnglish
+      ? `🔴 ${cleanCat.toUpperCase()} • 24/7 LIVE VERIFIED DISPATCH • REAL-TIME GLOBAL UPDATES • TRENDING NEWS WORLD • STAY INFORMED • `
+      : `🔴 ${cleanCat} ডেস্ক • ২৪ ঘণ্টা লাইভ আপডেট • দেশ ও প্রবাসের সব তাজা সংবাদ • চোখ রাখুন BD NEWS 24/7-এ • `;
+
+    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
+    const textWidth = ctx.measureText(tickerText).width;
+    const speed = 4.2; // 4.2 pixels per frame
+    const scrollX = (badgeW + 16) - ((f * speed) % textWidth);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    // Render repeating segments to fill entire width smoothly
+    for (let xPos = scrollX; xPos < width + textWidth; xPos += textWidth) {
+      ctx.fillText(tickerText, xPos, y + height / 2);
+    }
+
+    // Left and right edge soft fade gradients
+    const leftFade = ctx.createLinearGradient(badgeW, y, badgeW + 35, y);
+    leftFade.addColorStop(0, strapBg);
+    leftFade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = leftFade;
+    ctx.fillRect(badgeW, y, 35, height);
+
+    const rightFade = ctx.createLinearGradient(width - 40, y, width, y);
+    rightFade.addColorStop(0, 'rgba(0,0,0,0)');
+    rightFade.addColorStop(1, strapBg);
+    ctx.fillStyle = rightFade;
+    ctx.fillRect(width - 40, y, 40, height);
+
+    ctx.restore();
     ctx.restore();
   }
 
@@ -1155,9 +1306,11 @@ export class ReelVideoRenderer {
           ctx.drawImage(img, cropX, 0, cropW, srcH, 0, 0, width, stageH);
         });
       } else {
-        const zoom = 1.0 + progress * 0.08;
-        const panY = Math.sin(progress * Math.PI) * 12;
-        this.drawZoomedImage(ctx, articleImg, 0, 0, width, stageH, zoom, panY);
+        const easedProgress = 1 - Math.pow(1 - progress, 2.2);
+        const zoom = 1.0 + easedProgress * 0.16;
+        const panY = Math.sin(progress * Math.PI) * 28;
+        const panX = (progress - 0.5) * 24;
+        this.drawZoomedImage(ctx, articleImg, 0, 0, width, stageH, zoom, panY, panX);
       }
 
       // Top subtle broadcast vignette for header bug clarity
@@ -1257,38 +1410,23 @@ export class ReelVideoRenderer {
     ctx.arc(pillX + 24, pillY + pillH / 2, 6 + Math.sin(f * 0.3) * 1.5, 0, Math.PI * 2);
     ctx.fill();
 
+    const dotPulse = (Math.sin(f * 0.3) + 1) / 2;
+    ctx.save();
+    ctx.strokeStyle = strapAccent;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1 - dotPulse * 0.75;
+    ctx.beginPath();
+    ctx.arc(pillX + 24, pillY + pillH / 2, 6 + dotPulse * 7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
     ctx.fillStyle = '#ffffff';
     ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
 
-    // 4. Floating Breaking News Ticker Strap (Y: 1210 to 1278, H: 68)
+    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 1210 to 1278, H: 68)
     const strapY = 1210;
     const strapH = 68;
-    ctx.save();
-    ctx.fillStyle = strapBg;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = strapAccent;
-    ctx.fillRect(0, strapY, width, 4);
-
-    const shimmerPos = ((f * 18) % (width + 400)) - 200;
-    const sGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
-    sGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    sGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.35)');
-    sGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = sGrad;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(isEnglish ? '🔴 BREAKING NEWS • LIVE UPDATE' : '🔴 ব্রেকিং নিউজ | LIVE BROADCAST', 45, strapY + strapH / 2);
-
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = catStyle.shimmerColor || '#fed7aa';
-    ctx.fillText(deskName, width - 45, strapY + strapH / 2);
-    ctx.restore();
+    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
 
     // 5. Floating Studio Headline Card (Y: 1295 to 1740, H: 445)
     const cardX = 40;
@@ -1345,7 +1483,9 @@ export class ReelVideoRenderer {
       catStyle.headlineColor || '#1e3a8a',
       strapAccent || '#f59e0b',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
 
     // Mini Live Ticker row inside lower portion of card
@@ -1591,35 +1731,10 @@ export class ReelVideoRenderer {
       ctx.stroke();
     }
 
-    // 4. Middle Divider: Category Strap with Specular Shimmer (Y: 765 to 835, H: 68)
+    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 765 to 833, H: 68)
     const strapY = 765;
     const strapH = 68;
-    ctx.save();
-    ctx.fillStyle = strapBg;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = strapAccent;
-    ctx.fillRect(0, strapY, width, 4);
-
-    const shimmerPos = ((f * 18) % (width + 400)) - 200;
-    const sGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
-    sGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    sGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.35)');
-    sGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = sGrad;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(isEnglish ? '⚡ SPECIAL REPORT • VERIFIED DISPATCH' : '⚡ বিশেষ প্রতিবেদন | SPECIAL REPORT', 45, strapY + strapH / 2);
-
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = catStyle.shimmerColor || '#fed7aa';
-    ctx.fillText(deskName, width - 45, strapY + strapH / 2);
-    ctx.restore();
+    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
 
     // 5. Stage 2: News Article Photo with Ken Burns Motion (Y: 850 to 1335, H: 485)
     const artX = 40;
@@ -1633,9 +1748,11 @@ export class ReelVideoRenderer {
     ctx.clip();
 
     if (articleImg) {
-      const zoom = 1.0 + progress * 0.08;
-      const panY = Math.sin(progress * Math.PI) * 10;
-      this.drawZoomedImage(ctx, articleImg, artX, artY, artW, artH, zoom, panY);
+      const easedProgress = 1 - Math.pow(1 - progress, 2.2);
+      const zoom = 1.0 + easedProgress * 0.16;
+      const panY = Math.sin(progress * Math.PI) * 28;
+      const panX = (progress - 0.5) * 24;
+      this.drawZoomedImage(ctx, articleImg, artX, artY, artW, artH, zoom, panY, panX);
 
       // Dark gradient vignette
       const artVig = ctx.createLinearGradient(0, artY + artH - 120, 0, artY + artH);
@@ -1724,7 +1841,9 @@ export class ReelVideoRenderer {
       catStyle.headlineColor || '#1e3a8a',
       strapAccent || '#f59e0b',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
     ctx.restore();
 
@@ -1860,10 +1979,12 @@ export class ReelVideoRenderer {
       }
     } else if (articleImg) {
       // Story deep-dive: Article news photo with Ken Burns zoom
-      const bodyProgress = (progress - 0.20) / 0.60;
-      const zoom = 1.0 + bodyProgress * 0.08;
-      const panY = Math.sin(bodyProgress * Math.PI) * 12;
-      this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY);
+      const bodyProgress = Math.max(0, Math.min(1, (progress - 0.20) / 0.60));
+      const easedProgress = 1 - Math.pow(1 - bodyProgress, 2.2);
+      const zoom = 1.0 + easedProgress * 0.16;
+      const panY = Math.sin(bodyProgress * Math.PI) * 28;
+      const panX = (bodyProgress - 0.5) * 24;
+      this.drawZoomedImage(ctx, articleImg, stageX, stageY, stageW, stageH, zoom, panY, panX);
 
       // Vignette
       const artVig = ctx.createLinearGradient(0, stageY + stageH - 150, 0, stageY + stageH);
@@ -1941,35 +2062,10 @@ export class ReelVideoRenderer {
     ctx.fillStyle = '#ffffff';
     ctx.fillText(pillLabel, pillX + 38, pillY + pillH / 2);
 
-    // 4. Divider Category Strap (Y: 1195 to 1265, H: 70)
+    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 1195 to 1265, H: 70)
     const strapY = 1195;
     const strapH = 70;
-    ctx.save();
-    ctx.fillStyle = strapBg;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = strapAccent;
-    ctx.fillRect(0, strapY, width, 4);
-
-    const shimmerPos = ((f * 18) % (width + 400)) - 200;
-    const sGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
-    sGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    sGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.35)');
-    sGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = sGrad;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(isEnglish ? '⚡ SPECIAL REPORT • FULL COVERAGE' : '⚡ বিশেষ প্রতিবেদন | FULL COVERAGE', 45, strapY + strapH / 2);
-
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = catStyle.shimmerColor || '#fed7aa';
-    ctx.fillText(deskName, width - 45, strapY + strapH / 2);
-    ctx.restore();
+    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
 
     // 5. Studio Headline Card (Y: 1285 to 1740, H: 455)
     const cardX = 40;
@@ -2026,7 +2122,9 @@ export class ReelVideoRenderer {
       catStyle.headlineColor || '#1e3a8a',
       strapAccent || '#f59e0b',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
     ctx.restore();
 
@@ -2250,9 +2348,11 @@ export class ReelVideoRenderer {
     // 2. Full-Bleed News Photo with Smooth Ken Burns Motion (0 to 1100px)
     const photoH = 1100;
     if (articleImg) {
-      const zoom = 1.0 + progress * 0.08;
-      const panY = Math.sin(progress * Math.PI) * 12;
-      this.drawZoomedImage(ctx, articleImg, 0, 0, width, photoH, zoom, panY);
+      const easedProgress = 1 - Math.pow(1 - progress, 2.2);
+      const zoom = 1.0 + easedProgress * 0.16;
+      const panY = Math.sin(progress * Math.PI) * 32;
+      const panX = (progress - 0.5) * 26;
+      this.drawZoomedImage(ctx, articleImg, 0, 0, width, photoH, zoom, panY, panX);
     } else {
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(0, 0, width, photoH);
@@ -2397,50 +2497,10 @@ export class ReelVideoRenderer {
     }
     ctx.restore();
 
-    // 4. FULL-WIDTH Breaking News Category Strap with Animated Shimmer Sweep
+    // 4. Smooth Television Broadcast Scrolling Ticker (Y: 1100 to 1176, H: 76)
     const strapY = 1100;
     const strapH = 76;
-    ctx.save();
-    ctx.fillStyle = strapBg;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    // Accent line on top
-    ctx.fillStyle = strapAccent;
-    ctx.fillRect(0, strapY, width, 4);
-
-    // Specular light shimmer sweep across strap
-    const shimmerPos = ((f * 18) % (width + 400)) - 200;
-    const shimmerGrad = ctx.createLinearGradient(shimmerPos - 120, strapY, shimmerPos + 120, strapY + strapH);
-    shimmerGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    shimmerGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.25)');
-    shimmerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = shimmerGrad;
-    ctx.fillRect(0, strapY, width, strapH);
-
-    // Glowing broadcast beacon dot
-    const strapBeaconX = 45;
-    const strapBeaconY = strapY + strapH / 2;
-    const strapPulseR = 6.5 + Math.sin(f * 0.4) * 1.8;
-    ctx.fillStyle = strapAccent;
-    ctx.shadowColor = strapAccent;
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(strapBeaconX, strapBeaconY, strapPulseR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = isEnglish ? 'bold 28px sans-serif' : 'bold 30px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(strapText, strapBeaconX + 22, strapBeaconY);
-
-    // Right category desk
-    ctx.font = isEnglish ? 'bold 24px sans-serif' : 'bold 26px "Hind Siliguri", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillStyle = deskColor;
-    ctx.fillText(isEnglish ? displayCategory + ' DESK' : category + ' ডেস্ক', width - 45, strapBeaconY);
-    ctx.restore();
+    this.drawScrollingTicker(ctx, width, strapY, strapH, strapBg, strapAccent, displayCategory, f, isEnglish);
 
     // 5. Mobile-Optimized Studio Headline Card
     // Safe vertical zone: Y: 1195 to 1570 (Leaves bottom clear for Facebook Reels UI overlay!)
@@ -2504,7 +2564,9 @@ export class ReelVideoRenderer {
       headlineColor || '#0f172a',
       strapAccent || '#f59e0b',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
     ctx.restore();
 
@@ -2820,7 +2882,9 @@ export class ReelVideoRenderer {
       '#7f1d1d',
       '#ef4444',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
     ctx.restore();
 
@@ -3274,7 +3338,8 @@ export class ReelVideoRenderer {
       '#38bdf8',
       f,
       'left',
-      cardX + 75
+      cardX + 75,
+      progress
     );
     ctx.restore();
 
@@ -3586,7 +3651,9 @@ export class ReelVideoRenderer {
       style.headlineColor || '#0f172a',
       style.badgeDot || style.badgeBg || '#f59e0b',
       f,
-      'center'
+      'center',
+      0,
+      progress
     );
     ctx.restore();
 
