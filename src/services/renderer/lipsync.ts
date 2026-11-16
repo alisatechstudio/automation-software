@@ -83,12 +83,12 @@ export class LipSyncEngine {
       if (typeof audioSource === 'string') {
         if (!fs.existsSync(audioSource)) return null;
         pcmBuffer = execSync(
-          `"${ffmpegBinPath}" -v error -i "${audioSource}" -f s16le -ac 1 -ar 16000 -`,
+          `"${ffmpegBinPath}" -v error -threads 1 -i "${audioSource}" -f s16le -ac 1 -ar 16000 -`,
           { maxBuffer: 64 * 1024 * 1024 }
         );
       } else if (Buffer.isBuffer(audioSource) && audioSource.length > 100) {
         pcmBuffer = execSync(
-          `"${ffmpegBinPath}" -v error -i pipe:0 -f s16le -ac 1 -ar 16000 -`,
+          `"${ffmpegBinPath}" -v error -threads 1 -i pipe:0 -f s16le -ac 1 -ar 16000 -`,
           { input: audioSource, maxBuffer: 64 * 1024 * 1024 }
         );
       } else {
