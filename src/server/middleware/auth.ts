@@ -10,7 +10,9 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     req.path.startsWith('/api/cron/') ||
     req.path === '/reset-server' ||
     req.path === '/reset-server.php' ||
-    req.path === '/api/reset-server'
+    req.path === '/api/reset-server' ||
+    req.path.startsWith('/api/youtube/auth') ||
+    req.path.startsWith('/api/gdrive-reels/auth')
   ) {
     return next();
   }

@@ -2816,6 +2816,10 @@ apiRouter.get(['/youtube/auth/url', '/gdrive-reels/auth/url'], async (req: Reque
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent%20select_account&state=${stateEncoded}`;
 
+  if (req.query.redirect === 'true' || req.query.go === 'true') {
+    return res.redirect(authUrl);
+  }
+
   res.json({
     authUrl,
     redirectUri,
