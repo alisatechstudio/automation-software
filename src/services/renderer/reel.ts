@@ -586,28 +586,6 @@ export class ReelVideoRenderer {
     // 2. Preload channel logo (English or Bengali channel)
     const logoImg = await this.loadLogoImage(isEnglish);
 
-    // 3. Audio soundtrack check - resolve dedicated category audio or category audio filter
-    const activeCategoryStyle = CATEGORY_STYLES[theme] || CATEGORY_STYLES[resolveCategoryTheme(category)];
-    const catAudioSlug = (activeCategoryStyle?.id || theme).replace('cat-', '');
-
-    const specificAudioCandidates = [
-      path.join(config.ASSETS_DIR, 'video', `theme_${catAudioSlug}.aac`),
-      path.join(config.ASSETS_DIR, 'video', `theme_${catAudioSlug}.mp3`),
-      path.join(process.cwd(), 'assets', 'video', `theme_${catAudioSlug}.aac`),
-      path.join(process.cwd(), 'assets', 'video', `theme_${catAudioSlug}.mp3`),
-    ];
-    const specificAudioPath = specificAudioCandidates.find((p) => fs.existsSync(p));
-
-    const audioCandidates = [
-      path.join(config.ASSETS_DIR, 'video', 'broadcast_news_theme.aac'),
-      path.join(process.cwd(), 'assets', 'video', 'broadcast_news_theme.aac'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'video', 'broadcast_news_theme.aac'),
-    ];
-    const defaultAudioPath = audioCandidates.find((p) => fs.existsSync(p));
-
-    const finalAudioPath = specificAudioPath || defaultAudioPath;
-    const useAudioFilter = !specificAudioPath && !!activeCategoryStyle?.audioFilter;
-
     // Temporary output file in /tmp or data directory
     const tempOutputDir = process.env.VERCEL ? '/tmp' : path.join(config.DATA_DIR, 'temp');
     if (!fs.existsSync(tempOutputDir)) {
@@ -617,21 +595,22 @@ export class ReelVideoRenderer {
     }
     const tempFile = path.join(tempOutputDir, `reel_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.mp4`);
 
+    // 3. Synthesize Voiceover exclusively using Microsoft Edge TTS (bn-BD-PradeepNeural for Bengali / en-US-GuyNeural for English)
     let voiceoverBuffer = input.voiceoverBuffer || null;
     const textToSpeak = (input.description && input.description.trim()) ? input.description : headline;
     if (!voiceoverBuffer && textToSpeak) {
       const speechScript = this.ttsService.cleanDescription(textToSpeak, headline);
       if (speechScript) {
         try {
-          console.log(`[ReelVideoRenderer] 🎙️ Synthesizing news voiceover: "${speechScript.substring(0, 50)}..."`);
+          console.log(`[ReelVideoRenderer] 🎙️ Synthesizing news voiceover via Edge TTS: "${speechScript.substring(0, 50)}..."`);
           voiceoverBuffer = await this.ttsService.synthesize(speechScript, {
             isEnglish,
           });
           if (voiceoverBuffer) {
-            console.log(`[ReelVideoRenderer] ✓ Edge TTS voiceover generated (${voiceoverBuffer.length} bytes)`);
+            console.log(`[ReelVideoRenderer] ✓ Edge TTS voiceover generated successfully (${voiceoverBuffer.length} bytes)`);
           }
         } catch (ttsErr: any) {
-          console.warn('[ReelVideoRenderer] Voiceover note:', ttsErr.message);
+          console.warn('[ReelVideoRenderer] Edge TTS voiceover note:', ttsErr.message);
         }
       }
     }
@@ -675,25 +654,24 @@ export class ReelVideoRenderer {
       '-pix_fmt', 'rgba',
       '-s', `${width}x${height}`,
       '-r', String(fps),
-      '-i', '-', // Zero-copy raw RGBA stream from stdin
+      '-i', '-', // Zero-copy raw RGBA stream from stdin (Input 0)
     ];
 
-    if (finalAudioPath) {
-      ffmpegArgs.push(
-        '-stream_loop', '-1',
-        '-i', finalAudioPath
-      );
-    } else {
-      // Meta Reels strictly requires a stereo 48kHz audio track (generate silent stereo fallback if asset is missing)
-      ffmpegArgs.push(
-        '-f', 'lavfi',
-        '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000'
-      );
-    }
-
+    // Exclusively use Edge TTS voiceover. All other voices, background music, and extra audio tracks are completely removed.
     if (tempVoiceFile) {
       ffmpegArgs.push(
-        '-i', tempVoiceFile
+        '-i', tempVoiceFile, // Voiceover stream from Edge TTS (Input 1)
+        '-af', 'apad',       // Pad with silence so video plays out full duration without early audio cut-off
+        '-map', '0:v',
+        '-map', '1:a'
+      );
+    } else {
+      // Silent stereo fallback if no voiceover text exists (Meta Reels strictly requires a stereo 48kHz audio track)
+      ffmpegArgs.push(
+        '-f', 'lavfi',
+        '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
+        '-map', '0:v',
+        '-map', '1:a'
       );
     }
 
@@ -709,21 +687,6 @@ export class ReelVideoRenderer {
     );
     if (isHighDef) {
       ffmpegArgs.push('-tune', 'film');
-    }
-
-    if (tempVoiceFile) {
-      // Background music at 10% volume, Charon voice at 90% volume
-      const bgFilter = useAudioFilter && activeCategoryStyle?.audioFilter
-        ? `${activeCategoryStyle.audioFilter},volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000`
-        : 'volume=0.10,aformat=channel_layouts=stereo:sample_rates=48000';
-      ffmpegArgs.push(
-        '-filter_complex',
-        `[1:a]${bgFilter}[bg];[2:a]volume=0.90,aformat=channel_layouts=stereo:sample_rates=48000[voice];[bg][voice]amix=inputs=2:duration=first:dropout_transition=2:weights=0.1 0.9[aout]`,
-        '-map', '0:v',
-        '-map', '[aout]'
-      );
-    } else if (useAudioFilter && activeCategoryStyle?.audioFilter) {
-      ffmpegArgs.push('-af', activeCategoryStyle.audioFilter);
     }
 
     ffmpegArgs.push(
@@ -793,7 +756,7 @@ export class ReelVideoRenderer {
           if (!ok && !isTerminated) {
             await new Promise<void>((res) => {
               ffmpegProcess.stdin.once('drain', res);
-              setTimeout(res, 500);
+              setTimeout(res, 25);
             });
           }
         } else {
