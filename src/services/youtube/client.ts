@@ -174,29 +174,29 @@ export class YouTubeClient {
       });
 
       this.clientId =
-        (sId?.value && sId.value.trim()) ||
         this.clientId ||
+        (sId?.value && sId.value.trim()) ||
         process.env.GOOGLE_CLIENT_ID ||
         process.env.GDRIVE_CLIENT_ID ||
         process.env.YOUTUBE_CLIENT_ID ||
         '';
       this.clientSecret =
-        (sSec?.value && sSec.value.trim()) ||
         this.clientSecret ||
+        (sSec?.value && sSec.value.trim()) ||
         process.env.GOOGLE_CLIENT_SECRET ||
         process.env.GDRIVE_CLIENT_SECRET ||
         process.env.YOUTUBE_CLIENT_SECRET ||
         '';
       this.refreshToken =
-        (sRef?.value && sRef.value.trim()) ||
         this.refreshToken ||
+        (sRef?.value && sRef.value.trim()) ||
         process.env.GOOGLE_REFRESH_TOKEN ||
         process.env.GDRIVE_REFRESH_TOKEN ||
         process.env.YOUTUBE_REFRESH_TOKEN ||
         '';
 
       // Auto-sync refresh token to DB if present in env but not in DB
-      if (!sRef?.value && this.refreshToken) {
+      if (!sRef?.value && this.refreshToken && !this.channelId) {
         await db.collection<Setting>('settings').updateOne(
           { _id: 'YOUTUBE_REFRESH_TOKEN' },
           { $set: { value: this.refreshToken, updatedAt: new Date() } },
