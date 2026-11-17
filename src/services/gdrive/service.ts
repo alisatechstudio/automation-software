@@ -1081,9 +1081,10 @@ export class GDriveReelService {
 
       // 3B. Post to YouTube Channel (Shorts)
       if (conf.autoPostYouTube !== false) {
+        let matchedYt: YouTubeChannel | undefined;
         try {
           const ytChannels = await db.collection<YouTubeChannel>('youtube_channels').find({ isActive: true }).toArray();
-          const targetYt = ytChannels.find((ch) => {
+          matchedYt = ytChannels.find((ch) => {
             if (!ch.autoUpload) return false;
             if (conf.youtubeChannelId && conf.youtubeChannelId !== 'all') {
               return ch._id === conf.youtubeChannelId;
@@ -1094,9 +1095,9 @@ export class GDriveReelService {
             return true;
           });
 
-          if (targetYt) {
-            console.log(`[GDriveReelService] 📺 [2/4] Publishing Short to YouTube Channel "${targetYt.title}" (${targetYt._id})...`);
-            const ytClientForChannel = YouTubeClient.forChannel(targetYt);
+          if (matchedYt) {
+            console.log(`[GDriveReelService] 📺 [2/4] Publishing Short to YouTube Channel "${matchedYt.title}" (${matchedYt._id})...`);
+            const ytClientForChannel = YouTubeClient.forChannel(matchedYt);
             const ytRes = await ytClientForChannel.uploadShort({
               videoBuffer,
               title: video.cleanTitle,
@@ -1110,8 +1111,8 @@ export class GDriveReelService {
                 _id: crypto.randomUUID(),
                 articleId: `gdrive_${conf._id}_${video.id}`,
                 articleTitle: video.cleanTitle,
-                channelId: targetYt._id,
-                channelTitle: targetYt.title,
+                channelId: matchedYt._id,
+                channelTitle: matchedYt.title,
                 pageId: page._id,
                 ytVideoId: ytRes.videoId,
                 ytVideoUrl: ytRes.videoUrl || `https://youtube.com/shorts/${ytRes.videoId}`,
@@ -1119,9 +1120,9 @@ export class GDriveReelService {
                 createdAt: new Date(),
               });
               try {
-                const currentCount = parseInt(targetYt.videoCount || '0', 10) || 0;
+                const currentCount = parseInt(matchedYt.videoCount || '0', 10) || 0;
                 await db.collection('youtube_channels').updateOne(
-                  { _id: targetYt._id },
+                  { _id: matchedYt._id },
                   { $set: { videoCount: String(currentCount + 1), updatedAt: new Date() } }
                 );
               } catch {}
@@ -1131,6 +1132,21 @@ export class GDriveReelService {
           }
         } catch (ytErr: any) {
           console.warn(`[GDriveReelService] YouTube Short upload note:`, ytErr.message);
+          try {
+            await db.collection<YouTubeUploadLog>('youtube_upload_logs').insertOne({
+              _id: crypto.randomUUID(),
+              articleId: `gdrive_${conf._id}_${video.id}`,
+              articleTitle: video.cleanTitle,
+              channelId: matchedYt?._id || 'unknown',
+              channelTitle: matchedYt?.title || 'YouTube Channel',
+              pageId: page._id,
+              ytVideoId: '',
+              ytVideoUrl: '',
+              status: 'failed',
+              errorMessage: ytErr.message || String(ytErr),
+              createdAt: new Date(),
+            });
+          } catch {}
         }
       }
 
