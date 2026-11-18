@@ -62,8 +62,14 @@ export function createServer(deps: ServerDependencies) {
     res.redirect('/dashboard');
   });
 
-  // Serve the previous News Automation Dashboard (BD News 24/7)
+  // Serve the previous News Automation Dashboard (BD News 24/7) with in-memory caching
+  let cachedNewsHtml: string | null = null;
   app.get(['/news-dashboard', '/legacy-dashboard', '/news'], (req: Request, res: Response) => {
+    if (cachedNewsHtml) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(cachedNewsHtml);
+    }
+
     const candidatePaths = [
       path.resolve(process.cwd(), 'assets/dashboard.html'),
       path.resolve(process.cwd(), 'legacy_fb_news/templates/dashboard.html'),
@@ -72,8 +78,9 @@ export function createServer(deps: ServerDependencies) {
     ];
     for (const p of candidatePaths) {
       if (fs.existsSync(p)) {
+        cachedNewsHtml = fs.readFileSync(p, 'utf8');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.sendFile(p);
+        return res.send(cachedNewsHtml);
       }
     }
     res.status(404).send('Previous news dashboard template not found in assets/dashboard.html');
