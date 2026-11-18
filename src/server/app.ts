@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express, { type Request, type Response } from 'express';
 import type { DbRepository } from '../db/repository.js';
 import type { ApprovalManager } from '../approval/manager.js';
@@ -20,11 +22,18 @@ export function createServer(deps: ServerDependencies) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Set up EJS views
-  const viewsDir = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
-    'views'
-  );
+  // Set up EJS views with multi-environment fallback (local src, built dist, Vercel serverless)
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  let viewsDir = path.resolve(currentDir, 'views');
+  if (!fs.existsSync(viewsDir)) {
+    const cwdDist = path.resolve(process.cwd(), 'dist/server/views');
+    const cwdSrc = path.resolve(process.cwd(), 'src/server/views');
+    if (fs.existsSync(cwdDist)) {
+      viewsDir = cwdDist;
+    } else if (fs.existsSync(cwdSrc)) {
+      viewsDir = cwdSrc;
+    }
+  }
   app.set('views', viewsDir);
   app.set('view engine', 'ejs');
 

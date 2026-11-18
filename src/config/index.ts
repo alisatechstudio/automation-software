@@ -45,7 +45,7 @@ export function loadConfig(configPath = './config.yaml'): LoadedConfig {
   }
   const config = configParsed.data;
 
-  // Ensure necessary runtime directories exist
+  // Ensure necessary runtime directories exist (ignoring read-only filesystem environments)
   const dirsToEnsure = [
     config.app.dataDir,
     config.app.inboxDir,
@@ -55,9 +55,13 @@ export function loadConfig(configPath = './config.yaml'): LoadedConfig {
   ];
 
   for (const dir of dirsToEnsure) {
-    const fullPath = path.resolve(process.cwd(), dir);
-    if (!fs.existsSync(fullPath)) {
-      fs.mkdirSync(fullPath, { recursive: true });
+    try {
+      const fullPath = path.resolve(process.cwd(), dir);
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+      }
+    } catch {
+      // Ignore directory creation failure in read-only environments (e.g., serverless Lambda/Vercel)
     }
   }
 
