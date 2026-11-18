@@ -53,9 +53,108 @@ export function createServer(deps: ServerDependencies) {
   // Serve static output files (videos, thumbnails)
   app.use('/output', express.static(path.resolve(process.cwd(), config.config.app.outputDir)));
 
+  // Serve static assets for News Automation Dashboard
+  app.use('/assets', express.static(path.resolve(process.cwd(), 'assets')));
+  app.use('/assets', express.static(path.resolve(process.cwd(), 'public/assets')));
+
   // Root redirect & Vercel rewrite alias
   app.get(['/', '/api/index', '/api'], (req: Request, res: Response) => {
     res.redirect('/dashboard');
+  });
+
+  // Serve the previous News Automation Dashboard (BD News 24/7)
+  app.get(['/news-dashboard', '/legacy-dashboard', '/news'], (req: Request, res: Response) => {
+    const candidatePaths = [
+      path.resolve(process.cwd(), 'assets/dashboard.html'),
+      path.resolve(process.cwd(), 'legacy_fb_news/templates/dashboard.html'),
+      path.resolve(currentDir, '../../assets/dashboard.html'),
+      path.resolve(currentDir, '../../../assets/dashboard.html'),
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.sendFile(p);
+      }
+    }
+    res.status(404).send('Previous news dashboard template not found in assets/dashboard.html');
+  });
+
+  // Terms and Privacy for Legal Compliance
+  app.get(['/terms', '/terms-of-service'], (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Terms of Service - Automation Software</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 p-8 font-sans max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4">Terms of Service</h1>
+  <p class="text-sm text-slate-400 mb-6">Automation Software Content Syndication & Publishing Platform.</p>
+  <div class="space-x-3">
+    <a href="/dashboard" class="px-3 py-1.5 bg-blue-600 rounded text-xs">← SportsClipBot Dashboard</a>
+    <a href="/news-dashboard" class="px-3 py-1.5 bg-slate-800 rounded text-xs">← News Automation Dashboard</a>
+  </div>
+</body>
+</html>`);
+  });
+
+  app.get(['/privacy', '/privacy-policy'], (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Privacy Policy - Automation Software</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 p-8 font-sans max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4">Privacy Policy</h1>
+  <p class="text-sm text-slate-400 mb-6">We respect user privacy and adhere to Meta Platform and Google API policies.</p>
+  <div class="space-x-3">
+    <a href="/dashboard" class="px-3 py-1.5 bg-blue-600 rounded text-xs">← SportsClipBot Dashboard</a>
+    <a href="/news-dashboard" class="px-3 py-1.5 bg-slate-800 rounded text-xs">← News Automation Dashboard</a>
+  </div>
+</body>
+</html>`);
+  });
+
+  // API endpoints expected by the News Automation Dashboard
+  app.get('/api/stats', async (req: Request, res: Response) => {
+    const { isPaused } = await repo.isPipelinePaused();
+    res.json({
+      success: true,
+      queue: { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 },
+      articles: 0,
+      pages: 0,
+      sources: 0,
+      youtubeChannels: 0,
+      reelLogs: 0,
+      postLogs: 0,
+      sportsPipeline: {
+        active: !isPaused,
+        dailyCap: config.config.compliance.dailyCapPerPlatform,
+      }
+    });
+  });
+
+  app.get('/api/settings', async (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      settings: {
+        auto_posting_enabled: 'false',
+        dry_run: config.isDryRun ? 'true' : 'false',
+      }
+    });
+  });
+
+  app.get('/api/articles', async (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      articles: [],
+      total: 0,
+    });
   });
 
   // Main Compliance & Approval Dashboard

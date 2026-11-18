@@ -16,6 +16,7 @@ public/*.mp4
 public/*.mp3
 public/*.wav
 public/*.aac
+public/assets/
 
 legacy_fb_news/
 

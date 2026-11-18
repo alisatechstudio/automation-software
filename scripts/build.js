@@ -30,6 +30,14 @@ try {
     fs.mkdirSync(publicDir, { recursive: true });
   }
 
+  // Copy legacy dashboard assets to public for static CDN serving
+  const assetsSrc = path.resolve('assets');
+  const publicAssetsDest = path.resolve('public/assets');
+  if (fs.existsSync(assetsSrc)) {
+    fs.mkdirSync(publicAssetsDest, { recursive: true });
+    fs.cpSync(assetsSrc, publicAssetsDest, { recursive: true });
+  }
+
   console.log('[Build] Build succeeded!');
 } catch (err) {
   console.error('[Build] Build failed with error:', err.message);
