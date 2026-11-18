@@ -1,55 +1,86 @@
-import { config } from './config/env.js';
-import { initMongoDb, closeDatabase } from './db/index.js';
+import { loadConfig } from './config/index.js';
+import { initDatabase, closeDatabase } from './db/index.js';
+import { DbRepository } from './db/repository.js';
+import { PublisherOrchestrator } from './publishers/index.js';
+import { ApprovalManager } from './approval/manager.js';
+import { TelegramApprovalBot } from './approval/telegram-bot.js';
+import { SportsClipPipeline } from './scheduler/pipeline.js';
+import { CopyrightMonitor } from './monitoring/copyright-monitor.js';
+import { SchedulerService } from './scheduler/cron.js';
 import { createServer } from './server/app.js';
-import { PipelineCoordinator } from './services/pipeline/coordinator.js';
+import { logger } from './logger.js';
 
-async function bootstrap() {
-  console.log('====================================================');
-  console.log('🚀 NEWS-TO-FACEBOOK AUTOMATION PLATFORM STARTING');
-  console.log(`🌍 Environment: ${config.NODE_ENV} | Port: ${config.PORT}`);
-  console.log(`🍃 Database: ${config.DB_TYPE === 'mysql' ? `MySQL (${config.MYSQL_DATABASE} @ ${config.MYSQL_HOST}:${config.MYSQL_PORT})` : 'MongoDB'}`);
-  console.log(`🛡️  Dry Run Mode: ${config.DRY_RUN ? 'ENABLED (Safe Simulated Publishing)' : 'DISABLED (Live Graph API)'}`);
-  console.log(`⏱️  Poll Interval: "${config.POLL_INTERVAL_CRON}"`);
-  console.log('====================================================');
+async function main() {
+  logger.info('=====================================================');
+  logger.info('   ⚡ SportsClipBot - Monetization Compliance Bot   ');
+  logger.info('=====================================================');
 
-  // 1. Start HTTP server FIRST so cPanel/Passenger & healthchecks get an instant response
-  const app = createServer();
-  const port = process.env.PORT || config.PORT || 3000;
-  const server = app.listen(port, () => {
-    console.log(`✓ [Server] Admin Dashboard listening on port/socket: ${port}`);
-    console.log(`✓ [Server] Health check available at /health`);
+  // 1. Load & Validate Configuration
+  const loadedConfig = loadConfig();
+  const { config, env, isDryRun } = loadedConfig;
+
+  logger.info({ environment: env.NODE_ENV, dryRun: isDryRun }, 'Configuration loaded.');
+
+  // 2. Initialize Database & Repositories (MongoDB)
+  const db = await initDatabase(env.MONGODB_URI, env.MONGODB_DB_NAME);
+  const repo = new DbRepository(db);
+
+  // 3. Initialize Publishing Engine
+  const publisher = new PublisherOrchestrator(loadedConfig, repo);
+
+  // 4. Initialize Approval Manager (Mandatory Human Gate)
+  const approvalManager = new ApprovalManager(repo, publisher);
+
+  // 5. Initialize Telegram Bot
+  const telegramBot = new TelegramApprovalBot({
+    botToken: env.TELEGRAM_BOT_TOKEN,
+    chatId: env.TELEGRAM_CHAT_ID,
+    adminUserId: env.TELEGRAM_ADMIN_USER_ID,
+    approvalManager,
   });
 
-  server.on('error', (err: any) => {
-    console.error(`[Server] Critical HTTP server error: ${err.message || err}`);
+  if (config.approval.telegramEnabled && env.TELEGRAM_BOT_TOKEN) {
+    await telegramBot.start();
+  }
+
+  // 6. Initialize Processing Pipeline
+  const pipeline = new SportsClipPipeline(repo, loadedConfig, telegramBot);
+
+  // 7. Initialize Copyright & Strikes Monitor
+  const monitor = new CopyrightMonitor(repo, loadedConfig);
+
+  // 8. Initialize Scheduled Cron Jobs
+  const scheduler = new SchedulerService(pipeline, monitor);
+  scheduler.start();
+
+  // 9. Start Express Dashboard & Control Center
+  const app = createServer({
+    repo,
+    approvalManager,
+    pipeline,
+    config: loadedConfig,
   });
 
-  // 2. Connect to MongoDB asynchronously (non-blocking for HTTP server)
-  initMongoDb().catch((err) => {
-    console.warn('[Bootstrap] Initial MongoDB connection attempt failed:', err.message);
+  const server = app.listen(env.PORT, () => {
+    logger.info(`Web Dashboard & Control Center active at: http://localhost:${env.PORT}`);
   });
 
-  // 3. Start Pipeline Coordinator (Scheduler + Worker)
-  const coordinator = new PipelineCoordinator();
-  await coordinator.start();
-
-  // Graceful shutdown handling
-  const shutdown = async (signal: string) => {
-    console.log(`\n[Shutdown] Received ${signal}. Gracefully shutting down...`);
-    coordinator.stop();
+  // Graceful Shutdown
+  const shutdown = async () => {
+    logger.info('Shutting down SportsClipBot gracefully...');
+    scheduler.stop();
     server.close(async () => {
-      console.log('[Shutdown] HTTP server closed.');
       await closeDatabase();
-      console.log('[Shutdown] MongoDB connection closed.');
+      logger.info('All services stopped.');
       process.exit(0);
     });
   };
 
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
-bootstrap().catch((err) => {
-  console.error('[Bootstrap] Fatal startup error:', err);
-  // Do NOT process.exit(1) on cPanel / Passenger, otherwise Passenger kills the process with 503
+main().catch((err) => {
+  logger.fatal({ err: err.message, stack: err.stack }, 'Fatal error during SportsClipBot initialization');
+  process.exit(1);
 });

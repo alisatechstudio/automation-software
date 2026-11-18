@@ -1,332 +1,248 @@
-# 📰 Self-Hosted News-to-Facebook Automation Platform
+# ⚡ SportsClipBot
 
-A resilient, production-ready, self-hosted automation platform that continuously monitors news portal RSS feeds, deduplicates incoming articles, dynamically renders branded news cards with localized Bengali typography via headless Playwright, publishes high-resolution photo posts to Facebook Pages using the official Facebook Graph API, and automatically appends the news URL as the first comment.
-
-Zero third-party SaaS dependencies (no n8n, Make, or Zapier). Built with **Node.js + TypeScript**, **Vercel Connected MongoDB**, **Playwright (headless Chromium)**, and **Docker**.
-
----
-
-## 🏗️ Architecture & Pipeline Flow
-
-```
-┌─────────────────┐       ┌────────────────────┐       ┌──────────────────────┐
-│  RSS Feed(s)    │ ────> │ Deduplication &    │ ────> │ Persistent Queue     │
-│  (Every N mins) │       │ Age Window Filter  │       │ (MongoDB FIFO Queue) │
-└─────────────────┘       └────────────────────┘       └──────────┬───────────┘
-                                                                  │
-                                                          Rate Cap & Jitter
-                                                            (30-60s delay)
-                                                                  │
-┌─────────────────────────┐                                       ▼
-│ Local Bangla Fonts      │                            ┌──────────────────────┐
-│ - Noto Sans Bengali     │ ─────────────────────────> │ Playwright Renderer  │
-│ - Hind Siliguri         │                            │ (HTML/CSS to PNG)    │
-└─────────────────────────┘                            └──────────┬───────────┘
-                                                                  │
-                                                           PNG Image Buffer
-                                                                  │
-                                                                  ▼
-┌─────────────────────────┐                            ┌──────────────────────┐
-│ Telegram Failure Alert  │ <─── 3 Retries Exhausted ──│ Graph API Publisher  │
-│ (@BotFather Alert Bot)  │                            │ POST /{page}/photos  │
-└─────────────────────────┘                            └──────────┬───────────┘
-                                                                  │
-                                                             fb_post_id
-                                                                  │
-                                                                  ▼
-                                                       ┌──────────────────────┐
-                                                       │ First Comment Poster │
-                                                       │ "বিস্তারিত পড়ুন: url" │
-                                                       └──────────────────────┘
-```
+> **Autonomous Sports Clip Transformer & Publisher with Strict Monetization Compliance Gating**  
+> Built with TypeScript (strict), Node 20+, ESM, pnpm, MongoDB, FFmpeg, Anthropic Claude API, and Meta/Google APIs.
 
 ---
 
-## 📁 Repository Structure
+## 🎯 Top Design Goal & Compliance Mandate
 
-```
-.
-├── assets/
-│   ├── fonts/                          # Bundled local Bengali typography
-│   │   ├── HindSiliguri-Bold.ttf
-│   │   ├── HindSiliguri-Regular.ttf
-│   │   └── NotoSansBengali-Regular.ttf
-│   └── images/                         # Branded vector assets
-│       ├── fallback.svg                # Fallback news placeholder
-│       └── logo.svg                    # Brand logo overlay
-├── data/                               # Rendered PNG cache
-│   └── rendered/
-├── src/
-│   ├── config/
-│   │   ├── constants.ts                # Template dimensions, aspect ratios, defaults
-│   │   └── env.ts                      # Strongly typed environment configuration
-│   ├── db/
-│   │   ├── index.ts                    # MongoDB connection pool & index provisioning
-│   │   └── schema.ts                   # TypeScript model interfaces
-│   ├── server/
-│   │   ├── app.ts                      # Express web server & health endpoint
-│   │   ├── middleware/
-│   │   │   ├── auth.ts                 # Basic Auth password protection
-│   │   │   └── logging.ts              # HTTP request timing & logging
-│   │   └── routes/
-│   │       ├── api.ts                  # REST API for sources, pages, queue, and settings
-│   │       └── dashboard.ts            # Responsive Web UI Dashboard
-│   ├── services/
-│   │   ├── alert/
-│   │   │   └── telegram.ts             # Telegram Bot failure alerting
-│   │   ├── facebook/
-│   │   │   ├── client.ts               # Facebook Graph API v21.0 client
-│   │   │   └── token.ts                # Token inspection and expiry verification
-│   │   ├── pipeline/
-│   │   │   └── coordinator.ts          # Scheduler + Queue orchestration
-│   │   ├── queue/
-│   │   │   ├── queue.ts                # Persistent MongoDB job queue with backoff
-│   │   │   └── worker.ts               # Worker with anti-spam jitter & rate caps
-│   │   ├── renderer/
-│   │   │   ├── playwright.ts           # Playwright headless Chromium renderer
-│   │   │   └── types.ts                # ImageRenderer interface
-│   │   └── rss/
-│   │       ├── dedupe.ts               # Deduplication and FIFO ordering
-│   │       └── parser.ts               # RSS ingestion & og:image scraper fallback
-│   ├── templates/                      # Swappable news graphic templates
-│   │   ├── template-landscape-standard.html  # 1200x630 (1.91:1 Social Share)
-│   │   ├── template-square-breaking.html     # 1080x1080 Breaking News
-│   │   └── template-square-editorial.html    # 1080x1080 Modern Editorial
-│   └── index.ts                        # Main application bootstrap
-├── test/                               # Comprehensive verification suite
-│   ├── test-rss.ts                     # Phase 1 test
-│   ├── test-renderer.ts                # Phase 2 test
-│   ├── test-facebook.ts                # Phase 3 test
-│   ├── test-queue.ts                   # Phase 4 test
-│   └── test-end-to-end.ts              # Full pipeline dry-run test
-├── Dockerfile                          # Multi-stage production container
-├── docker-compose.yml                  # Production orchestration
-├── .env.example                        # Environment template
-├── tsconfig.json
-└── package.json
-```
+The primary design principle of **SportsClipBot** is uncompromising compliance with the **YouTube Partner Program (YPP)** (including reused and inauthentic content policies) and **Facebook Content Monetization Policies**.
 
----
-
-## 🗄️ Database Schema (MongoDB)
-
-The platform connects to MongoDB via Vercel integration (`MONGODB_URI`) or MongoDB Atlas. Indexes are automatically initialized upon startup by `initMongoDb()`.
-
-### Core Collections
-1. **`news_articles`**:
-   - `_id`: Unique UUID.
-   - `guid`, `link`: Indexed uniqueness constraints for strict deduplication.
-   - `title`, `description`, `category`, `pubDate`, `imageUrl`.
-   - `status`: `ingested` | `queued` | `published` | `failed`.
-2. **`jobs`**:
-   - `_id`: UUID.
-   - `type`: `process_article`.
-   - `articleId`, `pageId`.
-   - `status`: `pending` | `processing` | `completed` | `failed`.
-   - `attempts`: Retry counter (0 to 3).
-   - `runAt`: Timestamp for exponential backoff scheduling.
-   - Atomic worker locking via `findOneAndUpdate`.
-3. **`facebook_pages`**:
-   - `_id`: Facebook Page ID.
-   - `name`: Human-readable label.
-   - `accessToken`: Page Access Token.
-   - `tokenExpiresAt`: Expiration date (NULL for never-expiring).
-4. **`rss_sources`**:
-   - `_id`: Source UUID.
-   - `url`: Unique RSS URL.
-   - `pageId`: Target Facebook Page.
-   - `templateId`: Preferred template (`template-square-breaking`, etc.).
-5. **`post_logs`**:
-   - Records `fbPhotoId`, `fbPostId`, `fbCommentId`, `durationMs`, `caption`, `comment`, and `renderedImagePath`.
-6. **`settings`**:
-   - Dynamic key-value overrides for cron interval, caps, and delays.
-   - `template_id`: Preferred template (`template-square-breaking`, etc.).
-5. **`post_logs`**:
-   - Records `fb_photo_id`, `fb_post_id`, `fb_comment_id`, `duration_ms`, `caption`, `comment`, and `rendered_image_path`.
-6. **`settings`**:
-   - Dynamic key-value overrides for cron interval, caps, and delays.
-
----
-
-## 🔑 Meta Developer App & Page Access Token Guide
-
-To publish images and comments to a Facebook Page, you need a **never-expiring Page Access Token**. Follow this official procedure:
-
-### Step 1: Create a Meta Developer App
-1. Go to [developers.facebook.com](https://developers.facebook.com/) and log in with the Facebook account that manages your Page.
-2. Click **My Apps** ➔ **Create App**.
-3. Select **Other** as the use case ➔ Click **Next**.
-4. Select **Business** as the App Type ➔ Enter an App Name (e.g., `News Automation Engine`) ➔ Click **Create App**.
-
-### Step 2: Grant Permissions in Graph API Explorer
-1. Navigate to **Tools** ➔ **Graph API Explorer** ([developers.facebook.com/tools/explorer](https://developers.facebook.com/tools/explorer)).
-2. In the top right:
-   - Select your **Meta App**.
-   - Under **User or Page**, select **User Token**.
-3. Under **Add a permission**, add these three mandatory permissions:
-   - `pages_manage_posts` (allows posting photos and captions)
-   - `pages_manage_engagement` (allows creating the first comment)
-   - `pages_read_engagement` (allows reading post and comment status)
-4. Click **Generate Access Token**. Approve the Facebook popup dialog giving access to your Page.
-
-### Step 3: Convert to a 60-Day Long-Lived User Token
-Run this HTTP request in your terminal or browser (replace placeholders with values from your App Settings ➔ Basic):
-```bash
-curl -X GET "https://graph.facebook.com/v21.0/oauth/access_token?\
-grant_type=fb_exchange_token&\
-client_id=YOUR_APP_ID&\
-client_secret=YOUR_APP_SECRET&\
-fb_exchange_token=SHORT_LIVED_USER_TOKEN"
-```
-The response returns a long-lived User Access Token valid for 60 days:
-```json
-{
-  "access_token": "LONG_LIVED_USER_ACCESS_TOKEN",
-  "token_type": "bearer"
-}
-```
-
-### Step 4: Extract the Never-Expiring Page Access Token
-Using the `LONG_LIVED_USER_ACCESS_TOKEN` from Step 3, query the `/me/accounts` endpoint:
-```bash
-curl -X GET "https://graph.facebook.com/v21.0/me/accounts?access_token=LONG_LIVED_USER_ACCESS_TOKEN"
-```
-Response:
-```json
-{
-  "data": [
-    {
-      "name": "My News Portal",
-      "id": "109876543210987",
-      "access_token": "EAAB...NEVER_EXPIRING_PAGE_ACCESS_TOKEN..."
-    }
-  ]
-}
-```
 > [!IMPORTANT]
-> Because this Page Access Token was derived from a 60-day Long-Lived User Token, **it will NEVER expire** unless your Facebook password is changed or permissions are revoked. You can verify this by pasting the token into the **Access Token Debugger** (`developers.facebook.com/tools/debug/accesstoken`) where `Expires` will state `Never`.
+> **Strict Compliance Gate**: If a video cannot pass all 9 compliance checks, it **MUST NOT** be published. Nothing is ever force-published. Every single video requires explicit human approval before being distributed to YouTube or Facebook.
 
 ---
 
-## 🚀 Quickstart & Local Verification
+## 🏗 High-Level Architecture & Pipeline Flow
 
-### 1. Install Dependencies & Build
-```bash
-# Clone the repository
-cd "d:/WEBSITES/Vercel/FB Automation"
+```mermaid
+flowchart TD
+    subgraph Sourcing ["1. Licensed Sourcing"]
+        A1[Watched Folder Inbox] --> B[Base Source Filter]
+        A2[Wikimedia Commons CC] --> B
+        A3[YouTube CC Filter] --> B
+        A4[Pexels / Pixabay API] --> B
+        A5[Licensed Partner Feeds] --> B
+        B -->|Hard Blocklist Check| C{Broadcaster / League?}
+        C -->|Yes - No Agreement| D[REJECT & LOG]
+        C -->|No / Authorized| E[(MongoDB: Ingested Clips)]
+    end
 
-# Install packages
-npm install
+    subgraph Transformation ["2. Transformative Editing"]
+        E --> F[Claude API Script & Analysis Breakdown]
+        F --> G[Graphics Generator: Stats Cards & Lower-Third]
+        G --> H[FFmpeg 9:16 Vertical Video Renderer]
+        H --> I[EBU R128 Loudness Normalization & Captions]
+        I --> J[Thumbnail Generation & Perceptual Hash]
+    end
 
-# Build TypeScript to dist/
-npm run build
+    subgraph ComplianceGate ["3. Strict Compliance Gate (9 Checks)"]
+        J --> K1[1. License Evidence on File]
+        J --> K2[2. Music AcoustID Fingerprint]
+        J --> K3[3. Watermark / Logo Detection]
+        J --> K4[4. Originality Ratio & Uniqueness]
+        J --> K5[5. Claude Advertiser-Friendliness]
+        J --> K6[6. Metadata Honesty & Anti-Clickbait]
+        J --> K7[7. Synthetic Media Disclosure]
+        J --> K8[8. Format 9:16 & Duration 15-45s]
+        J --> K9[9. Daily Platform Volume Caps]
+        K1 & K2 & K3 & K4 & K5 & K6 & K7 & K8 & K9 --> L{All 9 Checks Pass?}
+        L -->|Fail Any| M[Move to Rejected Queue & Record Reasons]
+        L -->|Pass All| N[(MongoDB: Pending Approvals)]
+    end
+
+    subgraph HumanApproval ["4. Mandatory Human Approval"]
+        N --> O[Web Dashboard / Telegram Bot Alert]
+        O --> P{Reviewer Decision}
+        P -->|Reject| Q[Mark Rejected in MongoDB & Audit Log]
+        P -->|Approve| R[(MongoDB: Approved Video)]
+    end
+
+    subgraph Publishing ["5. Resumable Publishing"]
+        R --> S{DRY_RUN Mode?}
+        S -->|true| T[Simulate Upload & Record Mock URLs]
+        S -->|false| U[YouTube Resumable Upload + Altered Content Flag]
+        S -->|false| V[Facebook Reels 3-Phase Resumable API]
+    end
+
+    subgraph Monitoring ["6. Continuous Policy Monitoring"]
+        U & V --> W[Poll YouTube & Facebook for Claims & Strikes]
+        W --> X{Strike / Claim Found?}
+        X -->|Yes| Y[EMERGENCY PAUSE PIPELINE & Alert Admin]
+        X -->|No| Z[Audit Log Status: Healthy]
+    end
 ```
-
-### 2. Run Verification Tests Step-by-Step
-Run the dedicated test suite for each phase:
-
-```bash
-# Phase 1: RSS Ingestion & Deduplication
-npm run test:rss
-
-# Phase 2: Playwright Image Renderer with Bangla Fonts
-npm run test:renderer
-
-# Phase 3: Facebook Graph API Client & Formatting
-npm run test:facebook
-
-# Phase 4: Persistent SQLite Queue & Backoff
-npm run test:queue
-
-# Phase 5 / Complete End-to-End Pipeline Dry-Run
-npm run test:pipeline
-```
-
-### 3. Launch Platform in Dry-Run Mode
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Verify `DRY_RUN=true` in `.env`.
-3. Start the application:
-   ```bash
-   npm run dev
-   ```
-4. Open the Web Dashboard in your browser:
-   - URL: `http://localhost:3000`
-   - User: `admin` (or any username)
-   - Password: Value from `ADMIN_PASSWORD` in `.env` (Default: `SetYourStrongPasswordHere_12345!`)
 
 ---
 
-## 🚢 Production Deployment on VPS (Docker)
+## 📋 Monetization Policy Checklist
 
-### 1. Prerequisites on VPS
-- Ubuntu 22.04 / 24.04 LTS or Debian 12
-- Docker & Docker Compose (`apt install docker.io docker-compose-v2`)
+Because YouTube and Meta policies are updated periodically, re-verify your publishing parameters against these official documentation hubs:
 
-### 2. Deployment Steps
+### 🔴 YouTube Partner Program (Google)
+1. **Reused & Repetitious Content Policy**:  
+   [YouTube Channel Monetization Policies](https://support.google.com/youtube/answer/1311392)  
+   *Requirement*: Content must feature significant original commentary, educational value, or narrative transformation. Mere compilation or raw clip reposting results in demonetization.
+2. **Advertiser-Friendly Content Guidelines**:  
+   [Advertiser-Friendly Guidelines (Ad Suitability)](https://support.google.com/youtube/answer/6162278)  
+   *Requirement*: No graphic injuries, violent altercations, hate speech, gambling promotion, or deceptive medical misinformation.
+3. **Altered or Synthetic Content Disclosure**:  
+   [How to Disclose Altered or Synthetic Content](https://support.google.com/youtube/answer/14328491)  
+   *Requirement*: Mandatory `containsSyntheticMedia: true` flag and description notice for AI-generated voiceovers or altered visuals.
+4. **Spam, Deceptive Practices, and Scams**:  
+   [YouTube Spam & Deceptive Metadata Policy](https://support.google.com/youtube/answer/2801973)  
+   *Requirement*: No misleading clickbait, no tag stuffing (max 15 relevant tags), accurate thumbnails.
+
+### 🔵 Meta Content Monetization (Facebook Reels)
+1. **Content Monetization Policies**:  
+   [Meta Content Monetization Guidelines](https://www.facebook.com/business/help/251390491959461)  
+   *Requirement*: Creator must demonstrate significant value-add; raw footage aggregation is penalized with a "Limited Originality of Content" (LOC) flag.
+2. **Facebook Community Standards**:  
+   [Facebook Community Standards](https://transparency.fb.com/policies/community-standards/)  
+   *Requirement*: Authentic engagement, brand safety, no intellectual property infringement.
+3. **Intellectual Property Rights**:  
+   [Meta Copyright and Trademark Help](https://www.facebook.com/help/325058084212425)  
+   *Requirement*: Verifiable commercial rights on all video and audio assets.
+
+---
+
+## 🛠 Tech Stack
+
+- **Runtime**: Node.js 20+ (ESM, strict TypeScript)
+- **Package Manager**: `pnpm`
+- **Database**: `mongodb` (supports MongoDB Atlas & self-hosted instances)
+- **Config & Validation**: `zod` for `config.yaml` and `.env`
+- **Video Editing**: `fluent-ffmpeg` / `child_process` with bundled `@ffmpeg-installer` and `@ffprobe-installer`
+- **Audio Fingerprinting**: Chromaprint (`fpcalc` CLI) + AcoustID REST API
+- **Perceptual Hashing**: `sharp` 64-bit difference hash (dHash) & Levenshtein text similarity
+- **Scriptwriting & Screening**: `@anthropic-ai/sdk` (Claude 3.5 Sonnet)
+- **Platforms**:
+  - YouTube Data API v3 (`googleapis` resumable uploads)
+  - Facebook Graph API v21.0 (`undici` / native `fetch` 3-phase Reels upload)
+- **Approval & Notifications**: `grammy` Telegram bot + Express & EJS Dashboard
+- **Scheduling**: `node-cron`
+- **Testing**: `vitest`
+
+---
+
+## 📁 Project Structure
+
+```
+├── src/
+│   ├── index.ts                     # Main entrypoint: starts scheduler, web server, telegram bot
+│   ├── config/                      # Zod validation schemas for config.yaml and .env
+│   ├── types/                       # Domain types, interfaces, enums
+│   ├── db/                          # MongoDB connection, indexes, typed repository
+│   ├── sources/                     # Pluggable sources: WatchedFolder, Wikimedia, YouTubeCC, Pexels, Pixabay, PartnerFeed
+│   ├── compliance/                  # 9-check compliance gate, dHash perceptual hashing, AcoustID fingerprinting
+│   ├── editor/                      # FFmpeg vertical editor, graphics generator, captions, script writer
+│   ├── approval/                    # Human approval manager & grammY Telegram bot
+│   ├── publishers/                  # YouTube & Facebook publishers with backoff retries & DRY_RUN
+│   ├── monitoring/                  # Copyright & strikes monitoring with emergency pause
+│   ├── scheduler/                   # node-cron scheduler and in-process job queue
+│   └── server/                      # Express dashboard and approval API
+├── tests/
+│   ├── license.test.ts              # Unit tests for commercial vs NC license verification
+│   ├── originality.test.ts          # Unit tests for 60% licensed ratio limit & uniqueness
+│   ├── compliance-gate.test.ts      # Integration tests for 9-check Compliance Gate
+│   ├── dedup.test.ts                # Unit tests for dHash & Levenshtein text similarity
+│   ├── sources.test.ts              # Unit tests for broadcaster/league blocklists
+│   └── publishers.test.ts           # Unit tests for publishers and DRY_RUN mode
+├── config.yaml                      # Declarative application configuration
+├── .env.example                     # Environment template
+├── Dockerfile                       # Multi-stage production container
+├── docker-compose.yml               # Container orchestration
+└── docs/
+    ├── GOOGLE_OAUTH_SETUP.md        # YouTube OAuth2 credentials guide
+    └── FACEBOOK_APP_SETUP.md        # Facebook developer app & Page token guide
+```
+
+---
+
+## 🚀 Quickstart & Setup
+
+### 1. Prerequisites
+- Node.js `20.x` or higher
+- `pnpm` (`npm install -g pnpm`)
+- Optional: `ffmpeg` & `fpcalc` (bundled in Docker; Windows binaries included in npm dependencies)
+
+### 2. Installation
 ```bash
-# 1. Clone repository to VPS
-git clone <your-repo-url> /opt/fb-automation
-cd /opt/fb-automation
+git clone <repo-url>
+cd sportsclipbot
+pnpm install
+```
 
-# 2. Configure production .env
+### 3. Environment Configuration
+Copy `.env.example` to `.env`:
+```bash
 cp .env.example .env
-nano .env
-# Set ADMIN_PASSWORD, DRY_RUN=false, TELEGRAM_BOT_TOKEN, etc.
-
-# 3. Build and launch container in background
-docker compose up -d --build
-
-# 4. View real-time logs
-docker compose logs -f news-automation
 ```
+Populate your credentials:
+- **YouTube OAuth**: See [docs/GOOGLE_OAUTH_SETUP.md](file:///d:/WEBSITES/Vercel/FB%20Automation/docs/GOOGLE_OAUTH_SETUP.md)
+- **Facebook Reels**: See [docs/FACEBOOK_APP_SETUP.md](file:///d:/WEBSITES/Vercel/FB%20Automation/docs/FACEBOOK_APP_SETUP.md)
+- **Anthropic API**: From [console.anthropic.com](https://console.anthropic.com/)
+- **Telegram Bot**: From [@BotFather](https://t.me/BotFather)
 
-### 3. Caddy Reverse Proxy (Recommended for Free Auto-SSL)
-Install Caddy on your VPS and place this in `/etc/caddy/Caddyfile`:
-```caddy
-news-bot.yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
-Reload Caddy:
+### 4. Running Tests
 ```bash
-sudo systemctl reload caddy
+pnpm test
 ```
-Your dashboard is now live and secured with HTTPS at `https://news-bot.yourdomain.com`.
+Runs 28 comprehensive unit & integration tests covering license verification, originality metrics, dedup hashing, blocklist enforcement, and compliance gating.
+
+### 5. Running the Application
+```bash
+# Development mode with hot-reload
+pnpm dev
+
+# Build and production start
+pnpm build
+pnpm start
+```
+
+### 6. Running with Docker Compose
+```bash
+docker-compose up --build -d
+```
+The web dashboard will be accessible at: `http://localhost:3000`.
 
 ---
 
-## 🧪 Testing Plan & Safe Production Cutover
+## 🛡 Sourcing Rules & Hard Blocklist
 
-### Stage 1: Safe Dry-Run Validation
-1. Keep `DRY_RUN=true` in `.env`.
-2. Connect your Facebook Page ID and Page Access Token via the **Facebook Pages** tab.
-3. Add your target RSS feed URL in the **RSS Sources** tab.
-4. Click **Poll RSS Now**.
-5. Observe the **Queue & Logs** tab:
-   - Articles are ingested and ordered oldest first.
-   - The Playwright renderer compiles the HTML template and renders a 1080x1080 PNG into `data/rendered/`.
-   - Simulated Facebook publish and comment actions are logged with zero risk to live followers.
-
-### Stage 2: Single-Item Live Test
-1. Set `DRY_RUN=false` in `.env` (or via the **Settings** tab in the dashboard).
-2. Set `MAX_POSTS_PER_HOUR=1` temporarily to ensure only 1 item can publish.
-3. Trigger **Poll RSS Now**.
-4. Check your Facebook Page:
-   - The branded image is posted with the clean headline and hashtags.
-   - Confirm **no links are present in the caption**.
-   - Confirm the first comment appears within seconds: `"বিস্তারিত পড়ুন: <url>"`.
-5. Once verified, adjust `MAX_POSTS_PER_HOUR=10` (or your preferred schedule).
+`SportsClipBot` enforces strict sourcing rules:
+1. **Allowed**:
+   - Creator-owned footage placed in `./data/inbox` with a companion `<name>.license.json` or `.license.txt` permission note.
+   - Creative Commons Attribution (`CC_BY`) and Public Domain (`CC0`).
+   - Pexels & Pixabay commercial license video APIs.
+   - Authorized partner feeds configured with formal agreement IDs in `config.yaml`.
+2. **Unconditionally Rejected**:
+   - Broadcasters: ESPN, Sky Sports, NBC Sports, BBC Sport, Fox Sports, DAZN, TNT Sports, Star Sports, Eurosport, etc.
+   - Leagues: FIFA, UEFA, Premier League, La Liga, NBA, NFL, MLB, NHL, Formula 1, ICC, etc.
+   - Non-Commercial licenses: `CC-BY-NC`, `CC-BY-NC-SA`, `CC-BY-NC-ND`.
+   - Watermarked footage from TikTok, Instagram Reels, or third-party TV feeds.
 
 ---
 
-## 🛡️ Reliability & Security Specifications
+## 🔒 Mandatory Human Approval Workflow
 
-- **Rate Limit Safeguards**: Enforces configurable hourly caps (`MAX_POSTS_PER_HOUR`) per page.
-- **Anti-Spam Jitter**: Inserts a randomized 30-60 second pause before publishing to prevent algorithmic throttling.
-- **Graceful Image Fallback**: If Playwright template rendering fails, the worker seamlessly downloads the original article's image directly and publishes it, ensuring zero missed breaking news items.
-- **Local Typography Isolation**: Bengali fonts are loaded directly from local TTF assets (`assets/fonts/`), guaranteeing that conjuncts (যুক্তবর্ণ) and modifiers render accurately with zero network lag or layout shifting.
-- **Health Check Endpoint**: `/health` is exposed unauthenticated for container monitoring, Docker healthchecks, and uptime monitors.
+1. Processed videos appear on the Web Dashboard (`http://localhost:3000/dashboard`) and are pushed to the Telegram Admin Chat.
+2. The card displays:
+   - Video title and 9:16 poster preview
+   - License evidence reference & source proof URL
+   - Full 9-check Compliance Gate report
+   - Originality ratio (e.g. 45% original analysis, 55% licensed footage)
+   - Narration script
+3. Only clicking **[Approve & Publish]** releases the video to YouTube and Facebook.
+4. The reviewer's identity and timestamp are permanently written to MongoDB `approvals` and `audit_log` collections.
 
+---
+
+## 🚨 Emergency Strike Pause
+
+If YouTube or Facebook flags a copyright claim, Content ID restriction, or strike:
+1. The `CopyrightMonitor` immediately halts the pipeline.
+2. `pipeline_state.is_paused` is set to `true`.
+3. Admin receives an urgent alert.
+4. The pipeline cannot publish new content until manually investigated and resumed from the web dashboard.

@@ -1,0 +1,188 @@
+# ==============================================================================
+# SportsClipBot - Complete Configuration
+# ==============================================================================
+app:
+  name: "SportsClipBot"
+  dataDir: "./data"
+  inboxDir: "./data/inbox"
+  musicDir: "./data/music"
+  outputDir: "./data/output"
+  tempDir: "./data/temp"
+
+# ------------------------------------------------------------------------------
+# Originality & Value-Add Gate (YouTube/Facebook Reused Content Policy)
+# ------------------------------------------------------------------------------
+originality:
+  # Maximum percentage of total video runtime that can be licensed footage.
+  # Minimum 40% MUST be original commentary, graphics, stats breakdowns, intro/outro.
+  maxLicensedFootageRatio: 0.60 # max 60% licensed footage
+
+  # Minimum percentage of original content required
+  minOriginalContentRatio: 0.40 # min 40% original value-add
+
+  # Maximum allowable text similarity to previously published scripts (0.0 to 1.0).
+  # Prevents templated or repetitive scripts flagged as inauthentic spam.
+  maxTextSimilarityThreshold: 0.65
+
+  # Minimum Hamming distance between visual perceptual hashes (0 to 64).
+  # Lower values indicate near-identical video frames/thumbnails.
+  minFrameHammingDistance: 10
+
+  # Mandatory transformative elements
+  requireVoiceover: true
+  requireGraphics: true
+
+# ------------------------------------------------------------------------------
+# Compliance Gate Policies & Hard Blocklists
+# ------------------------------------------------------------------------------
+compliance:
+  dailyCapPerPlatform: 3 # Maximum daily posts per platform to prevent spam penalties
+  minDurationSec: 15     # Minimum duration for vertical shorts/reels
+  maxDurationSec: 45     # Target duration (hard platform cap is 60s)
+  requireCommercialLicense: true
+  blockNonCommercial: true
+
+  # Broadcaster / League / Team Hard Blocklist.
+  # Clips mentioning these entities are unconditionally rejected at ingestion
+  # unless an explicit license agreement is configured below in partnerFeeds.
+  blocklist:
+    - espn
+    - sky sports
+    - skysports
+    - nbc sports
+    - bbc sport
+    - fox sports
+    - dazn
+    - tnt sports
+    - bt sport
+    - star sports
+    - sony sports
+    - eurosport
+    - fifa
+    - uefa
+    - premier league
+    - la liga
+    - serie a
+    - bundesliga
+    - ligue 1
+    - nba
+    - wnba
+    - nfl
+    - mlb
+    - nhl
+    - formula 1
+    - f1
+    - icc
+    - bcci
+    - olympics
+    - ioc
+    - wwe
+    - ufc
+    - bellator
+
+# ------------------------------------------------------------------------------
+# Ingestion Sources (Licensed Only)
+# ------------------------------------------------------------------------------
+sources:
+  # 1. Watched Inbox Folder (Footage you own or have signed written permission for)
+  watchedFolder:
+    enabled: true
+    path: "./data/inbox"
+    requirePermissionFile: true # Requires companion <name>.license.json or .license.txt
+
+  # 2. Wikimedia Commons & Internet Archive (Creative Commons verified)
+  commonsArchive:
+    enabled: true
+    defaultCategories:
+      - Athletics
+      - Cycling
+      - Gymnastics
+      - Swimming
+      - Skateboarding
+
+  # 3. YouTube Creative Commons Filter (Requires YouTube API Key)
+  youtubeCc:
+    enabled: false
+    queries:
+      - "calisthenics creative commons"
+      - "amateur skateboarding cc-by"
+    maxResults: 5
+
+  # 4. Pexels Video API (Pexels Commercial License)
+  pexels:
+    enabled: true
+    searchSports:
+      - basketball
+      - running
+      - athletics
+      - cycling
+
+  # 5. Pixabay Video API (Pixabay Commercial License)
+  pixabay:
+    enabled: true
+    searchSports:
+      - soccer
+      - tennis
+      - boxing
+
+  # 6. Contractually Licensed Partner Feeds
+  partnerFeeds: []
+    # Example:
+    # - name: "Global Action Sports Syndicate"
+    #   url: "https://api.partnersports.com/v1/clips.json"
+    #   licenseType: "LICENSED_PARTNER"
+    #   licenseTerms: "Perpetual global digital distribution with ad monetization"
+    #   agreementId: "AGR-2026-SPORTS-091"
+
+# ------------------------------------------------------------------------------
+# Video Editor Configuration (FFmpeg)
+# ------------------------------------------------------------------------------
+editor:
+  targetWidth: 1080
+  targetHeight: 1920 # 9:16 vertical Reels / Shorts
+  fps: 30
+  videoBitrate: "4500k"
+  audioBitrate: "192k"
+  loudnorm:
+    targetI: -16 # EBU R128 target loudness
+    lra: 11
+    tp: -1.5
+  musicVolume: 0.15 # 15% background music volume
+  voiceVolume: 1.0   # 100% voiceover volume
+  enableSubtitles: true
+
+# ------------------------------------------------------------------------------
+# Publishing Configuration
+# ------------------------------------------------------------------------------
+publishing:
+  dryRun: false # Set true to simulate rendering & compliance without uploading
+  youtube:
+    enabled: true
+    privacyStatus: "public" # 'private', 'public', or 'unlisted'
+    defaultTags:
+      - SportsAnalysis
+      - Biomechanics
+      - Shorts
+      - PeakPerformance
+  facebook:
+    enabled: true
+    defaultTags:
+      - SportsAnalysis
+      - Reels
+      - Performance
+
+# ------------------------------------------------------------------------------
+# Strikes & Copyright Monitoring
+# ------------------------------------------------------------------------------
+monitoring:
+  pollIntervalMinutes: 30
+  autoPauseOnStrikeOrClaim: true # Emergency pause if Content ID match or strike detected
+  notifyAdminOnEvent: true
+
+# ------------------------------------------------------------------------------
+# Human Approval Policy (Mandatory)
+# ------------------------------------------------------------------------------
+approval:
+  mandatoryReview: true # CANNOT be disabled. No video publishes without review.
+  telegramEnabled: true
+  dashboardEnabled: true
