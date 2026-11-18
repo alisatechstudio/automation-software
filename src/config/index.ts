@@ -1,11 +1,143 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import YAML from 'yaml';
 import { ConfigYamlSchema, EnvSchema, type AppConfig, type EnvConfig } from './schema.js';
 
 // Load .env
 dotenv.config();
+
+const DEFAULT_CONFIG_YAML = `
+app:
+  name: "SportsClipBot"
+  dataDir: "./data"
+  inboxDir: "./data/inbox"
+  musicDir: "./data/music"
+  outputDir: "./data/output"
+  tempDir: "./data/temp"
+
+originality:
+  maxLicensedFootageRatio: 0.60
+  minOriginalContentRatio: 0.40
+  maxTextSimilarityThreshold: 0.65
+  minFrameHammingDistance: 10
+  requireVoiceover: true
+  requireGraphics: true
+
+compliance:
+  dailyCapPerPlatform: 3
+  minDurationSec: 15
+  maxDurationSec: 45
+  requireCommercialLicense: true
+  blockNonCommercial: true
+  blocklist:
+    - espn
+    - sky sports
+    - skysports
+    - nbc sports
+    - bbc sport
+    - fox sports
+    - dazn
+    - tnt sports
+    - bt sport
+    - star sports
+    - sony sports
+    - eurosport
+    - fifa
+    - uefa
+    - premier league
+    - la liga
+    - serie a
+    - bundesliga
+    - ligue 1
+    - nba
+    - nfl
+    - mlb
+    - nhl
+    - formula 1
+    - f1
+    - icc
+    - olympics
+    - ioc
+    - wwe
+    - ufc
+
+sources:
+  watchedFolder:
+    enabled: true
+    path: "./data/inbox"
+    requirePermissionFile: true
+  commonsArchive:
+    enabled: true
+    defaultCategories:
+      - Athletics
+      - Cycling
+      - Gymnastics
+      - Swimming
+      - Skateboarding
+  youtubeCc:
+    enabled: false
+    queries:
+      - "calisthenics creative commons"
+      - "amateur skateboarding cc-by"
+    maxResults: 5
+  pexels:
+    enabled: true
+    searchSports:
+      - basketball
+      - running
+      - athletics
+      - cycling
+  pixabay:
+    enabled: true
+    searchSports:
+      - soccer
+      - tennis
+      - boxing
+  partnerFeeds: []
+
+editor:
+  targetWidth: 1080
+  targetHeight: 1920
+  fps: 30
+  videoBitrate: "4500k"
+  audioBitrate: "192k"
+  loudnorm:
+    targetI: -16
+    lra: 11
+    tp: -1.5
+  musicVolume: 0.15
+  voiceVolume: 1.0
+  enableSubtitles: true
+
+publishing:
+  dryRun: false
+  youtube:
+    enabled: true
+    privacyStatus: "public"
+    defaultTags:
+      - SportsAnalysis
+      - Biomechanics
+      - Shorts
+      - PeakPerformance
+  facebook:
+    enabled: true
+    defaultTags:
+      - SportsAnalysis
+      - Reels
+      - Performance
+
+monitoring:
+  pollIntervalMinutes: 30
+  autoPauseOnStrikeOrClaim: true
+  notifyAdminOnEvent: true
+
+approval:
+  mandatoryReview: true
+  telegramEnabled: true
+  dashboardEnabled: true
+`;
 
 export interface LoadedConfig {
   env: EnvConfig;
@@ -28,16 +160,30 @@ export function loadConfig(configPath = './config.yaml'): LoadedConfig {
   }
   const env = envParsed.data;
 
-  // 2. Load & Validate config.yaml
+  // 2. Load & Validate config.yaml (checking multiple candidate locations with built-in default fallback)
   let rawYaml = '';
-  const resolvedConfigPath = path.resolve(process.cwd(), configPath);
-  if (fs.existsSync(resolvedConfigPath)) {
-    rawYaml = fs.readFileSync(resolvedConfigPath, 'utf8');
-  } else {
-    console.warn(`[Config] Config file not found at ${resolvedConfigPath}. Using defaults.`);
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    path.resolve(process.cwd(), configPath),
+    path.resolve(process.cwd(), 'config.yaml'),
+    path.resolve(currentDir, 'config.yaml'),
+    path.resolve(currentDir, '../config.yaml'),
+    path.resolve(currentDir, '../../config.yaml'),
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      rawYaml = fs.readFileSync(candidate, 'utf8');
+      break;
+    }
   }
 
-  const parsedYaml = rawYaml ? YAML.parse(rawYaml) : {};
+  if (!rawYaml) {
+    console.warn('[Config] config.yaml not found on disk. Falling back to built-in default configuration.');
+    rawYaml = DEFAULT_CONFIG_YAML;
+  }
+
+  const parsedYaml = YAML.parse(rawYaml);
   const configParsed = ConfigYamlSchema.safeParse(parsedYaml);
   if (!configParsed.success) {
     console.error('Invalid config.yaml structure:', configParsed.error.format());

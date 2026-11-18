@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 export const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.string().default('development'),
   PORT: z.coerce.number().default(3000),
   DRY_RUN: z
-    .string()
+    .union([z.string(), z.boolean()])
     .optional()
-    .transform((val) => val === 'true' || val === '1'),
+    .transform((val) => val === true || val === 'true' || val === '1'),
   MONGODB_URI: z.string().default('mongodb://127.0.0.1:27017'),
   MONGODB_DB_NAME: z.string().default('sports_clip_bot'),
 
