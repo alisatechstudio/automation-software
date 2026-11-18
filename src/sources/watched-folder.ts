@@ -1,15 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import ffmpeg from 'fluent-ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { BaseSource } from './base.js';
 import type { ClipMeta } from '../types/index.js';
 import { logger } from '../logger.js';
 
-if (ffprobeInstaller?.path) {
-  ffmpeg.setFfprobePath(ffprobeInstaller.path);
-}
+try {
+  const req = createRequire(import.meta.url);
+  try {
+    const ffprobeInstaller = req('@ffprobe-installer/ffprobe');
+    if (ffprobeInstaller?.path) ffmpeg.setFfprobePath(ffprobeInstaller.path);
+  } catch {}
+} catch {}
 
 export interface WatchedFolderOptions {
   inboxPath: string;

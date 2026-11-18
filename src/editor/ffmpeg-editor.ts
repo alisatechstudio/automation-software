@@ -1,21 +1,26 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import type { EditOptions, EditResult, Editor, OriginalityMetrics } from '../types/index.js';
 import { GraphicsGenerator } from './graphics-generator.js';
 import { CaptionGenerator } from './caption-generator.js';
 import { computeImageDHash } from '../compliance/perceptual-hash.js';
 import { logger } from '../logger.js';
 
-if (ffmpegInstaller?.path) {
-  ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-}
-if (ffprobeInstaller?.path) {
-  ffmpeg.setFfprobePath(ffprobeInstaller.path);
-}
+// Safely configure ffmpeg and ffprobe paths if local platform binaries are present
+try {
+  const req = createRequire(import.meta.url);
+  try {
+    const ffmpegInstaller = req('@ffmpeg-installer/ffmpeg');
+    if (ffmpegInstaller?.path) ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+  } catch {}
+  try {
+    const ffprobeInstaller = req('@ffprobe-installer/ffprobe');
+    if (ffprobeInstaller?.path) ffmpeg.setFfprobePath(ffprobeInstaller.path);
+  } catch {}
+} catch {}
 
 export interface FFmpegEditorConfig {
   tempDir: string;
