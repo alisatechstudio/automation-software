@@ -4,8 +4,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "assets/**,src/templates/**",
-      "maxDuration": 300
+      "includeFiles": "src/server/views/**",
+      "maxDuration": 60
     }
   },
   "rewrites": [
