@@ -22,16 +22,29 @@ export function createServer(deps: ServerDependencies) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Strip Vercel rewrite prefix & restore original requested route if rewritten
+  app.use((req: Request, res: Response, next) => {
+    const forwardedUri = (req.headers['x-forwarded-uri'] || req.headers['x-matched-path']) as string;
+    if (forwardedUri && forwardedUri !== '/api/index' && forwardedUri !== '/api') {
+      req.url = forwardedUri;
+    } else if (req.originalUrl && !req.originalUrl.startsWith('/api/index')) {
+      req.url = req.originalUrl;
+    } else if (req.url.startsWith('/api/index')) {
+      req.url = req.url.replace(/^\/api\/index/, '') || '/';
+    }
+    next();
+  });
+
   // Set up EJS views with multi-environment fallback (local src, built dist, Vercel serverless)
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   let viewsDir = path.resolve(currentDir, 'views');
   if (!fs.existsSync(viewsDir)) {
-    const cwdDist = path.resolve(process.cwd(), 'dist/server/views');
     const cwdSrc = path.resolve(process.cwd(), 'src/server/views');
-    if (fs.existsSync(cwdDist)) {
-      viewsDir = cwdDist;
-    } else if (fs.existsSync(cwdSrc)) {
+    const cwdDist = path.resolve(process.cwd(), 'dist/server/views');
+    if (fs.existsSync(cwdSrc)) {
       viewsDir = cwdSrc;
+    } else if (fs.existsSync(cwdDist)) {
+      viewsDir = cwdDist;
     }
   }
   app.set('views', viewsDir);
@@ -40,8 +53,8 @@ export function createServer(deps: ServerDependencies) {
   // Serve static output files (videos, thumbnails)
   app.use('/output', express.static(path.resolve(process.cwd(), config.config.app.outputDir)));
 
-  // Root redirect
-  app.get('/', (req: Request, res: Response) => {
+  // Root redirect & Vercel rewrite alias
+  app.get(['/', '/api/index', '/api'], (req: Request, res: Response) => {
     res.redirect('/dashboard');
   });
 
