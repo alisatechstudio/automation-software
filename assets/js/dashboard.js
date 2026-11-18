@@ -3245,6 +3245,7 @@
                     '<div class="text-xs text-slate-400 mt-1.5 flex flex-wrap gap-x-4 gap-y-1">' +
                       '<span><strong>License:</strong> ' + (clip.licenseType || 'Verified') + '</span>' +
                       (clip.licenseProofUrl ? '<span><a href="' + clip.licenseProofUrl + '" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">View License Evidence ↗</a></span>' : '') +
+                      '<span><a href="' + (item.gdrive_web_view_link || video.gdriveWebViewLink || 'https://drive.google.com/drive/u/0/folders/1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh') + '" target="_blank" class="text-emerald-400 font-semibold underline hover:text-emerald-300">📁 Staged in Drive ↗</a></span>' +
                       '<span><strong>Originality:</strong> ' + Math.round((video.originalContentRatio || 0.6) * 100) + '% original contribution</span>' +
                     '</div>' +
                   '</div>' +

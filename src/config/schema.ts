@@ -165,6 +165,19 @@ export const ConfigYamlSchema = z.object({
 
   publishing: z.object({
     dryRun: z.boolean().default(false),
+    googleDrive: z
+      .object({
+        enabled: z.boolean().default(true),
+        folderId: z.string().default('1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh'),
+        folderUrl: z.string().default('https://drive.google.com/drive/u/0/folders/1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh'),
+        saveBeforePost: z.boolean().default(true),
+      })
+      .default({
+        enabled: true,
+        folderId: '1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh',
+        folderUrl: 'https://drive.google.com/drive/u/0/folders/1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh',
+        saveBeforePost: true,
+      }),
     youtube: z
       .object({
         enabled: z.boolean().default(true),

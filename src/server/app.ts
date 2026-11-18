@@ -845,7 +845,7 @@ export function createServer(deps: ServerDependencies) {
   });
 
   // Health check API
-  app.get('/api/status', async (req: Request, res: Response) => {
+  app.get(['/api/status', '/api/health', '/health'], async (req: Request, res: Response) => {
     const { isPaused, reason } = await repo.isPipelinePaused();
     res.json({
       status: 'OK',
@@ -855,6 +855,24 @@ export function createServer(deps: ServerDependencies) {
       isDryRun: config.isDryRun,
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // Fallback 404 handler to guarantee serverless requests never hang
+  app.use((req: Request, res: Response) => {
+    if (!res.headersSent) {
+      if (req.accepts('html')) {
+        return sendUnifiedDashboard(req, res);
+      }
+      return res.status(404).json({ error: 'Not Found', path: req.originalUrl || req.url });
+    }
+  });
+
+  // Global error handler
+  app.use((err: any, req: Request, res: Response, _next: any) => {
+    logger.error({ err: err?.message || String(err) }, 'Server error');
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal Server Error', message: err?.message || String(err) });
+    }
   });
 
   return app;

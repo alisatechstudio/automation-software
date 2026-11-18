@@ -92,6 +92,10 @@ export interface ProcessedVideo {
   aspectRatio: '9:16';
   width: number;
   height: number;
+  gdriveFileId?: string;
+  gdriveWebViewLink?: string;
+  gdriveFolderId?: string;
+  gdriveFolderUrl?: string;
   createdAt: string;
 }
 

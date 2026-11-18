@@ -113,6 +113,11 @@ editor:
 
 publishing:
   dryRun: false
+  googleDrive:
+    enabled: true
+    folderId: "1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh"
+    folderUrl: "https://drive.google.com/drive/u/0/folders/1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh"
+    saveBeforePost: true
   youtube:
     enabled: true
     privacyStatus: "public"

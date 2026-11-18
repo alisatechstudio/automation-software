@@ -7,6 +7,7 @@ import { FFmpegEditor } from '../editor/ffmpeg-editor.js';
 import { VoiceScriptGenerator } from '../editor/voice-script.js';
 import { fetchFromAllSources, createSources } from '../sources/index.js';
 import { computeImageDHash } from '../compliance/perceptual-hash.js';
+import { GoogleDriveUploader } from '../services/gdrive-uploader.js';
 import type { TelegramApprovalBot } from '../approval/telegram-bot.js';
 import type { ClipMeta, ProcessedVideo } from '../types/index.js';
 import { logger } from '../logger.js';
@@ -17,6 +18,7 @@ export class SportsClipPipeline {
   private gate: ComplianceGate;
   private editor: FFmpegEditor;
   private scriptGen: VoiceScriptGenerator;
+  private gdriveUploader: GoogleDriveUploader;
   private telegramBot?: TelegramApprovalBot;
 
   constructor(
@@ -37,6 +39,10 @@ export class SportsClipPipeline {
       loudnorm: config.config.editor.loudnorm,
     });
     this.scriptGen = new VoiceScriptGenerator(config.env.ANTHROPIC_API_KEY);
+    this.gdriveUploader = new GoogleDriveUploader(
+      repo,
+      process.env.GDRIVE_SPORTS_FOLDER_ID || '1E7y1TxCkbd7UJUeGG5oEb9hmXwcMKlFh'
+    );
   }
 
   /**
@@ -159,6 +165,14 @@ export class SportsClipPipeline {
       return false;
     }
 
+    // 6B. Save qualified video to Google Drive folder before post
+    logger.info({ videoId, clipId: clip.id }, '✓ Clip qualified by Compliance Gate! Staging video into Google Drive folder before post...');
+    const gdriveUpload = await this.gdriveUploader.uploadQualifiedVideo({
+      videoPath: outputVideoPath,
+      filename: `${videoId}.mp4`,
+      title: scriptData.title,
+    });
+
     // 7. Save Processed Video & Create Pending Approval
     const processedVideo: ProcessedVideo & { perceptualHash: string; originalityRatio: number } = {
       id: videoId,
@@ -177,6 +191,10 @@ export class SportsClipPipeline {
       aspectRatio: '9:16',
       width: editResult.width,
       height: editResult.height,
+      gdriveFileId: gdriveUpload.fileId,
+      gdriveWebViewLink: gdriveUpload.webViewLink,
+      gdriveFolderId: gdriveUpload.folderId,
+      gdriveFolderUrl: gdriveUpload.folderUrl,
       complianceReport: report,
       createdAt: new Date().toISOString(),
     };

@@ -30,8 +30,19 @@ export default async function handler(req: any, res: any) {
       res.on('close', () => resolve());
       res.on('error', (err: any) => reject(err));
       cachedApp(req, res, (err: any) => {
-        if (err) reject(err);
-        else resolve();
+        if (err) {
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: err?.message || 'Internal Server Error' }));
+          }
+          resolve();
+        } else {
+          if (!res.headersSent) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: 'Not Found', path: req.url }));
+          }
+          resolve();
+        }
       });
     });
   } catch (err: any) {

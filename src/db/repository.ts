@@ -371,6 +371,10 @@ export class DbRepository {
       contains_synthetic_media: video.containsSyntheticMedia ? 1 : 0,
       self_declared_made_for_kids: video.selfDeclaredMadeForKids ? 1 : 0,
       originality_ratio: video.originalityRatio,
+      gdrive_file_id: video.gdriveFileId || null,
+      gdrive_web_view_link: video.gdriveWebViewLink || null,
+      gdrive_folder_id: video.gdriveFolderId || null,
+      gdrive_folder_url: video.gdriveFolderUrl || null,
       created_at: new Date().toISOString(),
     };
 
@@ -510,6 +514,10 @@ export class DbRepository {
             license_type: '$clip.license_type',
             license_proof_url: '$clip.license_proof_url',
             credit: '$clip.credit',
+            gdrive_file_id: '$video.gdrive_file_id',
+            gdrive_web_view_link: '$video.gdrive_web_view_link',
+            gdrive_folder_id: '$video.gdrive_folder_id',
+            gdrive_folder_url: '$video.gdrive_folder_url',
             compliance_summary: { $ifNull: [{ $arrayElemAt: ['$report.summary', 0] }, 'Compliance passed'] },
             created_at: '$created_at',
           },
@@ -544,6 +552,10 @@ export class DbRepository {
         license_type: clip?.license_type || 'LICENSED',
         license_proof_url: clip?.license_proof_url || '',
         credit: clip?.credit || '',
+        gdrive_file_id: video.gdrive_file_id || null,
+        gdrive_web_view_link: video.gdrive_web_view_link || null,
+        gdrive_folder_id: video.gdrive_folder_id || null,
+        gdrive_folder_url: video.gdrive_folder_url || null,
         compliance_summary: report?.summary || 'Compliance passed',
         created_at: app.created_at,
       });
