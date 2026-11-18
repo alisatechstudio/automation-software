@@ -575,12 +575,18 @@
     // --- SAFE JSON FETCHER ---
     async function safeFetchJson(url, options) {
       try {
-        const res = await fetch(url, options);
+        const defaultHeaders = { 'Accept': 'application/json' };
+        const mergedHeaders = Object.assign(defaultHeaders, options?.headers || {});
+        const res = await fetch(url, Object.assign({}, options, { headers: mergedHeaders }));
         const text = await res.text();
         try {
           return { ok: res.ok, status: res.status, data: JSON.parse(text) };
         } catch {
-          return { ok: false, status: res.status, error: text || 'Non-JSON response' };
+          let errClean = text;
+          if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+            errClean = 'Unexpected server response (HTTP ' + res.status + ')';
+          }
+          return { ok: false, status: res.status, error: errClean || 'Non-JSON response' };
         }
       } catch (err) {
         return { ok: false, status: 0, error: err.message };
