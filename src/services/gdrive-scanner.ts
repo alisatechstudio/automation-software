@@ -101,21 +101,51 @@ export async function scanGoogleDriveFolder(params: {
   const videoList: GDriveVideoItem[] = [];
   let driveError: string | undefined;
 
-  // 1. Scan Google Drive API v3 (OAuth first, then API Key)
+  // 1. Scan Google Drive API v3 (Separate API Key and OAuth Bearer token - NEVER send both together)
   const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
   const fields = encodeURIComponent('files(id,name,size,mimeType,createdTime,modifiedTime,webViewLink,thumbnailLink)');
-  const keyParam = params.apiKey ? `&key=${encodeURIComponent(params.apiKey)}` : '';
-  const apiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${keyParam}`;
+  const baseApiUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
 
-  const headers: Record<string, string> = {};
-  if (params.accessToken) {
-    headers['Authorization'] = `Bearer ${params.accessToken}`;
+  let driveRes: Response | null = null;
+
+  // A. Prefer API Key first if available (without Authorization header)
+  if (params.apiKey) {
+    try {
+      const keyUrl = `${baseApiUrl}&key=${encodeURIComponent(params.apiKey)}`;
+      const res = await fetch(keyUrl);
+      if (res.ok) {
+        driveRes = res;
+      } else {
+        const errJson = (await res.json().catch(() => null)) as any;
+        driveError = errJson?.error?.message || `Google Drive API Key error (HTTP ${res.status})`;
+      }
+    } catch (e: any) {
+      driveError = `Drive API fetch failed: ${e.message}`;
+    }
   }
 
-  try {
-    const res = await fetch(apiUrl, { headers });
-    if (res.ok) {
-      const data = (await res.json()) as any;
+  // B. Fallback to OAuth Access Token if API key is not present or failed (without key param)
+  if (!driveRes && params.accessToken) {
+    try {
+      const res = await fetch(baseApiUrl, {
+        headers: { Authorization: `Bearer ${params.accessToken}` },
+      });
+      if (res.ok) {
+        driveRes = res;
+        driveError = undefined; // Cleared since OAuth succeeded
+      } else {
+        const errJson = (await res.json().catch(() => null)) as any;
+        const msg = errJson?.error?.message || `Google Drive OAuth error (HTTP ${res.status})`;
+        if (!driveError) driveError = msg;
+      }
+    } catch (e: any) {
+      if (!driveError) driveError = `Drive OAuth fetch failed: ${e.message}`;
+    }
+  }
+
+  if (driveRes && driveRes.ok) {
+    try {
+      const data = (await driveRes.json()) as any;
       const rawFiles: any[] = data.files || [];
       for (const f of rawFiles) {
         const ext = path.extname(f.name || '').toLowerCase();
@@ -138,17 +168,9 @@ export async function scanGoogleDriveFolder(params: {
           thumbnailLink: f.thumbnailLink,
         });
       }
-    } else {
-      const errJson = (await res.json().catch(() => null)) as any;
-      const msg = errJson?.error?.message || `Google Drive returned status ${res.status}`;
-      if (res.status === 401 || res.status === 403) {
-        driveError = `Drive Access: ${msg}. Make sure the folder is shared ("Anyone with the link can view") or save a valid Google Drive API Key.`;
-      } else {
-        driveError = msg;
-      }
+    } catch (parseErr: any) {
+      driveError = `Error parsing Google Drive file list: ${parseErr.message}`;
     }
-  } catch (netErr: any) {
-    driveError = `Network error connecting to Google Drive API: ${netErr.message}`;
   }
 
   // 2. Scan Local Fallback directory if on filesystem
