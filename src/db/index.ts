@@ -6,7 +6,7 @@ let dbInstance: Db | null = null;
 
 export async function initDatabase(
   uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
-  dbName = process.env.MONGODB_DB_NAME || 'sports_clip_bot'
+  dbName = process.env.MONGODB_DB_NAME || 'news_automation'
 ): Promise<Db> {
   if (dbInstance) {
     return dbInstance;

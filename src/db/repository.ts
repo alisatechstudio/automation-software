@@ -40,6 +40,17 @@ export class DbRepository {
     }
   }
 
+  public getDb(): Db | undefined {
+    if (!this.db) {
+      try {
+        this.db = getDatabase();
+      } catch {
+        // Not initialized yet
+      }
+    }
+    return this.db;
+  }
+
   private getCollection(name: string): Collection | null {
     if (this.db) {
       return this.db.collection(name);

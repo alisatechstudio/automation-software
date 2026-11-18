@@ -127,40 +127,355 @@ export function createServer(deps: ServerDependencies) {
 </html>`);
   });
 
-  // API endpoints expected by the News Automation Dashboard
+  // ==========================================
+  // API endpoints for the News Automation Dashboard (Backed by MongoDB Atlas)
+  // ==========================================
   app.get('/api/stats', async (req: Request, res: Response) => {
-    const { isPaused } = await repo.isPipelinePaused();
-    res.json({
-      success: true,
-      queue: { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 },
-      articles: 0,
-      pages: 0,
-      sources: 0,
-      youtubeChannels: 0,
-      reelLogs: 0,
-      postLogs: 0,
-      sportsPipeline: {
-        active: !isPaused,
-        dailyCap: config.config.compliance.dailyCapPerPlatform,
+    try {
+      const db = repo.getDb();
+      const { isPaused } = await repo.isPipelinePaused().catch(() => ({ isPaused: false }));
+
+      if (!db) {
+        return res.json({
+          queue: { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 },
+          articlesCount: 0,
+          reelsInDrive: 0,
+          pagesCount: 0,
+          sourcesCount: 0,
+          groupsCount: 0,
+          groupSharesCount: 0,
+          reelsCount: 0,
+          storiesCount: 0,
+          youtubeCount: 0,
+          youtubeChannelsCount: 0,
+          gdriveChannelsCount: 0,
+          tiktokCount: 0,
+          successfulPosts: 0,
+          dryRun: config.isDryRun,
+          sportsPipeline: { active: !isPaused, dailyCap: config.config.compliance.dailyCapPerPlatform },
+        });
       }
-    });
+
+      const [
+        articlesCount,
+        reelsInDriveArticles,
+        pagesCount,
+        sourcesCount,
+        youtubeChannels,
+        gdriveChannels,
+        reelLogsCount,
+        postLogsCount,
+        ytLogsCount,
+        tiktokCount,
+        storiesCount,
+        groupsCount,
+        groupSharesCount,
+        publishedArticlesCount,
+      ] = await Promise.all([
+        db.collection('news_articles').countDocuments().catch(() => 0),
+        db.collection('news_articles').countDocuments({ status: 'uploaded_to_drive' }).catch(() => 0),
+        db.collection('facebook_pages').countDocuments().catch(() => 0),
+        db.collection('rss_sources').countDocuments().catch(() => 0),
+        db.collection('youtube_channels').find({}).toArray().catch(() => []),
+        db.collection('gdrive_reel_configs').find({}).toArray().catch(() => []),
+        db.collection('reel_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+        db.collection('post_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+        db.collection('youtube_upload_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+        db.collection('tiktok_upload_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+        db.collection('story_logs').countDocuments({ status: { $in: ['published', 'success', 'dry_run'] } }).catch(() => 0),
+        db.collection('facebook_groups').countDocuments({ isActive: { $ne: false } }).catch(() => 0),
+        db.collection('group_share_logs').countDocuments({ status: { $in: ['success', 'dry_run'] } }).catch(() => 0),
+        db.collection('news_articles').countDocuments({ status: 'published' }).catch(() => 0),
+      ]);
+
+      const youtubeChannelsCount = (youtubeChannels as any[]).length;
+      const gdriveChannelsCount = (gdriveChannels as any[]).length;
+
+      const gdrivePostedTotal = (gdriveChannels as any[]).reduce(
+        (sum: number, ch: any) => sum + (ch.postedVideoIds?.length || 0),
+        0
+      );
+      const reelsCount = Math.max(reelLogsCount, gdrivePostedTotal);
+
+      const ytVideosTotal = (youtubeChannels as any[]).reduce(
+        (sum: number, ch: any) => sum + (parseInt(ch.videoCount || '0', 10) || 0),
+        0
+      );
+      const youtubeCount = Math.max(ytLogsCount, ytVideosTotal);
+      const successfulPosts = Math.max(postLogsCount, publishedArticlesCount);
+      const reelsInDrive = reelsInDriveArticles;
+
+      res.json({
+        queue: { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 },
+        articlesCount,
+        reelsInDrive,
+        pagesCount,
+        sourcesCount,
+        groupsCount,
+        groupSharesCount,
+        reelsCount,
+        storiesCount,
+        youtubeCount,
+        youtubeChannelsCount,
+        gdriveChannelsCount,
+        tiktokCount,
+        successfulPosts,
+        dryRun: config.isDryRun,
+        sportsPipeline: {
+          active: !isPaused,
+          dailyCap: config.config.compliance.dailyCapPerPlatform,
+        },
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed computing /api/stats');
+      res.status(500).json({ error: err.message });
+    }
   });
 
-  app.get('/api/settings', async (req: Request, res: Response) => {
-    res.json({
-      success: true,
-      settings: {
-        auto_posting_enabled: 'false',
-        dry_run: config.isDryRun ? 'true' : 'false',
-      }
-    });
+  app.get('/api/sources', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const [rawSources, pages] = await Promise.all([
+        db.collection('rss_sources').find({}).toArray().catch(() => []),
+        db.collection('facebook_pages').find({}).toArray().catch(() => []),
+      ]);
+      const pageMap = new Map((pages as any[]).map((p: any) => [p._id?.toString(), p.name]));
+
+      const sources = (rawSources as any[]).map((s: any) => {
+        const pageId = s.pageId || s.page_id || '';
+        return {
+          id: s._id?.toString(),
+          name: s.name || 'Untitled Source',
+          url: s.url || '',
+          is_active: s.isActive !== undefined ? Boolean(s.isActive) : (s.is_active !== undefined ? Boolean(s.is_active) : true),
+          page_id: pageId,
+          page_name: pageMap.get(pageId) || pageId || 'Default Page',
+          gdrive_folder_url: s.gdriveFolderUrlOrId || s.gdrive_folder_url || '',
+          gdrive_folder_id: s.gdriveFolderId || s.gdrive_folder_id || '',
+          reel_theme: s.reelTheme || s.reel_theme || 'canva-studio-rotate',
+          template_id: s.templateId || s.template_id || 'template-trendingnews-breaking',
+          reel_duration: parseInt(String(s.reelDuration || s.reel_duration || 30), 10) || 30,
+          created_at: s.createdAt || s.created_at || new Date(),
+        };
+      });
+      res.json(sources);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/pages', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const pages = await db
+        .collection('facebook_pages')
+        .find({})
+        .project({
+          id: '$_id',
+          name: 1,
+          is_active: '$isActive',
+          token_expires_at: '$tokenExpiresAt',
+          created_at: '$createdAt',
+        })
+        .sort({ createdAt: -1 })
+        .toArray()
+        .catch(() => []);
+      res.json(pages.map((p: any) => ({
+        id: p.id?.toString(),
+        name: p.name,
+        is_active: p.is_active !== false,
+        token_expires_at: p.token_expires_at,
+        created_at: p.created_at,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/groups', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const groups = await db.collection('facebook_groups').find({}).toArray().catch(() => []);
+      res.json(groups.map((g: any) => ({
+        ...g,
+        id: g._id?.toString(),
+      })));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/groups/shares', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const shares = await db.collection('group_share_logs').find({}).sort({ createdAt: -1 }).limit(50).toArray().catch(() => []);
+      res.json(shares);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/queue', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const articles = await db.collection('news_articles')
+        .find({})
+        .sort({ pubDate: -1, createdAt: -1 })
+        .limit(50)
+        .toArray()
+        .catch(() => []);
+      res.json(articles.map((a: any) => ({
+        id: a._id?.toString(),
+        title: a.title,
+        article_title: a.title,
+        link: a.link,
+        article_link: a.link,
+        category: a.category || 'খবর',
+        imageUrl: a.imageUrl,
+        status: a.status,
+        created_at: a.createdAt || a.pubDate || new Date(),
+      })));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/logs', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const logs = await db.collection('reel_logs').find({}).sort({ createdAt: -1 }).limit(50).toArray().catch(() => []);
+      res.json(logs);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.get('/api/articles', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json({ success: true, articles: [], total: 0 });
+      const limit = parseInt(req.query.limit as string, 10) || 50;
+      const articles = await db.collection('news_articles').find({}).sort({ pubDate: -1, createdAt: -1 }).limit(limit).toArray().catch(() => []);
+      res.json({ success: true, articles, total: articles.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/reels/logs', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json([]);
+      const limit = parseInt(req.query.limit as string, 10) || 50;
+      const logs = await db.collection('reel_logs').find({}).sort({ createdAt: -1 }).limit(limit).toArray().catch(() => []);
+      res.json(logs);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/reels/settings', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json({ autoPostReels: false });
+      const doc = await db.collection('settings').findOne({ key: 'reels_settings' }).catch(() => null);
+      res.json(doc?.value || { autoPostReels: false });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/gdrive-reels/channels', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json({ success: true, channels: [] });
+      const channels = await db.collection('gdrive_reel_configs').find({}).toArray().catch(() => []);
+      res.json({ success: true, channels });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/gdrive-reels/auth/status', (req: Request, res: Response) => {
+    res.json({ success: true, isAuthenticated: true });
+  });
+
+  app.get('/api/youtube/channels', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json({ success: true, channels: [] });
+      const channels = await db.collection('youtube_channels').find({}).sort({ createdAt: -1 }).toArray().catch(() => []);
+      res.json({ success: true, channels });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/youtube/status', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      const count = db ? await db.collection('youtube_channels').countDocuments().catch(() => 0) : 0;
+      res.json({ success: true, configured: count > 0, channelsCount: count });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/youtube/logs', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      if (!db) return res.json({ success: true, logs: [] });
+      const limit = parseInt(req.query.limit as string, 10) || 50;
+      const logs = await db.collection('youtube_upload_logs').find({}).sort({ createdAt: -1 }).limit(limit).toArray().catch(() => []);
+      res.json({ success: true, logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/tiktok/status', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      const count = db ? await db.collection('tiktok_upload_logs').countDocuments().catch(() => 0) : 0;
+      res.json({ success: true, configured: count > 0, count });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/settings', async (req: Request, res: Response) => {
+    try {
+      const db = repo.getDb();
+      const settingsDocs = db ? await db.collection('settings').find({}).toArray().catch(() => []) : [];
+      const settingsObj: Record<string, any> = {
+        auto_posting_enabled: 'false',
+        dry_run: config.isDryRun ? 'true' : 'false',
+      };
+      for (const doc of settingsDocs) {
+        if (doc.key) settingsObj[doc.key] = doc.value;
+      }
+      res.json({ success: true, settings: settingsObj });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/cron', (req: Request, res: Response) => {
+    res.json({ cronSecretConfigured: Boolean(process.env.CRON_SECRET) });
+  });
+
+  app.get('/api/cron/catalog', (req: Request, res: Response) => {
     res.json({
-      success: true,
-      articles: [],
-      total: 0,
+      routes: [
+        { path: '/api/cron/input', description: 'Fetch RSS articles and generate videos/reels' },
+        { path: '/api/cron/output', description: 'Publish staged videos to Facebook and YouTube' },
+      ]
     });
   });
 
