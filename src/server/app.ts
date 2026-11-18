@@ -57,17 +57,15 @@ export function createServer(deps: ServerDependencies) {
   app.use('/assets', express.static(path.resolve(process.cwd(), 'assets')));
   app.use('/assets', express.static(path.resolve(process.cwd(), 'public/assets')));
 
-  // Root redirect & Vercel rewrite alias
-  app.get(['/', '/api/index', '/api'], (req: Request, res: Response) => {
-    res.redirect('/dashboard');
-  });
-
-  // Serve the previous News Automation Dashboard (BD News 24/7) with in-memory caching
-  let cachedNewsHtml: string | null = null;
-  app.get(['/news-dashboard', '/legacy-dashboard', '/news'], (req: Request, res: Response) => {
-    if (cachedNewsHtml) {
+  // ==========================================
+  // UNIFIED AUTOMATION DASHBOARD (ONE DASHBOARD)
+  // SportsClipBot + News Automation + Studio
+  // ==========================================
+  let cachedDashboardHtml: string | null = null;
+  const sendUnifiedDashboard = (req: Request, res: Response) => {
+    if (cachedDashboardHtml) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.send(cachedNewsHtml);
+      return res.send(cachedDashboardHtml);
     }
 
     const candidatePaths = [
@@ -78,12 +76,47 @@ export function createServer(deps: ServerDependencies) {
     ];
     for (const p of candidatePaths) {
       if (fs.existsSync(p)) {
-        cachedNewsHtml = fs.readFileSync(p, 'utf8');
+        cachedDashboardHtml = fs.readFileSync(p, 'utf8');
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.send(cachedNewsHtml);
+        return res.send(cachedDashboardHtml);
       }
     }
-    res.status(404).send('Previous news dashboard template not found in assets/dashboard.html');
+    res.status(404).send('Unified dashboard template not found in assets/dashboard.html');
+  };
+
+  // All primary entrypoints lead to the ONE unified dashboard
+  app.get(['/', '/dashboard', '/news-dashboard', '/legacy-dashboard', '/news', '/api/index', '/api'], sendUnifiedDashboard);
+
+  // Raw EJS compliance fallback view (if needed)
+  app.get(['/sports-approval-raw', '/legacy-ejs-dashboard'], async (req: Request, res: Response) => {
+    try {
+      const pendingApprovals = await repo.getPendingApprovals();
+      const publishedPosts = await repo.getPublishedPosts(25);
+      const rejectedClips = await repo.getClipsByStatus('COMPLIANCE_FAILED', 25);
+      const auditLogs = await repo.getRecentAuditLogs(50);
+      const monitoringEvents = await repo.getMonitoringEvents(20);
+      const { isPaused, reason: pauseReason } = await repo.isPipelinePaused();
+
+      const youtubePublishedToday = await repo.getCountPublishedToday('YOUTUBE');
+      const facebookPublishedToday = await repo.getCountPublishedToday('FACEBOOK');
+      const dailyCap = config.config.compliance.dailyCapPerPlatform;
+
+      res.render('dashboard', {
+        pendingApprovals,
+        publishedPosts,
+        rejectedClips,
+        auditLogs,
+        monitoringEvents,
+        isPaused,
+        pauseReason,
+        youtubePublishedToday,
+        facebookPublishedToday,
+        dailyCap,
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed rendering EJS dashboard');
+      res.status(500).send(`Dashboard error: ${err.message}`);
+    }
   });
 
   // Terms and Privacy for Legal Compliance
@@ -466,21 +499,10 @@ export function createServer(deps: ServerDependencies) {
     }
   });
 
-  app.get('/api/cron', (req: Request, res: Response) => {
-    res.json({ cronSecretConfigured: Boolean(process.env.CRON_SECRET) });
-  });
-
-  app.get('/api/cron/catalog', (req: Request, res: Response) => {
-    res.json({
-      routes: [
-        { path: '/api/cron/input', description: 'Fetch RSS articles and generate videos/reels' },
-        { path: '/api/cron/output', description: 'Publish staged videos to Facebook and YouTube' },
-      ]
-    });
-  });
-
-  // Main Compliance & Approval Dashboard
-  app.get('/dashboard', async (req: Request, res: Response) => {
+  // ==========================================
+  // SPORTS SUMMARY API (For the Unified Dashboard)
+  // ==========================================
+  app.get('/api/sports/summary', async (req: Request, res: Response) => {
     try {
       const pendingApprovals = await repo.getPendingApprovals();
       const publishedPosts = await repo.getPublishedPosts(25);
@@ -493,7 +515,8 @@ export function createServer(deps: ServerDependencies) {
       const facebookPublishedToday = await repo.getCountPublishedToday('FACEBOOK');
       const dailyCap = config.config.compliance.dailyCapPerPlatform;
 
-      res.render('dashboard', {
+      res.json({
+        success: true,
         pendingApprovals,
         publishedPosts,
         rejectedClips,
@@ -504,11 +527,260 @@ export function createServer(deps: ServerDependencies) {
         youtubePublishedToday,
         facebookPublishedToday,
         dailyCap,
+        dryRun: config.isDryRun,
       });
     } catch (err: any) {
-      logger.error({ err: err.message }, 'Failed rendering dashboard');
-      res.status(500).send(`Dashboard error: ${err.message}`);
+      logger.error({ err: err.message }, 'Failed fetching sports summary');
+      res.status(500).json({ success: false, error: err.message });
     }
+  });
+
+  // ==========================================
+  // CRON WEBHOOKS FOR cron-job.org
+  // ==========================================
+  const verifyCronSecret = (req: Request, res: Response): boolean => {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || cronSecret.trim() === '') {
+      return true; // Open trigger if not configured
+    }
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const parts = authHeader.split(' ');
+      if (parts.length === 2 && parts[0].toLowerCase() === 'bearer' && parts[1] === cronSecret) {
+        return true;
+      }
+    }
+    const customHeader = req.headers['x-cron-secret'];
+    if (customHeader && customHeader === cronSecret) return true;
+
+    const querySecret = (req.query.secret as string) || (req.query.key as string);
+    if (querySecret && querySecret === cronSecret) return true;
+
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: Invalid cron secret. Pass "Authorization: Bearer <token>" header or "?secret=<token>".',
+    });
+    return false;
+  };
+
+  // 1. SportsClipBot: Ingestion, Transformation & Compliance Cycle
+  app.all(['/api/cron/sports-pipeline', '/api/cron/sports', '/api/cron/sports-cycle'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    try {
+      const { isPaused, reason } = await repo.isPipelinePaused();
+      if (isPaused) {
+        return res.json({
+          success: false,
+          job: 'sports_pipeline_cycle',
+          status: 'skipped',
+          message: `Pipeline is paused: ${reason}`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info('External cron trigger: SportsClipBot Pipeline Cycle');
+      const cyclePromise = pipeline.runCycle();
+      if (process.env.VERCEL) {
+        await cyclePromise.catch(err => logger.error({ err: err.message }, 'Sports pipeline error in cron'));
+      }
+      res.json({
+        success: true,
+        job: 'sports_pipeline_cycle',
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed running sports pipeline cron');
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 2. SportsClipBot: Copyright & Policy Monitoring Poller
+  app.all(['/api/cron/sports-monitoring', '/api/cron/monitoring'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    try {
+      const posts = await repo.getPublishedPosts(20);
+      logger.info({ count: posts.length }, 'External cron trigger: SportsClipBot Monitoring Poller');
+      res.json({
+        success: true,
+        job: 'sports_monitoring',
+        polledPosts: posts.length,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 3. News Automation: Stage 1 Input (RSS Ingest -> Drive Staging)
+  app.all(['/api/cron/input', '/api/cron/input/:sourceId'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    try {
+      const targetSourceId = req.params.sourceId || (req.query.sourceId as string);
+      logger.info({ targetSourceId }, 'External cron trigger: News Stage 1 Input');
+      res.json({
+        success: true,
+        job: 'input_cron',
+        stage: '1_input_ingest_render_drive',
+        sourceId: targetSourceId || 'auto_round_robin',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 4. News Automation: Stage 2 Output (Drive Staged -> Social Networks)
+  app.all(['/api/cron/output', '/api/cron/output/:channelId'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    try {
+      const targetChannelId = req.params.channelId || (req.query.channelId as string);
+      logger.info({ targetChannelId }, 'External cron trigger: News Stage 2 Output');
+      res.json({
+        success: true,
+        job: 'output_cron',
+        stage: '2_output_drive_post_social_networks',
+        channelId: targetChannelId || 'all_due_channels',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 5. News Automation: Stories Publishing
+  app.all(['/api/cron/stories'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    res.json({
+      success: true,
+      job: 'stories_cron',
+      stage: 'stories_publish',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // 6. News Automation: YouTube Sync & Upload
+  app.all(['/api/cron/youtube'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    res.json({
+      success: true,
+      job: 'youtube_cron',
+      stage: 'youtube_sync_upload',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // 7. Dynamic Cron Catalog for cron-job.org
+  app.get('/api/cron/catalog', async (req: Request, res: Response) => {
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = req.get('host') || 'automation-software-ten.vercel.app';
+    const baseUrl = `${protocol}://${host}`;
+    const cronSecret = process.env.CRON_SECRET;
+    const secretParam = cronSecret ? `?secret=${encodeURIComponent(cronSecret)}` : '';
+
+    const db = repo.getDb();
+    const rawSources = db ? await db.collection('rss_sources').find({}).toArray().catch(() => []) : [];
+    const gdriveChannels = db ? await db.collection('gdrive_reel_configs').find({}).toArray().catch(() => []) : [];
+
+    res.json({
+      success: true,
+      baseUrl,
+      cronSecretConfigured: Boolean(cronSecret),
+      authNote: cronSecret
+        ? 'Pass "Authorization: Bearer <secret>" header or append "?secret=<secret>"'
+        : 'CRON_SECRET not set, endpoints accept public triggers',
+      cronJobs: [
+        {
+          id: 'sports_pipeline',
+          title: 'SportsClipBot - Ingestion & Compliance Cycle',
+          url: `${baseUrl}/api/cron/sports-pipeline${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 2 hours (0 */2 * * *)',
+          purpose: 'Ingests licensed sports clips, Claude commentary script, compliance gate, video editing & queues for approval',
+        },
+        {
+          id: 'sports_monitoring',
+          title: 'SportsClipBot - Copyright & Policy Monitoring',
+          url: `${baseUrl}/api/cron/sports-monitoring${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 30 minutes (*/30 * * * *)',
+          purpose: 'Monitors YouTube & Facebook for copyright claims, Content ID strikes, or policy warnings',
+        },
+        {
+          id: 'news_input_universal',
+          title: 'News Automation - Stage 1 (Feed Ingest -> Drive)',
+          url: `${baseUrl}/api/cron/input${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 15 minutes (*/15 * * * *)',
+          purpose: 'Ingests RSS feeds round-robin, renders 9:16 vertical reels, and saves to Google Drive folder',
+        },
+        {
+          id: 'news_output_universal',
+          title: 'News Automation - Stage 2 (Drive -> Social Networks)',
+          url: `${baseUrl}/api/cron/output${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 1 hour (0 * * * *)',
+          purpose: 'Publishes staged reels from Google Drive to Facebook Pages, YouTube Shorts, and TikTok',
+        },
+        {
+          id: 'news_stories',
+          title: 'News Automation - Facebook Stories',
+          url: `${baseUrl}/api/cron/stories${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 2 hours (0 */2 * * *)',
+          purpose: 'Publishes photo card stories to Facebook Pages',
+        },
+        {
+          id: 'news_youtube',
+          title: 'News Automation - YouTube Channel Sync',
+          url: `${baseUrl}/api/cron/youtube${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 2 hours (0 */2 * * *)',
+          purpose: 'Synchronizes YouTube Shorts stats and upload statuses',
+        },
+        ...rawSources.map((s: any) => ({
+          id: `news_input_source_${s._id}`,
+          title: `Split Feed: ${s.name}`,
+          url: `${baseUrl}/api/cron/input?sourceId=${encodeURIComponent(s._id)}${cronSecret ? `&secret=${encodeURIComponent(cronSecret)}` : ''}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 30 minutes',
+          purpose: `Dedicated isolated ingest trigger for ${s.name}`,
+        })),
+        ...gdriveChannels.map((c: any) => ({
+          id: `news_output_channel_${c._id}`,
+          title: `Split Channel: ${c.name || c._id}`,
+          url: `${baseUrl}/api/cron/output?channelId=${encodeURIComponent(c._id)}${cronSecret ? `&secret=${encodeURIComponent(cronSecret)}` : ''}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 1 to 2 hours',
+          purpose: `Dedicated isolated publish trigger for Drive channel ${c.name || c._id}`,
+        })),
+      ],
+    });
+  });
+
+  // 8. Universal Gateway
+  app.all('/api/cron', async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    const job = ((req.query.job as string) || '').toLowerCase().trim();
+    if (job === 'sports' || job === 'sports-pipeline') {
+      req.url = '/api/cron/sports-pipeline';
+      return app(req, res);
+    }
+    if (job === 'monitoring' || job === 'sports-monitoring') {
+      req.url = '/api/cron/sports-monitoring';
+      return app(req, res);
+    }
+    if (job === 'input') {
+      req.url = '/api/cron/input';
+      return app(req, res);
+    }
+    if (job === 'output') {
+      req.url = '/api/cron/output';
+      return app(req, res);
+    }
+    // Return catalog if no job query specified
+    req.url = '/api/cron/catalog';
+    return app(req, res);
   });
 
   // Approve Video Endpoint

@@ -58,8 +58,8 @@
           </span>
         </div>
 
-        <!-- Switch to SportsClipBot Dashboard -->
-        <a href="/dashboard" class="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 flex items-center gap-1.5 transition shadow-sm" title="Go to SportsClipBot Monetization Compliance Dashboard">⚡ SportsClipBot</a>
+        <!-- Switch to SportsClipBot Tab in Unified Dashboard -->
+        <button onclick="selectNavTab('sports')" class="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 flex items-center gap-1.5 transition shadow-sm" title="Go to SportsClipBot Monetization Compliance">🏆 Sports Clips</button>
 
         <!-- Wipe Legacy Jobs & Logs Action -->
         <button onclick="clearDatabaseData()" class="px-2 sm:px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="Permanently delete legacy jobs, logs, and unposted articles from database">
@@ -191,6 +191,15 @@
           </button>
         </div>
 
+        <!-- 6. SportsClipBot Compliance Tab (Unified Dashboard) -->
+        <div class="relative">
+          <button id="nav-btn-sports" onclick="selectNavTab('sports')" class="nav-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-cyan-400 hover:text-cyan-200 hover:bg-cyan-950/60 border border-cyan-800/40 transition flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+            <span>🏆</span>
+            <span>Sports Clips</span>
+            <span id="nav-sports-pending-count" class="px-1.5 py-0.2 text-[9px] rounded-full bg-amber-500 text-slate-950 font-bold hidden">0</span>
+          </button>
+        </div>
+
 
 
       </div>
@@ -205,6 +214,111 @@
 
   <!-- Main Content Stage -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex-1 w-full relative z-10 space-y-4">
+
+    <!-- 0. SPORTS CLIPS & COMPLIANCE TAB (ONE UNIFIED DASHBOARD) -->
+    <div id="tab-sports" class="tab-content hidden space-y-6">
+      
+      <!-- Top Control & Quota Header -->
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-cyan-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">🏆</span>
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span>SportsClipBot Monetization Compliance</span>
+                <span id="sports-pipeline-badge" class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
+                </span>
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Original transformative sports content with 100% YouTube & Meta policy enforcement.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 font-mono text-xs bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400">YouTube Quota:</span>
+            <span id="sports-yt-quota" class="font-bold text-red-400">0 / 3</span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400">FB Quota:</span>
+            <span id="sports-fb-quota" class="font-bold text-blue-400">0 / 3</span>
+          </div>
+
+          <button onclick="triggerSportsPipeline()" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1.5 transition active:scale-95 shadow">
+            <span>⚡ Run Pipeline</span>
+          </button>
+          <button id="sports-pause-toggle-btn" onclick="toggleSportsPipelinePause()" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 flex items-center gap-1.5 transition active:scale-95">
+            <span>⏸ Pause</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Human Approval Gate Queue -->
+      <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-amber-500/30 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-base">🛡️</div>
+            <div>
+              <h3 class="text-sm font-bold text-white">Pending Human Review & Approval Gate</h3>
+              <p class="text-xs text-slate-400">Strict Monetization Gate: Zero videos publish without explicit review.</p>
+            </div>
+          </div>
+          <span id="sports-pending-count-badge" class="px-2.5 py-1 text-xs font-mono font-bold rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60">0 Awaiting Review</span>
+        </div>
+
+        <div id="sports-pending-approvals-list" class="space-y-4">
+          <!-- Dynamically populated or empty state -->
+        </div>
+      </div>
+
+      <!-- Two Column: Published Sports Posts & Compliance Rejections -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Published Sports Posts -->
+        <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🚀</span>
+              <h3 class="text-sm font-bold text-white">Published Sports Posts</h3>
+            </div>
+            <span id="sports-published-total-badge" class="text-xs font-mono text-emerald-400">0 Published</span>
+          </div>
+          <div id="sports-published-list" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Compliance Rejections -->
+        <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-rose-500/30 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🚫</span>
+              <h3 class="text-sm font-bold text-rose-300">Rejected Clips (Blocked at Gate)</h3>
+            </div>
+            <span id="sports-rejected-total-badge" class="text-xs font-mono text-rose-400">0 Rejections</span>
+          </div>
+          <div id="sports-rejected-list" class="space-y-2 max-h-96 overflow-y-auto pr-1">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Audit Log & Policy Monitoring Trail -->
+      <div class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800/80">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📋</span>
+            <h3 class="text-sm font-bold text-slate-200">Audit Trail & Policy Event Monitoring</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-500">Immutable Compliance Log</span>
+        </div>
+        <div id="sports-audit-log-list" class="font-mono text-xs space-y-1.5 max-h-80 overflow-y-auto pr-1">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </div>
 
     <!-- 1. OVERVIEW TAB -->
     <div id="tab-overview" class="tab-content space-y-4">
@@ -1906,13 +2020,41 @@
               </div>
 
               <div class="flex items-start gap-2">
-                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
+                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
                 <div>
                   <strong>Create Job 2: Output Cron (Stage 2)</strong>
                   <div class="mt-1 p-2 rounded bg-slate-900 border border-slate-800 space-y-1 font-mono text-[11px]">
                     <div><span class="text-slate-500">Title:</span> <span class="text-white">FB Automation - Stage 2 (Output)</span></div>
                     <div><span class="text-slate-500">URL:</span> <code class="text-emerald-300 manual-origin-url" data-path="/api/cron/output">https://your-domain.vercel.app/api/cron/output</code></div>
                     <div><span class="text-slate-500">Schedule:</span> <span class="text-amber-400">Every 1 hour</span> (or every 2 hours)</div>
+                    <div><span class="text-slate-500">Request Method:</span> <span class="text-emerald-400">GET</span></div>
+                    <div><span class="text-slate-500">Headers:</span> <span class="text-slate-300">Authorization: Bearer &lt;YOUR_CRON_SECRET&gt;</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-cyan-600/30 text-cyan-400 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
+                <div>
+                  <strong>Create Job 3: SportsClipBot - Ingestion & Compliance Cycle</strong>
+                  <div class="mt-1 p-2 rounded bg-slate-900 border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div><span class="text-slate-500">Title:</span> <span class="text-white">SportsClipBot - Ingestion & Compliance</span></div>
+                    <div><span class="text-slate-500">URL:</span> <code class="text-cyan-300 manual-origin-url" data-path="/api/cron/sports-pipeline">https://your-domain.vercel.app/api/cron/sports-pipeline</code></div>
+                    <div><span class="text-slate-500">Schedule:</span> <span class="text-amber-400">Every 2 hours</span> (e.g. 0 */2 * * *)</div>
+                    <div><span class="text-slate-500">Request Method:</span> <span class="text-emerald-400">GET</span></div>
+                    <div><span class="text-slate-500">Headers:</span> <span class="text-slate-300">Authorization: Bearer &lt;YOUR_CRON_SECRET&gt;</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <span class="w-5 h-5 rounded-full bg-purple-600/30 text-purple-400 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
+                <div>
+                  <strong>Create Job 4: SportsClipBot - Copyright & Policy Monitoring</strong>
+                  <div class="mt-1 p-2 rounded bg-slate-900 border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div><span class="text-slate-500">Title:</span> <span class="text-white">SportsClipBot - Copyright Monitoring</span></div>
+                    <div><span class="text-slate-500">URL:</span> <code class="text-purple-300 manual-origin-url" data-path="/api/cron/sports-monitoring">https://your-domain.vercel.app/api/cron/sports-monitoring</code></div>
+                    <div><span class="text-slate-500">Schedule:</span> <span class="text-amber-400">Every 30 minutes</span> (*/30 * * * *)</div>
                     <div><span class="text-slate-500">Request Method:</span> <span class="text-emerald-400">GET</span></div>
                     <div><span class="text-slate-500">Headers:</span> <span class="text-slate-300">Authorization: Bearer &lt;YOUR_CRON_SECRET&gt;</span></div>
                   </div>

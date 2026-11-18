@@ -263,6 +263,9 @@
       } else if (tabId === 'manual') {
         targetBtnId = 'nav-btn-manual';
         tabNameLabel = 'User Manual';
+      } else if (tabId === 'sports') {
+        targetBtnId = 'nav-btn-sports';
+        tabNameLabel = 'Sports Clips';
       }
 
       const activeBtn = document.getElementById(targetBtnId);
@@ -546,6 +549,7 @@
       if (tabId === 'youtube') loadYouTube();
       if (tabId === 'tiktok') loadTikTokTab();
       if (tabId === 'manual') initManualTab();
+      if (tabId === 'sports') loadSportsTab();
     }
 
     function scrollManualTo(sectionId) {
@@ -3166,6 +3170,225 @@
       const disp = document.getElementById('yt-redirect-uri-display');
       if (disp) disp.innerText = window.location.origin + '/api/youtube/auth/callback';
     }, 200);
+
+    // ==========================================
+    // 🏆 SPORTSCLIPBOT COMPLIANCE & HUMAN APPROVAL
+    // ==========================================
+    let sportsSummaryData = null;
+
+    async function loadSportsTab() {
+      try {
+        const res = await safeFetchJson('/api/sports/summary');
+        if (!res.ok || !res.data) {
+          showToast('Failed loading sports clips summary', true);
+          return;
+        }
+        sportsSummaryData = res.data;
+        const d = res.data;
+
+        // Quotas
+        const ytQuota = document.getElementById('sports-yt-quota');
+        const fbQuota = document.getElementById('sports-fb-quota');
+        if (ytQuota) ytQuota.innerText = (d.youtubePublishedToday || 0) + ' / ' + (d.dailyCap || 3);
+        if (fbQuota) fbQuota.innerText = (d.facebookPublishedToday || 0) + ' / ' + (d.dailyCap || 3);
+
+        // Pipeline Status
+        const badge = document.getElementById('sports-pipeline-badge');
+        const pauseBtn = document.getElementById('sports-pause-toggle-btn');
+        if (badge) {
+          if (d.isPaused) {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Paused';
+            badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-rose-950/80 text-rose-300 border border-rose-700/60 flex items-center gap-1';
+            if (pauseBtn) pauseBtn.innerHTML = '<span>▶ Resume</span>';
+          } else {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active';
+            badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 flex items-center gap-1';
+            if (pauseBtn) pauseBtn.innerHTML = '<span>⏸ Pause</span>';
+          }
+        }
+
+        // Pending Approvals
+        const pending = d.pendingApprovals || [];
+        const pendingCountEl = document.getElementById('sports-pending-count-badge');
+        const navCountEl = document.getElementById('nav-sports-pending-count');
+        if (pendingCountEl) pendingCountEl.innerText = pending.length + ' Awaiting Review';
+        if (navCountEl) {
+          navCountEl.innerText = pending.length;
+          if (pending.length > 0) navCountEl.classList.remove('hidden');
+          else navCountEl.classList.add('hidden');
+        }
+
+        const approvalsContainer = document.getElementById('sports-pending-approvals-list');
+        if (approvalsContainer) {
+          if (pending.length === 0) {
+            approvalsContainer.innerHTML = 
+              '<div class="text-xs text-slate-500 font-mono py-8 text-center bg-slate-950/40 rounded-xl border border-slate-800/60">' +
+                '<div class="text-2xl mb-2">🎉</div>' +
+                '<div class="font-bold text-slate-300">No sports clips awaiting review.</div>' +
+                '<div class="text-[11px] text-slate-500 mt-1">All processed clips have passed or been reviewed. Click "⚡ Run Pipeline" to ingest fresh clips.</div>' +
+              '</div>';
+          } else {
+            approvalsContainer.innerHTML = pending.map(item => {
+              const video = item.video || {};
+              const clip = item.clip || {};
+              const report = item.report || {};
+              const checks = report.checks || [];
+
+              return '<div class="p-4 bg-slate-950/90 rounded-xl border border-amber-500/30 space-y-3.5 shadow-sm">' +
+                '<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">' +
+                  '<div class="min-w-0 flex-1">' +
+                    '<div class="flex items-center gap-2 flex-wrap">' +
+                      '<span class="text-sm font-bold text-white">' + (video.title || clip.title || 'Untitled Video') + '</span>' +
+                      '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">' + (clip.sport || 'Sports') + '</span>' +
+                      '<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-amber-300 border border-slate-800">⏱️ ' + (video.duration || clip.duration || 0) + 's</span>' +
+                    '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1.5 flex flex-wrap gap-x-4 gap-y-1">' +
+                      '<span><strong>License:</strong> ' + (clip.licenseType || 'Verified') + '</span>' +
+                      (clip.licenseProofUrl ? '<span><a href="' + clip.licenseProofUrl + '" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">View License Evidence ↗</a></span>' : '') +
+                      '<span><strong>Originality:</strong> ' + Math.round((video.originalContentRatio || 0.6) * 100) + '% original contribution</span>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] space-y-1.5">' +
+                  '<div class="font-bold text-slate-300 text-xs">🛡️ Compliance Gate Checks:</div>' +
+                  '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">' +
+                    checks.map(c => 
+                      '<div class="flex items-center gap-1.5 ' + (c.passed ? 'text-emerald-400' : 'text-rose-400') + '">' +
+                        '<span>' + (c.passed ? '✓' : '✕') + '</span>' +
+                        '<span class="truncate">' + c.name + ': ' + (c.passed ? 'Passed' : c.reason) + '</span>' +
+                      '</div>'
+                    ).join('') +
+                  '</div>' +
+                '</div>' +
+                '<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-800/80">' +
+                  '<input id="review-notes-' + item.id + '" type="text" placeholder="Add reviewer approval notes (optional)..." class="text-xs px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 flex-1" />' +
+                  '<div class="flex items-center gap-2 shrink-0">' +
+                    '<button onclick="approveSportsVideo(\'' + item.id + '\')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition active:scale-95 shadow">✓ Approve & Publish</button>' +
+                    '<button onclick="rejectSportsVideo(\'' + item.id + '\')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 transition active:scale-95">✕ Reject</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            }).join('');
+          }
+        }
+
+        // Published Posts
+        const published = d.publishedPosts || [];
+        const pubBadge = document.getElementById('sports-published-total-badge');
+        if (pubBadge) pubBadge.innerText = published.length + ' Posts';
+        const pubContainer = document.getElementById('sports-published-list');
+        if (pubContainer) {
+          if (published.length === 0) {
+            pubContainer.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center font-mono">No sports posts published yet.</div>';
+          } else {
+            pubContainer.innerHTML = published.map(p => 
+              '<div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-2 text-xs">' +
+                '<div class="min-w-0 flex-1">' +
+                  '<div class="font-bold text-slate-200 truncate">' + (p.platform === 'YOUTUBE' ? '🔴 YouTube Shorts' : '📘 Facebook Reels') + '</div>' +
+                  '<div class="text-[10px] text-slate-400 font-mono">' + new Date(p.publishedAt || p.published_at || Date.now()).toLocaleString() + '</div>' +
+                '</div>' +
+                (p.postUrl ? '<a href="' + p.postUrl + '" target="_blank" class="px-2 py-1 text-[10px] font-bold rounded bg-cyan-950 text-cyan-300 border border-cyan-800 hover:bg-cyan-900">View Post ↗</a>' : '') +
+              '</div>'
+            ).join('');
+          }
+        }
+
+        // Rejected Clips
+        const rejected = d.rejectedClips || [];
+        const rejBadge = document.getElementById('sports-rejected-total-badge');
+        if (rejBadge) rejBadge.innerText = rejected.length + ' Rejections';
+        const rejContainer = document.getElementById('sports-rejected-list');
+        if (rejContainer) {
+          if (rejected.length === 0) {
+            rejContainer.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center font-mono">Zero compliance violations. All clips compliant.</div>';
+          } else {
+            rejContainer.innerHTML = rejected.map(c => 
+              '<div class="p-2.5 rounded-lg bg-rose-950/30 border border-rose-900/50 space-y-1 text-xs">' +
+                '<div class="font-bold text-rose-300 truncate">' + (c.title || 'Rejected Clip') + '</div>' +
+                '<div class="text-[11px] text-rose-400 font-mono">Reason: ' + (c.rejectionReason || 'Failed compliance gate') + '</div>' +
+              '</div>'
+            ).join('');
+          }
+        }
+
+        // Audit Logs
+        const logs = d.auditLogs || [];
+        const auditContainer = document.getElementById('sports-audit-log-list');
+        if (auditContainer) {
+          if (logs.length === 0) {
+            auditContainer.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">No audit records logged yet.</div>';
+          } else {
+            auditContainer.innerHTML = logs.map(l => 
+              '<div class="p-1.5 rounded bg-slate-950/60 border border-slate-900 flex items-start gap-2 text-[11px]">' +
+                '<span class="text-slate-500 shrink-0">[' + new Date(l.created_at || l.createdAt || Date.now()).toLocaleTimeString() + ']</span>' +
+                '<span class="text-cyan-400 font-bold">' + l.action + '</span>' +
+                '<span class="text-slate-400">by ' + l.actor + '</span>' +
+                (l.details ? '<span class="text-slate-500 truncate">- ' + l.details + '</span>' : '') +
+              '</div>'
+            ).join('');
+          }
+        }
+
+      } catch (err) {
+        console.error('Error loading sports tab:', err);
+      }
+    }
+
+    async function approveSportsVideo(id) {
+      const notesEl = document.getElementById('review-notes-' + id);
+      const notes = notesEl ? notesEl.value : 'Approved via Web Dashboard';
+      try {
+        const res = await safeFetchJson('/api/approvals/' + id + '/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ reviewer: 'Dashboard Admin', notes })
+        });
+        showToast('✓ Video approved! Queued for publishing.');
+        loadSportsTab();
+      } catch (e) {
+        showToast('Approval failed: ' + e.message, true);
+      }
+    }
+
+    async function rejectSportsVideo(id) {
+      const reason = prompt('Please enter rejection reason:');
+      if (!reason) return;
+      try {
+        const res = await safeFetchJson('/api/approvals/' + id + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ reviewer: 'Dashboard Admin', reason })
+        });
+        showToast('Clip rejected and recorded in compliance log.');
+        loadSportsTab();
+      } catch (e) {
+        showToast('Rejection failed: ' + e.message, true);
+      }
+    }
+
+    async function triggerSportsPipeline() {
+      showToast('⚡ Triggering SportsClipBot pipeline cycle...');
+      try {
+        await safeFetchJson('/api/pipeline/trigger', { method: 'POST', headers: { 'Accept': 'application/json' } });
+        showToast('✓ Pipeline cycle started in background!');
+        setTimeout(loadSportsTab, 2000);
+      } catch (e) {
+        showToast('Failed triggering pipeline: ' + e.message, true);
+      }
+    }
+
+    async function toggleSportsPipelinePause() {
+      if (!sportsSummaryData) return;
+      const isPaused = sportsSummaryData.isPaused;
+      const endpoint = isPaused ? '/api/pipeline/resume' : '/api/pipeline/pause';
+      try {
+        await safeFetchJson(endpoint, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        showToast(isPaused ? '▶ Pipeline resumed' : '⏸ Pipeline paused');
+        loadSportsTab();
+      } catch (e) {
+        showToast('Action failed: ' + e.message, true);
+      }
+    }
 
     // Initial load & Tab URL check
     loadOverview();
