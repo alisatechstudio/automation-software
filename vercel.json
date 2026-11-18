@@ -3,8 +3,8 @@
   "framework": null,
   "outputDirectory": "public",
   "functions": {
-    "api/index.ts": {
-      "includeFiles": "src/server/views/**",
+    "api/index.js": {
+      "includeFiles": "{dist/server/views/**,src/server/views/**,config.yaml}",
       "maxDuration": 60
     }
   },

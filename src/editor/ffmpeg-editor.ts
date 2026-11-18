@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
@@ -45,12 +46,24 @@ export class FFmpegEditor implements Editor {
     this.fps = config.fps || 30;
     this.loudnormConfig = config.loudnorm || { targetI: -16, lra: 11, tp: -1.5 };
 
+    try {
+      if (!fs.existsSync(this.tempDir)) {
+        fs.mkdirSync(this.tempDir, { recursive: true });
+      }
+    } catch {
+      // In read-only filesystems (e.g., Vercel Lambda /var/task), fallback to os.tmpdir()
+      this.tempDir = path.join(os.tmpdir(), 'sports_clip_bot_ffmpeg');
+      try {
+        if (!fs.existsSync(this.tempDir)) {
+          fs.mkdirSync(this.tempDir, { recursive: true });
+        }
+      } catch {
+        // Safe no-op
+      }
+    }
+
     this.graphicsGen = new GraphicsGenerator({ tempDir: this.tempDir });
     this.captionGen = new CaptionGenerator();
-
-    if (!fs.existsSync(this.tempDir)) {
-      fs.mkdirSync(this.tempDir, { recursive: true });
-    }
   }
 
   public async process(options: EditOptions): Promise<EditResult> {

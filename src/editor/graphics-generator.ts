@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import type { EditGraphicCard } from '../types/index.js';
@@ -12,8 +13,20 @@ export class GraphicsGenerator {
 
   constructor(options: GraphicsGeneratorOptions) {
     this.tempDir = path.resolve(process.cwd(), options.tempDir);
-    if (!fs.existsSync(this.tempDir)) {
-      fs.mkdirSync(this.tempDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.tempDir)) {
+        fs.mkdirSync(this.tempDir, { recursive: true });
+      }
+    } catch {
+      // In read-only filesystems (e.g., Vercel Lambda /var/task), fallback to os.tmpdir()
+      this.tempDir = path.join(os.tmpdir(), 'sports_clip_bot_graphics');
+      try {
+        if (!fs.existsSync(this.tempDir)) {
+          fs.mkdirSync(this.tempDir, { recursive: true });
+        }
+      } catch {
+        // Safe no-op
+      }
     }
   }
 
