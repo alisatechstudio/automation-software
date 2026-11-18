@@ -12,7 +12,13 @@ export default async function handler(req: any, res: any) {
 
       if (process.env.MONGODB_URI) {
         try {
-          await initDatabase(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || 'news_automation');
+          const db = await initDatabase(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || 'news_automation');
+          const settingsDocs = await db.collection('settings').find({}).toArray().catch(() => []);
+          for (const s of settingsDocs) {
+            if (s.key && s.value && !process.env[s.key]) {
+              process.env[s.key] = String(s.value);
+            }
+          }
         } catch (dbErr) {
           console.warn('MongoDB connection warning:', dbErr);
         }

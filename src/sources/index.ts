@@ -51,10 +51,11 @@ export function createSources(loaded: LoadedConfig): Source[] {
   }
 
   // 4. Pexels
-  if (config.sources.pexels.enabled && env.PEXELS_API_KEY) {
+  const pexelsKey = env.PEXELS_API_KEY || process.env.PEXELS_API_KEY;
+  if (config.sources.pexels.enabled && pexelsKey) {
     sources.push(
       new PexelsSource({
-        apiKey: env.PEXELS_API_KEY,
+        apiKey: pexelsKey,
         searchSports: config.sources.pexels.searchSports,
         blocklist,
         licensedAgreements,
@@ -63,10 +64,11 @@ export function createSources(loaded: LoadedConfig): Source[] {
   }
 
   // 5. Pixabay
-  if (config.sources.pixabay.enabled && env.PIXABAY_API_KEY) {
+  const pixabayKey = env.PIXABAY_API_KEY || process.env.PIXABAY_API_KEY;
+  if (config.sources.pixabay.enabled && pixabayKey) {
     sources.push(
       new PixabaySource({
-        apiKey: env.PIXABAY_API_KEY,
+        apiKey: pixabayKey,
         searchSports: config.sources.pixabay.searchSports,
         blocklist,
         licensedAgreements,
