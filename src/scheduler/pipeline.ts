@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type { DbRepository } from '../db/repository.js';
@@ -80,7 +81,31 @@ export class SportsClipPipeline {
         continue;
       }
 
-      const cleanFilePath = videoPath.replace(/^file:\/\//, '');
+      let cleanFilePath = videoPath.replace(/^file:\/\//, '');
+
+      // Download remote asset to temp file if HTTP/HTTPS
+      if (cleanFilePath.startsWith('http://') || cleanFilePath.startsWith('https://')) {
+        try {
+          const tempDir = path.resolve(process.cwd(), this.config.config.app.tempDir || './data/temp');
+          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          const parsedUrl = new URL(cleanFilePath);
+          const ext = path.extname(parsedUrl.pathname) || '.mp4';
+          const localDest = path.join(tempDir, `remote_${clip.id}${ext}`);
+          if (!fs.existsSync(localDest) || fs.statSync(localDest).size === 0) {
+            logger.info({ clipId: clip.id, url: cleanFilePath }, 'Downloading remote video asset...');
+            const r = await fetch(cleanFilePath);
+            if (r.ok) {
+              const buf = Buffer.from(await r.arrayBuffer());
+              fs.writeFileSync(localDest, buf);
+              cleanFilePath = localDest;
+            }
+          } else {
+            cleanFilePath = localDest;
+          }
+        } catch (dlErr: any) {
+          logger.warn({ clipId: clip.id, err: dlErr.message }, 'Could not pre-download remote asset; using URL directly.');
+        }
+      }
 
       try {
         const success = await this.processSingleClip(clip, cleanFilePath);

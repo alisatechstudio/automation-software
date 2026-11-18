@@ -14,17 +14,29 @@ export class CommonsArchiveSource extends BaseSource {
 
   constructor(options: CommonsArchiveOptions = {}) {
     super(options.blocklist, options.licensedAgreements);
-    this.categories = options.categories || ['Athletics', 'Cycling', 'Gymnastics', 'Swimming'];
+    this.categories = options.categories || [
+      'Videos_of_sports',
+      'Videos_of_athletics',
+      'Videos_of_cycling',
+      'Videos_of_gymnastics',
+      'Videos_of_swimming',
+      'Videos_of_skateboarding',
+    ];
   }
 
   public async fetchRecent(): Promise<ClipMeta[]> {
     const candidates: ClipMeta[] = [];
 
-    for (const category of this.categories) {
+    for (const rawCat of this.categories) {
+      const category = rawCat.startsWith('Category:')
+        ? rawCat.replace(/^Category:/, '')
+        : rawCat.startsWith('Videos_of_')
+        ? rawCat
+        : `Videos_of_${rawCat.toLowerCase()}`;
       try {
         const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&list=categorymembers&cmtitle=Category:${encodeURIComponent(
           category
-        )}&cmtype=file&cmlimit=10&origin=*`;
+        )}&cmtype=file&cmlimit=15&origin=*`;
 
         const res = await fetch(url, { headers: { 'User-Agent': 'SportsClipBot/1.0 (sportsclipbot@example.com)' } });
         if (!res.ok) continue;

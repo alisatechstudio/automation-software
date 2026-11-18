@@ -71,11 +71,12 @@ sources:
   commonsArchive:
     enabled: true
     defaultCategories:
-      - Athletics
-      - Cycling
-      - Gymnastics
-      - Swimming
-      - Skateboarding
+      - Videos_of_sports
+      - Videos_of_athletics
+      - Videos_of_cycling
+      - Videos_of_gymnastics
+      - Videos_of_swimming
+      - Videos_of_skateboarding
   youtubeCc:
     enabled: false
     queries:
