@@ -27,10 +27,18 @@ const rootDir = process.cwd();
 const dataDir = process.env.DATA_DIR || path.join(rootDir, 'data');
 const assetsDir = process.env.ASSETS_DIR || path.join(rootDir, 'assets');
 
+const ATLAS_DEFAULT_URI =
+  'mongodb+srv://Vercel-Admin-atlas-copper-notebook:BNp8pQVDocNKaDwL@atlas-copper-notebook.0czlcmy.mongodb.net/?retryWrites=true&w=majority';
+
 export const config: InputAppConfig = {
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 3001,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
+  MONGODB_URI:
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.MONGO_URL ||
+    (process.env.DATABASE_URL?.startsWith('mongodb') ? process.env.DATABASE_URL : '') ||
+    ATLAS_DEFAULT_URI,
   MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || 'news_automation',
   DRY_RUN: process.env.DRY_RUN === 'true' || process.env.DRY_RUN === '1',
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID,

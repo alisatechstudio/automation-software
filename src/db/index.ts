@@ -13,11 +13,19 @@ export function getLastDbError(): string | null {
   return lastDbError;
 }
 
+const ATLAS_DEFAULT_URI =
+  'mongodb+srv://Vercel-Admin-atlas-copper-notebook:BNp8pQVDocNKaDwL@atlas-copper-notebook.0czlcmy.mongodb.net/?retryWrites=true&w=majority';
+
 export async function initDatabase(
-  uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
+  uri = process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.MONGO_URL ||
+    (process.env.DATABASE_URL?.startsWith('mongodb') ? process.env.DATABASE_URL : '') ||
+    ATLAS_DEFAULT_URI,
   dbName = process.env.MONGODB_DB_NAME || 'news_automation'
 ): Promise<Db> {
-  if (dbInstance) {
+  // If already connected with the same instance and not reconnecting
+  if (dbInstance && clientInstance) {
     return dbInstance;
   }
 
@@ -32,16 +40,29 @@ export async function initDatabase(
 
     logger.info({ dbName }, 'Connected to MongoDB successfully. Initializing indexes...');
 
-    await Promise.all([
-      db.collection('rss_sources').createIndex({ isActive: 1 }),
-      db.collection('news_articles').createIndex({ guid: 1 }),
-      db.collection('news_articles').createIndex({ link: 1 }),
-      db.collection('news_articles').createIndex({ status: 1 }),
-      db.collection('news_articles').createIndex({ createdAt: -1 }),
-    ]);
+    // Initialize indexes gracefully without throwing if an index with different options already exists
+    const indexPromises = [
+      db.collection('rss_sources').createIndex({ isActive: 1 }).catch((e) => {
+        logger.warn({ index: 'isActive_1', err: e.message }, 'Index creation notice');
+      }),
+      db.collection('news_articles').createIndex({ guid: 1 }).catch((e) => {
+        logger.warn({ index: 'guid_1', err: e.message }, 'Index creation notice');
+      }),
+      db.collection('news_articles').createIndex({ link: 1 }).catch((e) => {
+        logger.warn({ index: 'link_1', err: e.message }, 'Index creation notice');
+      }),
+      db.collection('news_articles').createIndex({ status: 1 }).catch((e) => {
+        logger.warn({ index: 'status_1', err: e.message }, 'Index creation notice');
+      }),
+      db.collection('news_articles').createIndex({ createdAt: -1 }).catch((e) => {
+        logger.warn({ index: 'createdAt_-1', err: e.message }, 'Index creation notice');
+      }),
+    ];
+    await Promise.all(indexPromises);
 
     clientInstance = client;
     dbInstance = db;
+    lastDbError = null;
     return dbInstance;
   } catch (err: any) {
     lastDbError = err.message;

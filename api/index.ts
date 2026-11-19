@@ -8,12 +8,10 @@ let cachedApp: any = null;
 export default async function handler(req: any, res: any) {
   try {
     if (!cachedApp) {
-      if (process.env.MONGODB_URI) {
-        try {
-          await initDatabase(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || 'news_automation');
-        } catch (dbErr: any) {
-          console.warn('[Vercel Input API] MongoDB connection note:', dbErr.message);
-        }
+      try {
+        await initDatabase();
+      } catch (dbErr: any) {
+        console.warn('[Vercel Input API] MongoDB connection note:', dbErr.message);
       }
 
       const pipeline = new InputPipelineService();
