@@ -6,9 +6,7 @@ settings:
 
 importers:
 
-  .: {}
-
-  input-automation:
+  .:
     dependencies:
       '@ffmpeg-installer/ffmpeg':
         specifier: ^1.1.0
@@ -99,58 +97,6 @@ importers:
       '@ffmpeg-installer/linux-x64':
         specifier: ^4.1.0
         version: 4.1.0
-
-  output-automation:
-    dependencies:
-      '@vercel/functions':
-        specifier: ^3.11.3
-        version: 3.11.3(ws@8.23.0)
-      dotenv:
-        specifier: ^16.6.1
-        version: 16.6.1
-      express:
-        specifier: ^4.22.1
-        version: 4.22.3
-      googleapis:
-        specifier: ^190.0.0
-        version: 190.0.0
-      mongodb:
-        specifier: ^7.9.0
-        version: 7.9.0
-      node-cron:
-        specifier: ^3.0.3
-        version: 3.0.3
-      pino:
-        specifier: ^10.4.0
-        version: 10.4.0
-      pino-pretty:
-        specifier: ^13.2.0
-        version: 13.2.0
-      undici:
-        specifier: ^8.12.4
-        version: 8.12.4
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
-    devDependencies:
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.25
-      '@types/node':
-        specifier: ^22.13.1
-        version: 22.20.5
-      '@types/node-cron':
-        specifier: ^3.0.11
-        version: 3.0.11
-      tsx:
-        specifier: ^4.19.3
-        version: 4.23.15
-      typescript:
-        specifier: ^5.7.3
-        version: 5.9.3
 
 packages:
 
@@ -1301,6 +1247,10 @@ packages:
     resolution: {integrity: sha512-VYdnB5S7/0IeXzBacUtwNAaM6d7Y/PgYnNC7bJCI6meqA/OgnsQbZMtVW8Dt2D1PHgbHGtYmhSoEIgvt7xZ2ZA==}
     engines: {node: '>=0.6'}
 
+  qs@6.17.1:
+    resolution: {integrity: sha512-jd3COkaKVgGUW+ZHyEHCG9bH7RoaaiWuMgzsIBjUMVjLAaWGWpoUAVwljVvBHxRu/2qEHnadLGZrkutYUBPQJA==}
+    engines: {node: '>=0.6'}
+
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
 
@@ -2353,7 +2303,7 @@ snapshots:
       gaxios: 8.3.3
       google-auth-library: 11.3.4
       google-logging-utils: 2.2.0
-      qs: 6.16.2
+      qs: 6.17.1
       url-template: 2.0.8
     transitivePeerDependencies:
       - supports-color
@@ -2606,6 +2556,11 @@ snapshots:
   punycode@2.3.1: {}
 
   qs@6.16.2:
+    dependencies:
+      es-define-property: 1.0.1
+      side-channel: 1.1.1
+
+  qs@6.17.1:
     dependencies:
       es-define-property: 1.0.1
       side-channel: 1.1.1

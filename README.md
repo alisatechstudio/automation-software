@@ -1,56 +1,59 @@
-# ⚡ Automation Architecture (Two Independent Node.js Apps)
+# ⚡ Input Automation
+> **Stage 1 Microservice: Source -> Reel Video -> Google Drive Staging**
 
-This project is partitioned into two completely independent, decoupled Node.js applications:
+---
 
-```mermaid
-flowchart LR
-    A[News / Media Sources] --> B[input-automation]
-    B --> C[(Google Drive Folder)]
-    C --> D[output-automation]
-    D --> E[Facebook Reels & Comments]
-    D --> F[YouTube Shorts]
-    D --> G[TikTok Videos]
-    D --> H[Telegram Channel / Group]
+## 🎯 Purpose & Responsibilities
+This is a standalone Node.js application dedicated exclusively to **Input Automation**:
+1. **Sources**: Ingests breaking news & articles from RSS feeds (e.g. BD News, Trending News World) or clip sources.
+2. **Reel Generation Engine**:
+   - Neural Text-to-Speech (Microsoft Edge TTS for Bengali & English).
+   - High-contrast television studio news cards via `@napi-rs/canvas`.
+   - FFmpeg 9:16 vertical video composition (1080x1920) with audio normalization (EBU R128), waveform, animated tickers, and captions.
+3. **Google Drive Staging**: Uploads generated `.mp4` videos directly to the assigned Google Drive folder via Google Drive API v3 (resumable) with automatic local folder fallback.
+4. **State Tracking**: Saves ingestion & upload records in MongoDB to ensure deduplication.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+```bash
+cd input-automation
+pnpm install
 ```
 
----
+### 2. Environment Setup
+Copy `.env.example` to `.env` and fill in credentials:
+```bash
+cp .env.example .env
+```
+Key settings:
+- `MONGODB_URI`: Shared MongoDB instance for state synchronization
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`: Google Cloud OAuth credentials for Google Drive
+- `GDRIVE_FOLDER_ID`: Target Google Drive folder ID
+- `PORT`: Server port (default: 3001)
 
-## 📦 Applications
-
-### 1. `input-automation`
-> **Source ➔ AI / TTS & News Card ➔ 9:16 Video Reel ➔ Google Drive Folder**
-- Ingests breaking news & articles from RSS feeds or media sources.
-- Generates Edge Neural TTS voiceover (`bn-BD` Bengali and `en-US` English).
-- Renders high-contrast news cards via `@napi-rs/canvas`.
-- Encodes 1080x1920 9:16 vertical video with FFmpeg (audio normalization, waveform, animated ticker).
-- Uploads `.mp4` videos directly to the assigned Google Drive folder.
-- **Port:** `3001`
-- **Webhook trigger:** `POST /api/cron/input`
-- **Directory:** `./input-automation`
-
-### 2. `output-automation`
-> **Google Drive Folder ➔ Facebook / YouTube / TikTok / Telegram ➔ Drive Auto-Trash**
-- Scans Google Drive folder for pending videos (FIFO queue / oldest-first).
-- Publishes to Facebook Page Reels via Meta Graph API v21.0.
-- Automatically posts a high-CTR first comment containing the news link.
-- Publishes to YouTube Shorts via YouTube Data API v3.
-- Publishes to TikTok via TikTok Content Posting API.
-- Publishes video directly (`sendVideo`) and announcement cards (`sendMessage`) to Telegram channels or groups.
-- Deletes or trashes published videos from Google Drive to avoid repeat postings.
-- **Port:** `3002`
-- **Webhook trigger:** `POST /api/cron/output`
-- **Directory:** `./output-automation`
-
----
-
-## 🚀 Running from Root
+### 3. Running
 
 ```bash
-# 1. Input Automation
-pnpm input:dev       # Dev server
-pnpm input:run       # Single execution via CLI
+# Development (with hot-reload)
+pnpm dev
 
-# 2. Output Automation
-pnpm output:dev      # Dev server
-pnpm output:publish  # Single publication via CLI
+# Build TypeScript
+pnpm build
+
+# Production Start
+pnpm start
+
+# Run a single cycle directly from CLI
+pnpm run-now
 ```
+
+---
+
+## 🌐 API & Webhook Endpoints
+- `GET /health` or `GET /`: Healthcheck & configuration status
+- `POST /api/cron/input` (or `GET /api/cron/input`): Executes the input cycle. Compatible with **cron-job.org** or Vercel cron.
+- `GET /api/status`: MongoDB stats (total articles, reels uploaded to Drive)
+- `GET /api/sources`: Lists configured RSS/content sources
