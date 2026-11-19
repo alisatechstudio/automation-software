@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { DbRepository } from '../db/repository.js';
+import { GDriveReelService } from './gdrive/service.js';
 import { logger } from '../logger.js';
 
 export interface GDriveUploadResult {
@@ -159,55 +160,28 @@ export class GoogleDriveUploader {
       // Ignored for serverless environments
     }
 
-    // Attempt cloud upload via Google Drive API v3
-    const accessToken = await this.getGoogleAccessToken();
-    if (accessToken && videoBuffer) {
+    // Attempt cloud upload via Google Drive Service
+    if (videoBuffer) {
       try {
-        const initUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true';
-        const initRes = await fetch(initUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Upload-Content-Type': 'video/mp4',
-            'X-Upload-Content-Length': String(videoBuffer.length),
-          },
-          body: JSON.stringify({
-            name: filename,
-            parents: [targetFolder],
-            description: `Qualified SportsClipBot Video: ${params.title}`,
-          }),
+        const gdriveService = new GDriveReelService();
+        const uploadResult = await gdriveService.uploadVideoToFolder({
+          folderId: targetFolder,
+          videoBuffer,
+          filename,
         });
 
-        if (initRes.ok) {
-          const uploadLocation = initRes.headers.get('location');
-          if (uploadLocation) {
-            const putRes = await fetch(uploadLocation, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'video/mp4',
-                'Content-Length': String(videoBuffer.length),
-              },
-              body: videoBuffer as any,
-            });
-
-            if (putRes.ok) {
-              const fileData = (await putRes.json()) as any;
-              const webViewLink = `https://drive.google.com/file/d/${fileData.id}/view`;
-              logger.info(
-                { fileId: fileData.id, webViewLink, folderId: targetFolder },
-                '✓ Qualified sports clip successfully uploaded and saved to Google Drive folder before post!'
-              );
-
-              return {
-                success: true,
-                fileId: fileData.id,
-                webViewLink,
-                folderId: targetFolder,
-                folderUrl: targetFolderUrl,
-              };
-            }
-          }
+        if (uploadResult.fileId) {
+          logger.info(
+            { fileId: uploadResult.fileId, folderId: targetFolder },
+            '✓ Qualified sports clip successfully uploaded and saved to Google Drive folder before post!'
+          );
+          return {
+            success: true,
+            fileId: uploadResult.fileId,
+            webViewLink: uploadResult.webViewLink,
+            folderId: targetFolder,
+            folderUrl: targetFolderUrl,
+          };
         }
       } catch (uploadErr: any) {
         logger.error({ err: uploadErr.message }, 'Google Drive API cloud upload failed');
