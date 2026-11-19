@@ -312,11 +312,13 @@ export class InputPipelineService {
             const existing = await articlesCol.findOne({
               $or: [{ guid: item.guid }, { link: item.link }],
             });
+            const hasRealDriveFile =
+              Boolean(existing.gdriveFileId) && !existing.gdriveFileId.startsWith('local_');
             const alreadyInDrive =
               existing &&
-              (existing.status === 'uploaded_to_drive' ||
+              ((existing.status === 'uploaded_to_drive' && hasRealDriveFile) ||
                 existing.status === 'published' ||
-                Boolean(existing.gdriveFileId));
+                hasRealDriveFile);
 
             if (alreadyInDrive) {
               skippedDuplicate++;
@@ -399,16 +401,23 @@ export class InputPipelineService {
                 filename,
               });
 
-              if (uploadRes.success) {
-                gdriveFileId = uploadRes.fileId || null;
+              if (uploadRes.success && !uploadRes.isLocalFallback && uploadRes.fileId && !uploadRes.fileId.startsWith('local_')) {
+                gdriveFileId = uploadRes.fileId;
                 uploadedToDrive++;
                 grandTotalUploadedToDrive++;
+                this.addLog(`✓ Saved to Google Drive! File ID: ${gdriveFileId}`);
                 console.log(`✓ [InputPipeline] Saved to Drive folder! (ID: ${gdriveFileId})`);
+              } else {
+                const failReason = uploadRes.error || (uploadRes.isLocalFallback ? 'Saved to local temp only (Google Drive upload failed)' : 'Drive upload failed');
+                this.addLog(`⚠️ Google Drive upload failed for "${filename}": ${failReason}`);
+                console.warn(`[InputPipeline] ⚠️ Google Drive upload failed for "${filename}": ${failReason}`);
               }
             } catch (upErr: any) {
+              this.addLog(`❌ Google Drive upload error: ${upErr.message}`);
               console.error('[InputPipeline] Drive upload failed:', upErr.message);
             }
 
+            const isReallyUploaded = !!gdriveFileId && !gdriveFileId.startsWith('local_');
             if (dbAvailable && articlesCol) {
               try {
                 await articlesCol.updateOne(
@@ -423,10 +432,10 @@ export class InputPipelineService {
                       category: effectiveCategory,
                       pubDate: item.pubDate,
                       imageUrl: item.imageUrl || null,
-                      status: gdriveFileId ? 'uploaded_to_drive' : 'rendered',
-                      gdriveFileId,
+                      status: isReallyUploaded ? 'uploaded_to_drive' : 'rendered',
+                      gdriveFileId: isReallyUploaded ? gdriveFileId : null,
                       gdriveFolderId: folderId,
-                      gdriveUploadStatus: gdriveFileId ? 'uploaded' : 'pending',
+                      gdriveUploadStatus: isReallyUploaded ? 'uploaded' : 'failed',
                       updatedAt: new Date(),
                     },
                     $setOnInsert: {
@@ -442,11 +451,12 @@ export class InputPipelineService {
             }
           }
 
+          const isReallyUploaded = !!gdriveFileId && !gdriveFileId.startsWith('local_');
           processedArticles.push({
             title: item.title,
-            gdriveFileId: gdriveFileId || undefined,
+            gdriveFileId: isReallyUploaded && gdriveFileId ? gdriveFileId : undefined,
             filename,
-            status: gdriveFileId ? 'uploaded_to_drive' : reelBuffer ? 'rendered' : 'skipped',
+            status: isReallyUploaded ? 'uploaded_to_drive' : reelBuffer ? 'rendered' : 'skipped',
           });
         }
 
@@ -484,12 +494,15 @@ export class InputPipelineService {
       }
 
       const totalDuration = Date.now() - startTime;
-      console.log(
-        `\n✓ [InputPipeline] Cycle Complete in ${totalDuration}ms: Generated ${grandTotalReelsCreated} reel(s), uploaded ${grandTotalUploadedToDrive} to Drive!`
-      );
+      let summaryMsg = `✓ Cycle Complete in ${totalDuration}ms: Generated ${grandTotalReelsCreated} reel(s), uploaded ${grandTotalUploadedToDrive} to Drive!`;
+      if (grandTotalReelsCreated > 0 && grandTotalUploadedToDrive === 0) {
+        summaryMsg = `⚠️ Cycle Complete with warnings: Generated ${grandTotalReelsCreated} reel(s), but Google Drive upload failed: ${this.gdriveUploader.lastAuthError || this.gdriveUploader.lastUploadError || 'OAuth/Upload Error'}`;
+      }
+
+      console.log(`\n[InputPipeline] ${summaryMsg}`);
 
       const result: InputCronResult = {
-        success: true,
+        success: grandTotalUploadedToDrive > 0 || grandTotalReelsCreated === 0,
         timestamp: new Date().toISOString(),
         durationMs: totalDuration,
         sourcesProcessed: activeSources.length,
@@ -497,6 +510,9 @@ export class InputPipelineService {
         totalReelsCreated: grandTotalReelsCreated,
         totalUploadedToDrive: grandTotalUploadedToDrive,
         results: sourceResults,
+        ...(grandTotalReelsCreated > 0 && grandTotalUploadedToDrive === 0
+          ? { error: `Google Drive upload failed: ${this.gdriveUploader.lastAuthError || this.gdriveUploader.lastUploadError || 'Check Drive refresh token'}` }
+          : {}),
       };
 
       this.jobState.isRunning = false;
@@ -504,9 +520,7 @@ export class InputPipelineService {
       this.jobState.progressPercent = 100;
       this.jobState.completedAt = new Date().toISOString();
       this.jobState.lastResult = result;
-      this.addLog(
-        `✓ Cycle Complete in ${totalDuration}ms: Generated ${grandTotalReelsCreated} reel(s), uploaded ${grandTotalUploadedToDrive} to Drive!`
-      );
+      this.addLog(summaryMsg);
 
       return result;
     } catch (err: any) {

@@ -635,5 +635,126 @@ export function createInputServer(pipeline: InputPipelineService): Express {
     }
   });
 
+  // Google Drive Diagnostics & Real-Time Connection Test
+  app.get(['/api/gdrive/status', '/api/gdrive/test'], async (req: Request, res: Response) => {
+    try {
+      const uploader = pipeline.getUploader();
+      const folderId = (req.query.folderId as string) || config.GDRIVE_FOLDER_ID;
+      const testResult = await uploader.testConnection(folderId);
+      const creds = await uploader.getCredentials();
+
+      res.json({
+        ...testResult,
+        hasClientId: Boolean(creds.clientId),
+        hasClientSecret: Boolean(creds.clientSecret),
+        hasRefreshToken: Boolean(creds.refreshToken),
+        tokenPrefix: creds.refreshToken ? `${creds.refreshToken.substring(0, 10)}...` : null,
+        configuredFolderId: config.GDRIVE_FOLDER_ID || null,
+        lastAuthError: uploader.lastAuthError,
+        lastUploadError: uploader.lastUploadError,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Update Google Drive Credentials & Staging Folder in Database
+  app.post('/api/gdrive/settings', async (req: Request, res: Response) => {
+    try {
+      const body = req.body || {};
+      const refreshToken = (body.refreshToken || body.GDRIVE_REFRESH_TOKEN || '').trim();
+      const clientId = (body.clientId || body.GOOGLE_CLIENT_ID || '').trim();
+      const clientSecret = (body.clientSecret || body.GOOGLE_CLIENT_SECRET || '').trim();
+      const folderId = (body.folderId || body.GDRIVE_FOLDER_ID || '').trim();
+
+      if (!isDbConnected()) {
+        return res.status(500).json({ success: false, error: 'Database is not connected.' });
+      }
+
+      const db = getDatabase();
+      const settingsCol = db.collection('settings');
+      const now = new Date();
+
+      if (refreshToken) {
+        await settingsCol.updateOne(
+          { _id: 'GDRIVE_REFRESH_TOKEN' as any },
+          { $set: { key: 'GDRIVE_REFRESH_TOKEN', value: refreshToken, updatedAt: now } },
+          { upsert: true }
+        );
+        await settingsCol.updateOne(
+          { _id: 'GOOGLE_REFRESH_TOKEN' as any },
+          { $set: { key: 'GOOGLE_REFRESH_TOKEN', value: refreshToken, updatedAt: now } },
+          { upsert: true }
+        );
+      }
+
+      if (clientId) {
+        await settingsCol.updateOne(
+          { _id: 'GOOGLE_CLIENT_ID' as any },
+          { $set: { key: 'GOOGLE_CLIENT_ID', value: clientId, updatedAt: now } },
+          { upsert: true }
+        );
+      }
+
+      if (clientSecret) {
+        await settingsCol.updateOne(
+          { _id: 'GOOGLE_CLIENT_SECRET' as any },
+          { $set: { key: 'GOOGLE_CLIENT_SECRET', value: clientSecret, updatedAt: now } },
+          { upsert: true }
+        );
+      }
+
+      if (folderId) {
+        await settingsCol.updateOne(
+          { _id: 'GDRIVE_FOLDER_ID' as any },
+          { $set: { key: 'GDRIVE_FOLDER_ID', value: folderId, updatedAt: now } },
+          { upsert: true }
+        );
+      }
+
+      const uploader = pipeline.getUploader();
+      uploader.clearCache();
+
+      const testResult = await uploader.testConnection(folderId || config.GDRIVE_FOLDER_ID);
+
+      res.json({
+        success: true,
+        message: 'Google Drive credentials updated successfully in MongoDB settings!',
+        testResult,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Reset Falsely Staged Articles (Articles with local_ fallback IDs)
+  app.post('/api/gdrive/fix-staged', async (_req: Request, res: Response) => {
+    try {
+      if (!isDbConnected()) {
+        return res.status(500).json({ success: false, error: 'Database not connected.' });
+      }
+      const db = getDatabase();
+      const articlesCol = db.collection('news_articles');
+      const result = await articlesCol.updateMany(
+        { gdriveFileId: /^local_/ },
+        {
+          $set: {
+            status: 'rendered',
+            gdriveUploadStatus: 'failed',
+            updatedAt: new Date(),
+          },
+          $unset: { gdriveFileId: '' },
+        }
+      );
+      res.json({
+        success: true,
+        modifiedCount: result.modifiedCount,
+        message: `Reset ${result.modifiedCount} falsely staged articles back to 'rendered' so they can be uploaded properly to Google Drive!`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   return app;
 }

@@ -440,11 +440,26 @@
     <!-- TAB 4: Google Drive Staging Setup -->
     <div id="tabContent-gdrive" class="hidden space-y-6">
       <div class="bg-dark-card border border-dark-border rounded-xl p-5 space-y-6">
-        <div>
-          <h2 class="text-base font-bold text-white flex items-center space-x-2">
-            <span>☁️ Google Drive Staging Configuration</span>
-          </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Input Automation renders video reels and uploads them directly to your Google Drive folder, where Output Automation picks them up for automated multi-network broadcast.</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dark-border/60 pb-4">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+              <span>☁️ Google Drive Staging Configuration</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Input Automation renders video reels and uploads them directly to your Google Drive folder, where Output Automation picks them up for automated multi-network broadcast.</p>
+          </div>
+          <button onclick="testDriveConnection()" id="btnTestDrive" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-cyan-800 bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 font-semibold text-xs shadow transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span id="btnTestDriveText">Test Drive Connection</span>
+          </button>
+        </div>
+
+        <!-- Live Drive Health Status Banner -->
+        <div id="gdriveHealthBanner" class="p-4 rounded-xl border flex items-start space-x-3 bg-slate-900/80 border-slate-800 text-xs">
+          <div id="gdriveHealthIcon" class="mt-0.5 w-3 h-3 rounded-full bg-slate-500 animate-pulse"></div>
+          <div class="flex-1 space-y-1">
+            <div id="gdriveHealthTitle" class="font-bold text-white">Checking Google Drive Access...</div>
+            <div id="gdriveHealthMsg" class="text-slate-400 text-[11px] leading-relaxed">Verifying OAuth refresh token and folder permissions...</div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -471,22 +486,54 @@
               <div id="gdriveDisplayAuthMode" class="font-mono font-semibold text-emerald-400 text-xs mt-0.5">Checking...</div>
             </div>
             <div>
-              <div class="text-slate-400 text-[11px]">Local Safety Fallback Cache:</div>
-              <div id="gdriveDisplayFallbackDir" class="font-mono text-slate-300 text-[11px] mt-0.5 break-all">data/gdrive_folders</div>
+              <div class="text-slate-400 text-[11px]">Active OAuth Token:</div>
+              <div id="gdriveDisplayTokenPrefix" class="font-mono text-slate-300 text-[11px] mt-0.5 break-all">Checking...</div>
             </div>
           </div>
         </div>
 
-        <!-- Explanation Card -->
+        <!-- Update Credentials Form -->
+        <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-400 uppercase tracking-wider">Update Google OAuth Credentials (Stored in Database)</span>
+            <span class="text-[10px] text-slate-400">Updates take effect immediately without redeploying Vercel</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="md:col-span-2">
+              <label class="block text-slate-400 text-[11px] mb-1">Google OAuth Refresh Token (with Drive access scope):</label>
+              <input type="password" id="inputGdriveRefreshToken" placeholder="1//05... or paste new refresh token from Google OAuth Playground" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">Google Client ID (Optional override):</label>
+              <input type="text" id="inputGdriveClientId" placeholder="e.g. 998558898236-...apps.googleusercontent.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">Google Client Secret (Optional override):</label>
+              <input type="password" id="inputGdriveClientSecret" placeholder="GOCSPX-..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 font-mono">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+            <button onclick="fixFalselyStagedArticles()" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+              🔄 Reset Falsely Staged Articles
+            </button>
+            <button onclick="saveGdriveCredentials()" id="btnSaveGdriveCreds" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow shadow-amber-500/20 transition flex items-center space-x-1.5">
+              <span>Save & Verify Credentials</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Help Guide -->
         <div class="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-300 space-y-2">
-          <div class="font-semibold text-white">How Input Automation stages content for Output Automation:</div>
-          <p class="text-slate-400 leading-relaxed">
-            1. Every RSS source has a designated <code class="font-mono text-cyan-300">gdriveFolderId</code>.<br>
-            2. When an article is fetched, the AI/TTS renderer produces a 9:16 MP4 video reel with audio narration and viral hashtags.<br>
-            3. The video is uploaded to the Google Drive folder via resumable Google Drive API v3.<br>
-            4. The article status is updated to <code class="font-mono text-emerald-300">uploaded_to_drive</code> in MongoDB Atlas.<br>
-            5. Output Automation scans this Drive folder on its own cron schedule and broadcasts each video to Facebook, YouTube, TikTok, and Telegram!
-          </p>
+          <div class="font-semibold text-white">How to generate a fresh Google Drive Refresh Token in 60 seconds:</div>
+          <ol class="list-decimal list-inside text-slate-400 space-y-1 leading-relaxed text-[11px]">
+            <li>Open the <a href="https://developers.google.com/oauthplayground" target="_blank" class="text-blue-400 hover:underline">Google OAuth 2.0 Playground</a> in a new tab.</li>
+            <li>Click the ⚙️ (gear icon) on top right, check <strong>"Use your own OAuth credentials"</strong>, and enter your Client ID & Client Secret.</li>
+            <li>In Step 1 on the left, scroll down to <strong>Drive API v3</strong> and select <code class="text-cyan-300">https://www.googleapis.com/auth/drive.file</code> and <code class="text-cyan-300">https://www.googleapis.com/auth/drive</code>.</li>
+            <li>Click <strong>Authorize APIs</strong> and approve the Google account that owns the folder.</li>
+            <li>In Step 2, click <strong>Exchange authorization code for tokens</strong>. Copy the <code class="text-emerald-300">Refresh token</code> and paste it above!</li>
+          </ol>
         </div>
       </div>
     </div>
@@ -905,8 +952,132 @@
         document.getElementById('diagStorageKeys').innerText = (data.database?.vercelStorage?.detectedKeys || []).join(', ') || 'None';
         document.getElementById('diagServerTime').innerText = `Server Time: ${new Date(data.environment?.serverTime || Date.now()).toLocaleTimeString()}`;
 
+        // Check Google Drive connection in background
+        testDriveConnection(false);
+
       } catch (err) {
         console.warn('Status error:', err);
+      }
+    }
+
+    // Test Google Drive Connection & Folder Access
+    async function testDriveConnection(notify = true) {
+      const banner = document.getElementById('gdriveHealthBanner');
+      const icon = document.getElementById('gdriveHealthIcon');
+      const title = document.getElementById('gdriveHealthTitle');
+      const msg = document.getElementById('gdriveHealthMsg');
+      const tokenDisplay = document.getElementById('gdriveDisplayTokenPrefix');
+      const btn = document.getElementById('btnTestDrive');
+      const btnText = document.getElementById('btnTestDriveText');
+
+      if (notify && btn && btnText) {
+        btn.disabled = true;
+        btnText.innerText = 'Testing...';
+      }
+
+      try {
+        const res = await fetch('/api/gdrive/status');
+        const data = await res.json();
+
+        if (tokenDisplay) {
+          tokenDisplay.innerText = data.tokenPrefix ? `${data.tokenPrefix} (Active in DB)` : (data.hasRefreshToken ? 'Configured' : 'Missing');
+        }
+
+        if (data.tokenValid && data.folderAccessible) {
+          banner.className = 'p-4 rounded-xl border flex items-start space-x-3 bg-emerald-950/40 border-emerald-800/60 text-xs';
+          icon.className = 'mt-0.5 w-3 h-3 rounded-full bg-emerald-400';
+          title.className = 'font-bold text-emerald-400';
+          title.innerText = `🟢 Connected & Authorized: ${data.folderName || 'Target Folder'}`;
+          msg.className = 'text-slate-300 text-[11px] leading-relaxed';
+          msg.innerText = `Google Drive OAuth token is verified and folder "${data.folderId || data.configuredFolderId}" is write-accessible.`;
+          if (notify) showToast('Google Drive connection verified!', 'success');
+        } else if (data.tokenValid && !data.folderAccessible) {
+          banner.className = 'p-4 rounded-xl border flex items-start space-x-3 bg-amber-950/40 border-amber-800/60 text-xs';
+          icon.className = 'mt-0.5 w-3 h-3 rounded-full bg-amber-400';
+          title.className = 'font-bold text-amber-400';
+          title.innerText = '🟡 OAuth Token Valid, but Folder Inaccessible';
+          msg.className = 'text-slate-300 text-[11px] leading-relaxed';
+          msg.innerText = data.error || 'The folder ID may be invalid or not shared with the OAuth user.';
+          if (notify) showToast('Folder check note: ' + (data.error || 'Check folder ID'), 'warning');
+        } else {
+          banner.className = 'p-4 rounded-xl border flex items-start space-x-3 bg-rose-950/40 border-rose-800/60 text-xs';
+          icon.className = 'mt-0.5 w-3 h-3 rounded-full bg-rose-400';
+          title.className = 'font-bold text-rose-400';
+          title.innerText = '🔴 Google Drive Authorization Failed';
+          msg.className = 'text-rose-200 text-[11px] leading-relaxed';
+          msg.innerText = data.error || 'OAuth token is expired or missing. Please update your refresh token below.';
+          if (notify) showToast(data.error || 'Drive OAuth failed', 'error');
+        }
+      } catch (err) {
+        if (banner && icon && title && msg) {
+          banner.className = 'p-4 rounded-xl border flex items-start space-x-3 bg-rose-950/40 border-rose-800/60 text-xs';
+          icon.className = 'mt-0.5 w-3 h-3 rounded-full bg-rose-400';
+          title.className = 'font-bold text-rose-400';
+          title.innerText = '🔴 Google Drive Diagnostics Error';
+          msg.innerText = err.message;
+        }
+      } finally {
+        if (notify && btn && btnText) {
+          btn.disabled = false;
+          btnText.innerText = 'Test Drive Connection';
+        }
+      }
+    }
+
+    // Save Updated Google Drive Credentials
+    async function saveGdriveCredentials() {
+      const refreshToken = (document.getElementById('inputGdriveRefreshToken')?.value || '').trim();
+      const clientId = (document.getElementById('inputGdriveClientId')?.value || '').trim();
+      const clientSecret = (document.getElementById('inputGdriveClientSecret')?.value || '').trim();
+      const btn = document.getElementById('btnSaveGdriveCreds');
+
+      if (!refreshToken && !clientId && !clientSecret) {
+        showToast('Please enter a Refresh Token or client credentials to save.', 'warning');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      try {
+        const res = await fetch('/api/gdrive/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken, clientId, clientSecret }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Google Drive credentials updated in MongoDB!', 'success');
+          document.getElementById('inputGdriveRefreshToken').value = '';
+          document.getElementById('inputGdriveClientSecret').value = '';
+          await testDriveConnection(true);
+        } else {
+          showToast(data.error || 'Failed to update credentials', 'error');
+        }
+      } catch (err) {
+        showToast('Error saving credentials: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Save & Verify Credentials';
+      }
+    }
+
+    // Reset Falsely Staged Articles
+    async function fixFalselyStagedArticles() {
+      if (!confirm('This will reset articles that were falsely marked as staged due to previous offline fallbacks so they can be processed and uploaded to Google Drive. Proceed?')) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/gdrive/fix-staged', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          await loadAllData();
+        } else {
+          showToast(data.error || 'Failed to reset articles', 'error');
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
       }
     }
 
