@@ -1,2 +1,6 @@
+packages:
+  - 'input-automation'
+  - 'output-automation'
+
 allowBuilds:
   esbuild: true
