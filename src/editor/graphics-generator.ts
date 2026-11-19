@@ -131,6 +131,14 @@ export class GraphicsGenerator {
     const cleanTitle = this.escapeXml(title.length > 50 ? `${title.slice(0, 47)}...` : title);
     const cleanSport = this.escapeXml(sport.toUpperCase());
 
+    const accentColors = ['#f43f5e', '#f97316', '#10b981', '#06b6d4', '#8b5cf6', '#ec4899', '#eab308'];
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) {
+      hash = (hash * 31 + title.charCodeAt(i)) & 0xffffffff;
+    }
+    const pillColor = accentColors[Math.abs(hash) % accentColors.length];
+    const strokeColor = accentColors[Math.abs(hash + 2) % accentColors.length];
+
     const overlaySvg = `
       <svg width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -146,13 +154,13 @@ export class GraphicsGenerator {
         <rect x="0" y="0" width="1080" height="1920" fill="url(#vignette)" />
 
         <!-- Sport Category Pill (Top) -->
-        <rect x="70" y="160" width="280" height="64" rx="16" fill="#e11d48" />
+        <rect x="70" y="160" width="280" height="64" rx="16" fill="${pillColor}" />
         <text x="210" y="204" font-family="Arial, sans-serif" font-size="32" font-weight="900" fill="#ffffff" text-anchor="middle">
           ${cleanSport}
         </text>
 
         <!-- Main Catchy Title Box (Bottom Center) -->
-        <rect x="60" y="1320" width="960" height="260" rx="24" fill="#0f172a" fill-opacity="0.9" stroke="#f43f5e" stroke-width="4" />
+        <rect x="60" y="1320" width="960" height="260" rx="24" fill="#0f172a" fill-opacity="0.9" stroke="${strokeColor}" stroke-width="4" />
         <text x="100" y="1420" font-family="Arial, sans-serif" font-size="52" font-weight="900" fill="#ffffff">
           ${cleanTitle}
         </text>

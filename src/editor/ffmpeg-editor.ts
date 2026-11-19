@@ -145,14 +145,34 @@ export class FFmpegEditor implements Editor {
       await this.extractPosterFrame(outputPath, rawFramePath, 2);
     } catch (frameErr: any) {
       logger.warn({ clipId, err: frameErr.message }, 'Frame extraction note; creating synthetic poster base');
-      await sharp({
-        create: {
-          width: this.targetWidth,
-          height: this.targetHeight,
-          channels: 3,
-          background: { r: 15, g: 23, b: 42 },
-        },
-      }).jpeg().toFile(rawFramePath);
+      let colorHash = 0;
+      for (let i = 0; i < clipId.length; i++) {
+        colorHash = (colorHash * 31 + clipId.charCodeAt(i)) & 0xffffffff;
+      }
+      const palettePairs = [
+        ['#0f172a', '#e11d48'],
+        ['#022c22', '#059669'],
+        ['#1e1b4b', '#4f46e5'],
+        ['#431407', '#ea580c'],
+        ['#082f49', '#0284c7'],
+        ['#18181b', '#d97706'],
+        ['#3b0764', '#c026d3'],
+        ['#042f2e', '#0d9488'],
+      ];
+      const [colStart, colEnd] = palettePairs[Math.abs(colorHash) % palettePairs.length];
+      const gradientSvg = Buffer.from(`
+        <svg width="${this.targetWidth}" height="${this.targetHeight}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${colStart}" />
+              <stop offset="50%" stop-color="#0f172a" />
+              <stop offset="100%" stop-color="${colEnd}" />
+            </linearGradient>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#g)" />
+        </svg>
+      `);
+      await sharp(gradientSvg).jpeg().toFile(rawFramePath);
     }
 
     try {

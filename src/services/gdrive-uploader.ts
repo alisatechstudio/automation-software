@@ -182,6 +182,8 @@ export class GoogleDriveUploader {
             folderId: targetFolder,
             folderUrl: targetFolderUrl,
           };
+        } else if (uploadResult.error) {
+          logger.warn({ error: uploadResult.error, folderId: targetFolder }, 'Google Drive upload returned error');
         }
       } catch (uploadErr: any) {
         logger.error({ err: uploadErr.message }, 'Google Drive API cloud upload failed');

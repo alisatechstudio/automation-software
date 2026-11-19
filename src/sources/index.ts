@@ -14,43 +14,20 @@ export function createSources(loaded: LoadedConfig): Source[] {
   const blocklist = config.compliance.blocklist;
   const licensedAgreements = config.sources.partnerFeeds.map((f) => f.name);
 
-  // 1. Watched Inbox Folder
-  if (config.sources.watchedFolder.enabled) {
+  // 1. Pixabay (High quality licensed commercial stock sports video)
+  const pixabayKey = env.PIXABAY_API_KEY || process.env.PIXABAY_API_KEY;
+  if (config.sources.pixabay.enabled && pixabayKey) {
     sources.push(
-      new WatchedFolderSource({
-        inboxPath: config.sources.watchedFolder.path,
-        requirePermissionFile: config.sources.watchedFolder.requirePermissionFile,
+      new PixabaySource({
+        apiKey: pixabayKey,
+        searchSports: config.sources.pixabay.searchSports,
         blocklist,
         licensedAgreements,
       })
     );
   }
 
-  // 2. Wikimedia Commons / Internet Archive
-  if (config.sources.commonsArchive.enabled) {
-    sources.push(
-      new CommonsArchiveSource({
-        categories: config.sources.commonsArchive.defaultCategories,
-        blocklist,
-        licensedAgreements,
-      })
-    );
-  }
-
-  // 3. YouTube Creative Commons
-  if (config.sources.youtubeCc.enabled) {
-    sources.push(
-      new YouTubeCCSource({
-        apiKey: env.YOUTUBE_CLIENT_ID ? undefined : undefined, // can use public API key or OAuth if configured
-        queries: config.sources.youtubeCc.queries,
-        maxResults: config.sources.youtubeCc.maxResults,
-        blocklist,
-        licensedAgreements,
-      })
-    );
-  }
-
-  // 4. Pexels
+  // 2. Pexels
   const pexelsKey = env.PEXELS_API_KEY || process.env.PEXELS_API_KEY;
   if (config.sources.pexels.enabled && pexelsKey) {
     sources.push(
@@ -63,13 +40,36 @@ export function createSources(loaded: LoadedConfig): Source[] {
     );
   }
 
-  // 5. Pixabay
-  const pixabayKey = env.PIXABAY_API_KEY || process.env.PIXABAY_API_KEY;
-  if (config.sources.pixabay.enabled && pixabayKey) {
+  // 3. Wikimedia Commons / Internet Archive
+  if (config.sources.commonsArchive.enabled) {
     sources.push(
-      new PixabaySource({
-        apiKey: pixabayKey,
-        searchSports: config.sources.pixabay.searchSports,
+      new CommonsArchiveSource({
+        categories: config.sources.commonsArchive.defaultCategories,
+        blocklist,
+        licensedAgreements,
+      })
+    );
+  }
+
+  // 4. Watched Inbox Folder
+  if (config.sources.watchedFolder.enabled) {
+    sources.push(
+      new WatchedFolderSource({
+        inboxPath: config.sources.watchedFolder.path,
+        requirePermissionFile: config.sources.watchedFolder.requirePermissionFile,
+        blocklist,
+        licensedAgreements,
+      })
+    );
+  }
+
+  // 5. YouTube Creative Commons
+  if (config.sources.youtubeCc.enabled) {
+    sources.push(
+      new YouTubeCCSource({
+        apiKey: env.YOUTUBE_CLIENT_ID ? undefined : undefined,
+        queries: config.sources.youtubeCc.queries,
+        maxResults: config.sources.youtubeCc.maxResults,
         blocklist,
         licensedAgreements,
       })

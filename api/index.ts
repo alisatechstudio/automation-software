@@ -15,9 +15,20 @@ export default async function handler(req: any, res: any) {
           const db = await initDatabase(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || 'news_automation');
           const settingsDocs = await db.collection('settings').find({}).toArray().catch(() => []);
           for (const s of settingsDocs) {
-            if (s.key && s.value && !process.env[s.key]) {
-              process.env[s.key] = String(s.value);
+            const k = (typeof s.key === 'string' && s.key.trim()) || (typeof s._id === 'string' && s._id.trim()) || '';
+            if (k && s.value !== undefined && !process.env[k]) {
+              process.env[k] = String(s.value);
             }
+          }
+          // Ensure aliases are set for Google OAuth
+          if (!process.env.GOOGLE_CLIENT_ID && process.env.YOUTUBE_CLIENT_ID) {
+            process.env.GOOGLE_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID;
+          }
+          if (!process.env.GOOGLE_CLIENT_SECRET && process.env.YOUTUBE_CLIENT_SECRET) {
+            process.env.GOOGLE_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET;
+          }
+          if (!process.env.GOOGLE_REFRESH_TOKEN && process.env.GDRIVE_REFRESH_TOKEN) {
+            process.env.GOOGLE_REFRESH_TOKEN = process.env.GDRIVE_REFRESH_TOKEN;
           }
         } catch (dbErr) {
           console.warn('MongoDB connection warning:', dbErr);

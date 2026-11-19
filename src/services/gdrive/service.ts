@@ -1321,7 +1321,10 @@ export class GDriveReelService {
 
       if (!refreshToken) {
         const sRef = await db.collection('settings').findOne({
-          _id: { $in: ['GDRIVE_REFRESH_TOKEN', 'GOOGLE_REFRESH_TOKEN', 'YOUTUBE_REFRESH_TOKEN'] as any },
+          $or: [
+            { key: { $in: ['GDRIVE_REFRESH_TOKEN', 'GOOGLE_REFRESH_TOKEN', 'YOUTUBE_REFRESH_TOKEN'] } },
+            { _id: { $in: ['GDRIVE_REFRESH_TOKEN', 'GOOGLE_REFRESH_TOKEN', 'YOUTUBE_REFRESH_TOKEN'] as any } },
+          ],
         });
         if (sRef?.value) refreshToken = sRef.value;
       }
@@ -1348,10 +1351,16 @@ export class GDriveReelService {
 
       if (refreshToken) {
         const sId = await db.collection('settings').findOne({
-          _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any },
+          $or: [
+            { key: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] } },
+            { _id: { $in: ['GOOGLE_CLIENT_ID', 'GDRIVE_CLIENT_ID', 'YOUTUBE_CLIENT_ID'] as any } },
+          ],
         });
         const sSec = await db.collection('settings').findOne({
-          _id: { $in: ['GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET', 'YOUTUBE_CLIENT_SECRET'] as any },
+          $or: [
+            { key: { $in: ['GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET', 'YOUTUBE_CLIENT_SECRET'] } },
+            { _id: { $in: ['GOOGLE_CLIENT_SECRET', 'GDRIVE_CLIENT_SECRET', 'YOUTUBE_CLIENT_SECRET'] as any } },
+          ],
         });
         const clientId =
           (sId?.value && sId.value.trim()) ||

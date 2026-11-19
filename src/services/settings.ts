@@ -35,8 +35,9 @@ export async function refreshDbSettings(force = false): Promise<Map<string, stri
     const rows = await db.collection<Setting>('settings').find({}).toArray();
     cache.clear();
     for (const r of rows) {
-      if (r && r._id && typeof r.value === 'string') {
-        cache.set(r._id, r.value);
+      const settingKey = (typeof (r as any).key === 'string' && (r as any).key.trim()) || (typeof r._id === 'string' && r._id.trim()) || '';
+      if (settingKey && r.value !== undefined) {
+        cache.set(settingKey, String(r.value));
       }
     }
     lastFetched = Date.now();
