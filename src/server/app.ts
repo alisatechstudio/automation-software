@@ -9,6 +9,8 @@ import type { LoadedConfig } from '../config/index.js';
 import { logger } from '../logger.js';
 import { scanGoogleDriveFolder, extractFolderId } from '../services/gdrive-scanner.js';
 import { GoogleDriveUploader } from '../services/gdrive-uploader.js';
+import { GDriveReelService } from '../services/gdrive/service.js';
+import { InputPipelineService } from '../services/pipeline/input-pipeline.js';
 
 export interface ServerDependencies {
   repo: DbRepository;
@@ -21,6 +23,8 @@ export function createServer(deps: ServerDependencies) {
   const app = express();
   const { repo, approvalManager, pipeline, config } = deps;
   const gdriveUploader = new GoogleDriveUploader(repo);
+  const gdriveReelService = new GDriveReelService();
+  const inputPipelineService = new InputPipelineService();
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -594,22 +598,50 @@ export function createServer(deps: ServerDependencies) {
 
   // 8. Publish Next Reel for Channel
   app.post('/api/gdrive-reels/channels/:id/publish-next', async (req: Request, res: Response) => {
-    res.json({ success: true, message: 'Scheduled reel check triggered for channel' });
+    try {
+      logger.info({ channelId: req.params.id }, 'Manual trigger: Publish next reel for channel');
+      const result = await gdriveReelService.publishNextForChannel(req.params.id);
+      res.json(result);
+    } catch (err: any) {
+      logger.error({ channelId: req.params.id, err: err.message }, 'Failed publishing next reel');
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // 9. Publish Specific File for Channel
   app.post('/api/gdrive-reels/channels/:id/publish-file', async (req: Request, res: Response) => {
-    res.json({ success: true, message: 'Reel queued for publication' });
+    try {
+      const { fileId } = req.body || {};
+      if (!fileId) return res.status(400).json({ success: false, error: 'Missing fileId in body' });
+      logger.info({ channelId: req.params.id, fileId }, 'Manual trigger: Publish specific file');
+      const result = await gdriveReelService.publishSpecificFileForChannel(req.params.id, fileId);
+      res.json(result);
+    } catch (err: any) {
+      logger.error({ channelId: req.params.id, err: err.message }, 'Failed publishing specific file');
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // 10. Publish All Due Channels Immediately
   app.post('/api/gdrive-reels/publish-all-due', async (req: Request, res: Response) => {
-    res.json({ success: true, summary: { totalChannels: 0, activeChannels: 0, processed: [] } });
+    try {
+      logger.info('Manual trigger: Publish all due channels');
+      const result = await gdriveReelService.publishAllDueChannels({ force: true });
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      logger.error({ err: err.message }, 'Failed publishing all due channels');
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // 11. Delete Specific Drive File
   app.delete('/api/gdrive-reels/files/:fileId', async (req: Request, res: Response) => {
-    res.json({ success: true });
+    try {
+      const result = await gdriveReelService.deleteDriveFile(req.params.fileId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // 12. OAuth Auth URL
@@ -794,17 +826,33 @@ export function createServer(deps: ServerDependencies) {
   app.all(['/api/cron/input', '/api/cron/input/:sourceId'], async (req: Request, res: Response) => {
     if (!verifyCronSecret(req, res)) return;
     try {
-      const targetSourceId = req.params.sourceId || (req.query.sourceId as string);
-      logger.info({ targetSourceId }, 'External cron trigger: News Stage 1 Input');
+      const targetSourceId = (req.params.sourceId as string) || (req.query.sourceId as string) || (req.query.source as string) || (req.query.feed as string);
+      const targetFolderId = (req.query.folderId as string) || (req.query.folder as string);
+      const targetPageId = (req.query.pageId as string) || (req.query.page as string);
+      const allParam = req.query.all === 'true' || req.query.allSources === 'true';
+      const force = req.query.force === 'true';
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const maxArticles = parseInt((req.query.max as string) || (req.query.limit as string) || '1', 10) || 1;
+
+      logger.info({ targetSourceId, targetFolderId, maxArticles }, 'External cron trigger: News Stage 1 Input');
+      const inputResult = await inputPipelineService.runInputCron({
+        sourceId: targetSourceId,
+        folderId: targetFolderId,
+        pageId: targetPageId,
+        allSources: allParam,
+        force,
+        maxArticlesPerSource: maxArticles,
+        limit: limitParam,
+      });
+
       res.json({
-        success: true,
+        ...inputResult,
         job: 'input_cron',
         stage: '1_input_ingest_render_drive',
-        sourceId: targetSourceId || 'auto_round_robin',
-        timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      logger.error({ err: err.message }, 'Failed running news input cron');
+      res.status(500).json({ success: false, job: 'input_cron', error: err.message });
     }
   });
 
@@ -812,18 +860,77 @@ export function createServer(deps: ServerDependencies) {
   app.all(['/api/cron/output', '/api/cron/output/:channelId'], async (req: Request, res: Response) => {
     if (!verifyCronSecret(req, res)) return;
     try {
-      const targetChannelId = req.params.channelId || (req.query.channelId as string);
-      logger.info({ targetChannelId }, 'External cron trigger: News Stage 2 Output');
+      const channelId = (req.params.channelId as string) || (req.query.channelId as string) || (req.query.channel as string);
+      const folderId = (req.query.folderId as string) || (req.query.folder as string);
+      const pageId = (req.query.pageId as string) || (req.query.page as string);
+      const force = req.query.force !== 'false';
+
+      logger.info({ channelId, folderId, force }, 'External cron trigger: News Stage 2 Output');
+      const outputResult = await gdriveReelService.publishAllDueChannels({
+        force,
+        channelId,
+        folderId,
+        pageId,
+      });
+
       res.json({
         success: true,
         job: 'output_cron',
         stage: '2_output_drive_post_social_networks',
-        channelId: targetChannelId || 'all_due_channels',
+        channelId: channelId || 'all',
+        folderId: folderId || 'all',
+        pageId: pageId || 'all',
         timestamp: new Date().toISOString(),
+        result: outputResult,
       });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      logger.error({ err: err.message }, 'Failed running news output cron');
+      res.status(500).json({ success: false, job: 'output_cron', error: err.message });
     }
+  });
+
+  // 4B. Universal Cron Gateway Endpoint (/api/cron)
+  app.all('/api/cron', async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    const jobParam = ((req.query.job as string) || '').toLowerCase().trim();
+    if (jobParam === 'input') {
+      try {
+        const targetSourceId = (req.query.sourceId as string) || (req.query.source as string);
+        const maxArticles = parseInt((req.query.max as string) || '1', 10) || 1;
+        const inputResult = await inputPipelineService.runInputCron({
+          sourceId: targetSourceId,
+          maxArticlesPerSource: maxArticles,
+        });
+        return res.json({ ...inputResult, job: 'input_cron' });
+      } catch (err: any) {
+        return res.status(500).json({ success: false, job: 'input_cron', error: err.message });
+      }
+    }
+    if (jobParam === 'output') {
+      try {
+        const channelId = (req.query.channelId as string) || (req.query.channel as string);
+        const outputResult = await gdriveReelService.publishAllDueChannels({
+          force: true,
+          channelId,
+        });
+        return res.json({ success: true, job: 'output_cron', result: outputResult });
+      } catch (err: any) {
+        return res.status(500).json({ success: false, job: 'output_cron', error: err.message });
+      }
+    }
+    if (jobParam === 'sports' || jobParam === 'sports-pipeline') {
+      try {
+        const sportsResult = await pipeline.runCycle();
+        return res.json({ success: true, job: 'sports_pipeline_cycle', result: sportsResult });
+      } catch (err: any) {
+        return res.status(500).json({ success: false, job: 'sports_pipeline_cycle', error: err.message });
+      }
+    }
+    // Default redirect to dynamic catalog
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = req.get('host') || 'automation-software-ten.vercel.app';
+    const baseUrl = `${protocol}://${host}`;
+    return res.redirect(`${baseUrl}/api/cron/catalog`);
   });
 
   // 5. News Automation: Stories Publishing

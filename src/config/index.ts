@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -197,6 +198,14 @@ export function loadConfig(configPath = './config.yaml'): LoadedConfig {
   }
   const config = configParsed.data;
 
+  // If running in serverless (e.g. Vercel Lambda /var/task) or if directory cannot be created locally:
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (isServerless) {
+    config.app.outputDir = path.join(os.tmpdir(), 'sports_clip_bot_output');
+    config.app.tempDir = path.join(os.tmpdir(), 'sports_clip_bot_temp');
+    config.app.dataDir = path.join(os.tmpdir(), 'sports_clip_bot_data');
+  }
+
   // Ensure necessary runtime directories exist (ignoring read-only filesystem environments)
   const dirsToEnsure = [
     config.app.dataDir,
@@ -208,7 +217,7 @@ export function loadConfig(configPath = './config.yaml'): LoadedConfig {
 
   for (const dir of dirsToEnsure) {
     try {
-      const fullPath = path.resolve(process.cwd(), dir);
+      const fullPath = path.isAbsolute(dir) ? dir : path.resolve(process.cwd(), dir);
       if (!fs.existsSync(fullPath)) {
         fs.mkdirSync(fullPath, { recursive: true });
       }

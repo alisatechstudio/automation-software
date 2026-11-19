@@ -3,6 +3,34 @@ import { logger } from '../logger.js';
 
 let clientInstance: MongoClient | null = null;
 let dbInstance: Db | null = null;
+let lastDbError: string | null = null;
+
+export function isDbConnected(): boolean {
+  return !!dbInstance;
+}
+
+export function isMongoConnected(): boolean {
+  return !!dbInstance;
+}
+
+export function getLastDbError(): string | null {
+  return lastDbError;
+}
+
+export function getLastMongoError(): string | null {
+  return lastDbError;
+}
+
+export function setDatabaseInstance(db: any): void {
+  dbInstance = db;
+}
+
+export async function initMongoDb(
+  uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
+  dbName = process.env.MONGODB_DB_NAME || 'news_automation'
+): Promise<Db> {
+  return initDatabase(uri, dbName);
+}
 
 export async function initDatabase(
   uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
@@ -57,6 +85,7 @@ export async function initDatabase(
     dbInstance = db;
     return dbInstance;
   } catch (err: any) {
+    lastDbError = err.message;
     logger.error({ err: err.message, uri }, 'Failed connecting to MongoDB');
     throw err;
   }

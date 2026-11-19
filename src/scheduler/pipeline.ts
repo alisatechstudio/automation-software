@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type { DbRepository } from '../db/repository.js';
@@ -86,8 +87,14 @@ export class SportsClipPipeline {
       // Download remote asset to temp file if HTTP/HTTPS
       if (cleanFilePath.startsWith('http://') || cleanFilePath.startsWith('https://')) {
         try {
-          const tempDir = path.resolve(process.cwd(), this.config.config.app.tempDir || './data/temp');
-          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          const configuredTemp = this.config.config.app.tempDir || './data/temp';
+          let tempDir = path.isAbsolute(configuredTemp) ? configuredTemp : path.resolve(process.cwd(), configuredTemp);
+          try {
+            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          } catch {
+            tempDir = path.join(os.tmpdir(), 'sports_clip_bot_temp');
+            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          }
           const parsedUrl = new URL(cleanFilePath);
           const ext = path.extname(parsedUrl.pathname) || '.mp4';
           const localDest = path.join(tempDir, `remote_${clip.id}${ext}`);
@@ -134,10 +141,18 @@ export class SportsClipPipeline {
     logger.info({ clipId: clip.id }, 'Generating original script and breakdown cards via Claude API...');
     const scriptData = await this.scriptGen.generateScript(clip, targetDuration);
 
-    // 2. Prepare file paths
+    // 2. Prepare file paths safely (with /tmp fallback for serverless read-only environments)
     const videoId = `video_${clip.id}_${Date.now()}`;
-    const outputVideoPath = path.resolve(this.config.config.app.outputDir, `${videoId}.mp4`);
-    const outputThumbPath = path.resolve(this.config.config.app.outputDir, `${videoId}_thumb.jpg`);
+    const configuredOut = this.config.config.app.outputDir || './data/output';
+    let outDir = path.isAbsolute(configuredOut) ? configuredOut : path.resolve(process.cwd(), configuredOut);
+    try {
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    } catch {
+      outDir = path.join(os.tmpdir(), 'sports_clip_bot_output');
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    }
+    const outputVideoPath = path.join(outDir, `${videoId}.mp4`);
+    const outputThumbPath = path.join(outDir, `${videoId}_thumb.jpg`);
 
     // 3. Render Transformative Video (9:16 vertical, graphics, captions, lower-third, loudnorm)
     const editResult = await this.editor.process({
