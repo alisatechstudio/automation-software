@@ -4,22 +4,34 @@ import os from 'os';
 import crypto from 'crypto';
 import { EdgeTTS } from 'node-edge-tts';
 // @ts-ignore
-import { WebSocket } from 'ws';
-// @ts-ignore
 import {
   TRUSTED_CLIENT_TOKEN,
   generateSecMsGecToken_V2,
   SEC_MS_GEC_VERSION_V2,
   CHROMIUM_FULL_VERSION,
 } from 'node-edge-tts/dist/drm.js';
-// @ts-ignore
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { SynthesisOptions, TtsConnectionStatus } from './types.js';
 import { cleanSpeechScript } from './cleaner.js';
 
+// Safe dynamic import with fallback to global WebSocket so module load never crashes
+let WS: any = globalThis.WebSocket;
+try {
+  const wsMod = await import('ws');
+  WS = wsMod.WebSocket || wsMod.default || globalThis.WebSocket;
+} catch {
+  WS = globalThis.WebSocket;
+}
+
+let HttpsProxyAgent: any = undefined;
+try {
+  const proxyMod = await import('https-proxy-agent');
+  HttpsProxyAgent = proxyMod.HttpsProxyAgent;
+} catch {}
+
 // Patch node-edge-tts WebSocket connection to avoid 429 errors caused by mismatched host header
 (EdgeTTS.prototype as any)._connectWebSocket = async function (): Promise<any> {
-  const wsConnect = new WebSocket(
+  const TargetWS = WS || globalThis.WebSocket;
+  const wsConnect = new TargetWS(
     `wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken_V2()}&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION_V2}`,
     {
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
@@ -30,7 +42,7 @@ import { cleanSpeechScript } from './cleaner.js';
         'Accept-Encoding': 'gzip, deflate, br, zstd',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      agent: this.proxy ? new HttpsProxyAgent(this.proxy) : undefined,
+      agent: this.proxy && HttpsProxyAgent ? new HttpsProxyAgent(this.proxy) : undefined,
     }
   );
 

@@ -1,15 +1,15 @@
+import { initDatabase } from '../src/db/index.js';
+import { createServer } from '../src/server/app.js';
+import { loadConfig } from '../src/config/index.js';
+import { DbRepository } from '../src/db/repository.js';
+import { ApprovalManager } from '../src/approval/manager.js';
+import { SportsClipPipeline } from '../src/scheduler/pipeline.js';
+
 let cachedApp: any = null;
 
 export default async function handler(req: any, res: any) {
   try {
     if (!cachedApp) {
-      const { initDatabase } = await import('../src/db/index.js');
-      const { createServer } = await import('../src/server/app.js');
-      const { loadConfig } = await import('../src/config/index.js');
-      const { DbRepository } = await import('../src/db/repository.js');
-      const { ApprovalManager } = await import('../src/approval/manager.js');
-      const { SportsClipPipeline } = await import('../src/scheduler/pipeline.js');
-
       if (process.env.MONGODB_URI) {
         try {
           const db = await initDatabase(process.env.MONGODB_URI, process.env.MONGODB_DB_NAME || 'news_automation');
