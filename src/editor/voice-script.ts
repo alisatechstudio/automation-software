@@ -78,19 +78,65 @@ Return a JSON object ONLY with the following structure:
   }
 
   private generateFallbackScript(clip: ClipMeta, targetDurationSec: number): ScriptGenerationResult {
-    const sport = clip.sport || 'Sports';
-    const script = `In this ${sport} breakdown, notice the exact biomechanical execution and timing displayed right here. Achieving this level of precision requires intense core stabilization, kinetic chain transfer, and split-second reaction speed. When analyzed in slow motion, the technical consistency separates elite athletes from amateurs. That is what peak performance looks like.`;
+    const sport = clip.sport || 'Athletics';
+    const cleanTitle = clip.title.slice(0, 45);
 
-    const description = `In-depth technical breakdown and analysis of ${sport} execution in "${clip.title}". Examining form, speed, and athletic mechanics.`;
+    const scriptTemplates = [
+      {
+        title: `${sport} Biomechanics: Kinetic Chain & Power`,
+        script: `In this ${sport} breakdown of "${cleanTitle}", study how the kinetic chain delivers maximum explosive force. Force production originates from the lower body drive, transfers through the stabilized core, and culminates in a flawless terminal release. Slow-motion analysis reveals why micro-adjustments in balance make all the difference at high velocity.`,
+        description: `Biomechanical analysis and kinetic chain breakdown of ${sport} form in "${clip.title}". Examining force production, posture, and technical discipline.`,
+        tags: [sport, 'Biomechanics', 'SportsScience', 'KineticChain', 'AthleticPerformance'],
+        cards: [
+          { title: 'KINETIC TRANSFER', statOrFact: 'Lower-Body Force to Core', subtitle: 'Optimal rotational power sequencing', startTime: 2, duration: 8 },
+          { title: 'TECHNICAL FOCUS', statOrFact: 'Balance & Center of Mass', subtitle: 'Micro-adjustments at terminal velocity', startTime: 12, duration: 8 },
+        ],
+      },
+      {
+        title: `${sport} Mastery: Tactical Timing & Execution`,
+        script: `Observing elite ${sport} competition highlights how crucial split-second anticipation is. Watch how the athlete positions their center of gravity right before committing to the movement in "${cleanTitle}". This tactical patience forces opponents out of position and opens up prime scoring lanes. That level of spatial awareness takes thousands of hours to master.`,
+        description: `Tactical breakdown and spatial analysis of ${sport} execution in "${clip.title}". Exploring defensive anticipation, timing, and positional strategy.`,
+        tags: [sport, 'TacticalAnalysis', 'SportsStrategy', 'Anticipation', 'ProAthletics'],
+        cards: [
+          { title: 'SPATIAL AWARENESS', statOrFact: 'Anticipation & Deceleration', subtitle: 'Creating positional advantage', startTime: 2, duration: 8 },
+          { title: 'TACTICAL DISCIPLINE', statOrFact: 'Center of Gravity Control', subtitle: 'Patience before explosive commitment', startTime: 12, duration: 8 },
+        ],
+      },
+      {
+        title: `${sport} Technical Breakdown: Footwork & Leverage`,
+        script: `Analyzing the athletic mechanics here in ${sport}: note the immaculate footwork and angular leverage on display. By establishing a wide, planted base during the setup in "${cleanTitle}", the athlete maintains total control under pressure. When we dissect the deceleration phase, notice how the joints absorb impact cleanly to avoid wasted energy.`,
+        description: `Technical analysis of footwork, ground force reaction, and leverage in ${sport} ("${clip.title}"). Breaking down deceleration and balance.`,
+        tags: [sport, 'FootworkDrills', 'Leverage', 'FormAnalysis', 'SportsMechanics'],
+        cards: [
+          { title: 'GROUND REACTION FORCE', statOrFact: 'Angular Leverage Base', subtitle: 'Wide planted stance under pressure', startTime: 2, duration: 8 },
+          { title: 'ENERGY CONSERVATION', statOrFact: 'Clean Deceleration Phase', subtitle: 'Minimizing joint stress & fatigue', startTime: 12, duration: 8 },
+        ],
+      },
+      {
+        title: `${sport} Performance Review: Reaction Speed & Form`,
+        script: `High-velocity ${sport} demands near-instantaneous neural processing. In this sequence from "${cleanTitle}", the response time between stimulus detection and physical execution is virtually instantaneous. Notice how posture remains aligned throughout the movement, preventing mechanical breakdown when fatigue sets in. That is championship-caliber conditioning.`,
+        description: `Performance analysis of reaction speed and postural alignment during high-intensity ${sport} in "${clip.title}".`,
+        tags: [sport, 'ReactionTime', 'Conditioning', 'PerformanceReview', 'Shorts'],
+        cards: [
+          { title: 'NEURAL PROCESSING', statOrFact: 'Sub-Second Stimulus Response', subtitle: 'Elite reaction timing under pressure', startTime: 2, duration: 8 },
+          { title: 'POSTURAL INTEGRITY', statOrFact: 'Spine & Core Neutrality', subtitle: 'Preventing fatigue-induced breakdown', startTime: 12, duration: 8 },
+        ],
+      },
+    ];
 
-    const tags = [sport, 'SportsScience', 'PerformanceAnalysis', 'Biomechanics', 'Shorts'];
+    // Pick template based on clip ID hash to ensure diversity across candidate clips
+    let hash = 0;
+    for (let i = 0; i < clip.id.length; i++) {
+      hash = (hash * 31 + clip.id.charCodeAt(i)) & 0xffffffff;
+    }
+    const selected = scriptTemplates[Math.abs(hash) % scriptTemplates.length];
 
     return {
-      title: `${sport} Mechanics Breakdown: Form & Precision`,
-      script,
-      description,
-      tags,
-      graphicsCards: this.getDefaultGraphicsCards(clip),
+      title: selected.title,
+      script: selected.script,
+      description: selected.description,
+      tags: selected.tags,
+      graphicsCards: selected.cards,
     };
   }
 
