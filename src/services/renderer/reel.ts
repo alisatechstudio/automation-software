@@ -9,9 +9,6 @@ import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 import { UnifiedTtsService } from '../tts/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 
 let ffmpegPath: string = '';
 try {
@@ -354,7 +351,7 @@ export class ReelVideoRenderer {
     const candidatePaths = [
       path.join(config.ASSETS_DIR, 'fonts'),
       path.join(process.cwd(), 'assets', 'fonts'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'fonts'),
+      path.join(process.cwd(), 'public', 'assets', 'fonts'),
     ];
 
     const fontsDir = candidatePaths.find((p) => fs.existsSync(p));

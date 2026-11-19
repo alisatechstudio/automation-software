@@ -7,9 +7,6 @@ import { ImageRenderer, RenderInput, RenderOutput } from './types.js';
 import { config } from '../../config/env.js';
 import { isEnglishText } from '../../config/constants.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export class CanvasCardRenderer implements ImageRenderer {
   private fontsRegistered: boolean = false;
 
@@ -23,7 +20,7 @@ export class CanvasCardRenderer implements ImageRenderer {
     const candidatePaths = [
       path.join(config.ASSETS_DIR, 'fonts'),
       path.join(process.cwd(), 'assets', 'fonts'),
-      path.join(__dirname, '..', '..', '..', 'assets', 'fonts'),
+      path.join(process.cwd(), 'public', 'assets', 'fonts'),
     ];
 
     const fontsDir = candidatePaths.find((p) => fs.existsSync(p));
