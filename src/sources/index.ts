@@ -7,6 +7,7 @@ import { PexelsSource } from './pexels.js';
 import { PixabaySource } from './pixabay.js';
 import { PartnerFeedSource } from './partner-feed.js';
 import { logger } from '../logger.js';
+import { getDbSettingSync } from '../services/settings.js';
 
 export function createSources(loaded: LoadedConfig): Source[] {
   const { config, env } = loaded;
@@ -15,7 +16,7 @@ export function createSources(loaded: LoadedConfig): Source[] {
   const licensedAgreements = config.sources.partnerFeeds.map((f) => f.name);
 
   // 1. Pixabay (High quality licensed commercial stock sports video)
-  const pixabayKey = env.PIXABAY_API_KEY || process.env.PIXABAY_API_KEY;
+  const pixabayKey = getDbSettingSync('PIXABAY_API_KEY') || env.PIXABAY_API_KEY || process.env.PIXABAY_API_KEY;
   if (config.sources.pixabay.enabled && pixabayKey) {
     sources.push(
       new PixabaySource({

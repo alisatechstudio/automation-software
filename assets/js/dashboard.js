@@ -266,6 +266,9 @@
       } else if (tabId === 'sports') {
         targetBtnId = 'nav-btn-sports';
         tabNameLabel = 'Sports Clips';
+      } else if (tabId === 'cron-jobs') {
+        targetBtnId = 'nav-btn-cron-jobs';
+        tabNameLabel = 'Cron Management';
       }
 
       const activeBtn = document.getElementById(targetBtnId);
@@ -550,6 +553,7 @@
       if (tabId === 'tiktok') loadTikTokTab();
       if (tabId === 'manual') initManualTab();
       if (tabId === 'sports') loadSportsTab();
+      if (tabId === 'cron-jobs') loadCronJobs();
     }
 
     function scrollManualTo(sectionId) {
@@ -3394,6 +3398,482 @@
         loadSportsTab();
       } catch (e) {
         showToast('Action failed: ' + e.message, true);
+      }
+    }
+
+    // =========================================================================
+    // CRON JOBS MANAGEMENT HUB (cron-job.org API v2)
+    // =========================================================================
+    let allCronJobs = [];
+    let activeCronFilter = 'all';
+
+    function toggleCronKeyVisibility() {
+      const input = document.getElementById('cronjob-api-key-input');
+      if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    async function saveCronJobApiKey() {
+      const input = document.getElementById('cronjob-api-key-input');
+      if (!input) return;
+      const key = input.value.trim();
+      if (!key) {
+        showToast('Please enter a valid cron-job.org API Key', true);
+        return;
+      }
+      try {
+        const res = await safeFetchJson('/api/cronjob/key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key })
+        });
+        if (res.ok && res.data?.success) {
+          showToast('✓ cron-job.org API Key saved and verified!');
+          loadCronJobs(true);
+        } else {
+          showToast('Failed saving API key: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      }
+    }
+
+    async function loadCronJobs(force = false) {
+      const badge = document.getElementById('cron-connection-badge');
+      const tbody = document.getElementById('cron-jobs-table-body');
+      if (badge) {
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>Connecting...';
+        badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60 flex items-center gap-1';
+      }
+
+      try {
+        const [statusRes, jobsRes] = await Promise.all([
+          safeFetchJson('/api/cronjob/status'),
+          safeFetchJson('/api/cronjob/jobs' + (force ? '?force=true' : ''))
+        ]);
+
+        const keyInput = document.getElementById('cronjob-api-key-input');
+        if (keyInput && statusRes.data?.apiKey && !keyInput.value) {
+          keyInput.value = statusRes.data.apiKey;
+        }
+
+        const isConnected = statusRes.ok && statusRes.data?.connected;
+        if (badge) {
+          if (isConnected) {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Connected';
+            badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 flex items-center gap-1';
+          } else {
+            badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Disconnected';
+            badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-rose-950/80 text-rose-300 border border-rose-700/60 flex items-center gap-1';
+          }
+        }
+
+        if (jobsRes.ok && jobsRes.data?.jobs) {
+          allCronJobs = jobsRes.data.jobs || [];
+          updateCronMetrics(allCronJobs);
+          filterCronJobsList();
+        } else {
+          allCronJobs = [];
+          if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-400 font-mono">Failed loading jobs: ' + escapeHtml(jobsRes.data?.error || jobsRes.error || 'Check API Key') + '</td></tr>';
+          }
+        }
+      } catch (err) {
+        if (badge) {
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Error';
+          badge.className = 'px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-rose-950 text-rose-400 border border-rose-800 flex items-center gap-1';
+        }
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-400 font-mono">Network error: ' + escapeHtml(err.message) + '</td></tr>';
+        }
+      }
+    }
+
+    function updateCronMetrics(jobs) {
+      const totalEl = document.getElementById('cron-stat-total');
+      const activeEl = document.getElementById('cron-stat-active');
+      const disabledEl = document.getElementById('cron-stat-disabled');
+      const navBadge = document.getElementById('nav-cron-count-badge');
+
+      const total = jobs.length;
+      const active = jobs.filter(j => j.enabled).length;
+      const disabled = total - active;
+
+      if (totalEl) totalEl.innerText = total;
+      if (activeEl) activeEl.innerText = active;
+      if (disabledEl) disabledEl.innerText = disabled;
+
+      if (navBadge) {
+        navBadge.innerText = active;
+        navBadge.classList.remove('hidden');
+      }
+    }
+
+    function setCronFilter(filter) {
+      activeCronFilter = filter;
+      ['all', 'app', 'active', 'paused'].forEach(f => {
+        const btn = document.getElementById('cron-filter-' + f);
+        if (btn) {
+          if (f === filter) {
+            btn.className = 'px-2.5 py-1 text-xs font-semibold rounded text-white bg-slate-800 border border-slate-700 transition';
+          } else {
+            btn.className = 'px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition';
+          }
+        }
+      });
+      filterCronJobsList();
+    }
+
+    function filterCronJobsList() {
+      const search = (document.getElementById('cron-search-input')?.value || '').toLowerCase().trim();
+      let list = allCronJobs;
+
+      if (activeCronFilter === 'active') {
+        list = list.filter(j => j.enabled);
+      } else if (activeCronFilter === 'paused') {
+        list = list.filter(j => !j.enabled);
+      } else if (activeCronFilter === 'app') {
+        list = list.filter(j => (j.url || '').includes('/api/cron/'));
+      }
+
+      if (search) {
+        list = list.filter(j =>
+          (j.title || '').toLowerCase().includes(search) ||
+          (j.url || '').toLowerCase().includes(search) ||
+          String(j.jobId).includes(search)
+        );
+      }
+
+      renderCronJobsTable(list);
+    }
+
+    function renderCronJobsTable(jobs) {
+      const tbody = document.getElementById('cron-jobs-table-body');
+      if (!tbody) return;
+
+      if (!jobs || jobs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400 font-mono">No matching cron jobs found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = jobs.map(job => {
+        const isAppJob = (job.url || '').includes('/api/cron/');
+        const statusBadge = job.enabled
+          ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Active</span>'
+          : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Paused</span>';
+
+        const lastStatus = job.lastStatus;
+        let lastExecHtml = '<span class="text-slate-500 font-mono text-[11px]">Never run</span>';
+        if (lastStatus !== undefined && lastStatus !== null) {
+          const isSuccess = lastStatus === 1 || lastStatus === 200;
+          const statusText = job.lastExecutionStatus ? (job.lastExecutionStatus.code + ' ' + (job.lastExecutionStatus.text || '')) : (isSuccess ? '200 OK' : 'Failed');
+          const badgeClass = isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-rose-950 text-rose-300 border-rose-700';
+          const durationText = job.lastDuration ? (job.lastDuration + 'ms') : '';
+          const timeText = job.lastExecutionFormatted || (job.lastExecution ? new Date(job.lastExecution * 1000).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka' }) : '');
+
+          lastExecHtml = '<div class="space-y-0.5">' +
+            '<div class="flex items-center gap-1.5">' +
+              '<span class="px-1.5 py-0.2 text-[9px] font-mono font-bold rounded border ' + badgeClass + '">' + escapeHtml(statusText) + '</span>' +
+              (durationText ? '<span class="text-[10px] font-mono text-slate-400">' + durationText + '</span>' : '') +
+            '</div>' +
+            (timeText ? '<div class="text-[10px] text-slate-500 font-mono">' + escapeHtml(timeText) + '</div>' : '') +
+          '</div>';
+        }
+
+        const nextRunText = job.nextExecutionFormatted || (job.nextExecution ? new Date(job.nextExecution * 1000).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) : 'Pending');
+
+        return '<tr class="hover:bg-slate-800/40 transition">' +
+          '<td class="py-2.5 px-3">' +
+            '<div class="font-bold text-slate-100 flex items-center gap-1.5">' +
+              (isAppJob ? '<span class="text-amber-400" title="System Webhook">⚡</span>' : '<span class="text-slate-500">🔗</span>') +
+              '<span>' + escapeHtml(job.title || 'Untitled Job') + '</span>' +
+            '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono">ID: #' + job.jobId + '</div>' +
+          '</td>' +
+          '<td class="py-2.5 px-3 max-w-xs">' +
+            '<div class="flex items-center gap-1.5">' +
+              '<span class="font-mono text-xs text-cyan-300 truncate max-w-[220px]" title="' + escapeHtml(job.url) + '">' + escapeHtml(job.url) + '</span>' +
+              '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(job.url) + '\'); showToast(\'Copied URL\');" class="text-slate-500 hover:text-cyan-300 text-xs transition" title="Copy URL">📋</button>' +
+            '</div>' +
+          '</td>' +
+          '<td class="py-2.5 px-3">' +
+            '<div class="font-semibold text-slate-200">' + escapeHtml(job.scheduleText || 'Custom') + '</div>' +
+            '<div class="text-[10px] text-slate-500 font-mono">' + escapeHtml(job.schedule?.timezone || 'Asia/Dhaka') + '</div>' +
+          '</td>' +
+          '<td class="py-2.5 px-3">' + lastExecHtml + '</td>' +
+          '<td class="py-2.5 px-3 font-mono text-slate-400 text-[11px]">' + escapeHtml(nextRunText) + '</td>' +
+          '<td class="py-2.5 px-3 text-center">' +
+            '<button onclick="toggleCronJob(' + job.jobId + ', ' + (!job.enabled) + ')" class="cursor-pointer transition hover:scale-105" title="Click to ' + (job.enabled ? 'Pause' : 'Activate') + '">' +
+              statusBadge +
+            '</button>' +
+          '</td>' +
+          '<td class="py-2.5 px-3 text-right">' +
+            '<div class="flex items-center justify-end gap-1.5">' +
+              '<button onclick="runCronJobNow(' + job.jobId + ')" class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold transition flex items-center gap-1" title="Trigger webhook immediately">' +
+                '<span>⚡</span> Run Now' +
+              '</button>' +
+              '<button onclick="viewCronHistory(' + job.jobId + ', \'' + escapeHtml(job.title).replace(/'/g, "\\'") + '\')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold transition" title="View execution logs">' +
+                '📜 Logs' +
+              '</button>' +
+              '<button onclick="openEditCronModal(' + job.jobId + ')" class="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition" title="Edit schedule/title">✎</button>' +
+              '<button onclick="deleteCronJob(' + job.jobId + ', \'' + escapeHtml(job.title).replace(/'/g, "\\'") + '\')" class="p-1 rounded bg-slate-800 hover:bg-rose-900/50 text-rose-400 text-[11px] transition" title="Delete job">🗑️</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    async function toggleCronJob(jobId, enabled) {
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs/' + jobId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+        if (res.ok && res.data?.success) {
+          showToast(enabled ? '✓ Cron job activated' : '⏸ Cron job paused');
+          const idx = allCronJobs.findIndex(j => j.jobId === jobId);
+          if (idx !== -1) allCronJobs[idx].enabled = enabled;
+          updateCronMetrics(allCronJobs);
+          filterCronJobsList();
+        } else {
+          showToast('Failed updating job: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      }
+    }
+
+    async function runCronJobNow(jobId) {
+      showToast('🚀 Triggering job #' + jobId + '...');
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs/' + jobId + '/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok && res.data?.success) {
+          const run = res.data.run || {};
+          const statusText = run.statusCode + ' ' + (run.statusText || '');
+          const duration = run.durationMs ? (run.durationMs + 'ms') : '';
+          showToast('✓ Executed in ' + duration + ' (HTTP ' + statusText + ')');
+          loadCronJobs(true);
+        } else {
+          showToast('Execution error: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error running job: ' + err.message, true);
+      }
+    }
+
+    async function syncAutomationCrons() {
+      const btn = document.getElementById('btn-sync-crons');
+      if (btn) btn.innerHTML = '<span>⚡</span> Syncing...';
+      try {
+        const res = await safeFetchJson('/api/cronjob/sync-catalog', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok && res.data?.success) {
+          const created = res.data.createdCount || 0;
+          showToast('✓ Sync complete! Created ' + created + ' new cron job(s).');
+          loadCronJobs(true);
+        } else {
+          showToast('Sync error: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Sync failed: ' + err.message, true);
+      } finally {
+        if (btn) btn.innerHTML = '<span>⚡</span> 1-Click Sync Webhooks';
+      }
+    }
+
+    function openCreateCronModal() {
+      const modal = document.getElementById('modal-create-cron');
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('create-cron-title').value = '';
+        document.getElementById('create-cron-url').value = '';
+        document.getElementById('create-cron-preset').value = '';
+        document.getElementById('create-cron-interval').value = 'every_15_min';
+        document.getElementById('create-cron-tz').value = 'Asia/Dhaka';
+        document.getElementById('create-cron-enabled').checked = true;
+      }
+    }
+
+    function applyCronPreset(presetKey) {
+      const origin = window.location.origin;
+      const titleInput = document.getElementById('create-cron-title');
+      const urlInput = document.getElementById('create-cron-url');
+      const intervalSelect = document.getElementById('create-cron-interval');
+
+      if (presetKey === 'sports') {
+        titleInput.value = 'SportsClipBot: Transformative Ingest & Compliance Cycle';
+        urlInput.value = origin + '/api/cron/sports-pipeline';
+        intervalSelect.value = 'every_15_min';
+      } else if (presetKey === 'monitoring') {
+        titleInput.value = 'SportsClipBot: Copyright & Policy Monitoring Poller';
+        urlInput.value = origin + '/api/cron/sports-monitoring';
+        intervalSelect.value = 'every_30_min';
+      } else if (presetKey === 'input') {
+        titleInput.value = 'News Automation: Stage 1 Ingestion (Drive Staging)';
+        urlInput.value = origin + '/api/cron/input?all=true&limit=2';
+        intervalSelect.value = 'every_10_min';
+      } else if (presetKey === 'output') {
+        titleInput.value = 'News Automation: Stage 2 Facebook Reel Auto-Poster';
+        urlInput.value = origin + '/api/cron/output?all=true';
+        intervalSelect.value = 'every_15_min';
+      } else if (presetKey === 'stories') {
+        titleInput.value = 'News Stories: Facebook 24h Story Poster';
+        urlInput.value = origin + '/api/cron/stories';
+        intervalSelect.value = 'every_1_hour';
+      } else if (presetKey === 'youtube') {
+        titleInput.value = 'YouTube Shorts: Direct Channel Sync';
+        urlInput.value = origin + '/api/cron/youtube-sync';
+        intervalSelect.value = 'every_2_hours';
+      }
+    }
+
+    async function submitCreateCron(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btn-submit-create-cron');
+      if (btn) btn.innerText = 'Creating...';
+
+      const payload = {
+        title: document.getElementById('create-cron-title').value.trim(),
+        url: document.getElementById('create-cron-url').value.trim(),
+        interval: document.getElementById('create-cron-interval').value,
+        timezone: document.getElementById('create-cron-tz').value.trim() || 'Asia/Dhaka',
+        enabled: document.getElementById('create-cron-enabled').checked
+      };
+
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok && res.data?.success) {
+          showToast('✓ Cron job created successfully!');
+          closeModal('modal-create-cron');
+          loadCronJobs(true);
+        } else {
+          showToast('Error creating job: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        if (btn) btn.innerText = 'Create Job';
+      }
+    }
+
+    function openEditCronModal(jobId) {
+      const job = allCronJobs.find(j => j.jobId === jobId);
+      if (!job) return;
+
+      document.getElementById('edit-cron-id').value = jobId;
+      document.getElementById('edit-cron-id-label').innerText = 'Job ID: #' + jobId;
+      document.getElementById('edit-cron-title').value = job.title || '';
+      document.getElementById('edit-cron-url').value = job.url || '';
+      document.getElementById('edit-cron-tz').value = job.schedule?.timezone || 'Asia/Dhaka';
+      document.getElementById('edit-cron-enabled').checked = !!job.enabled;
+
+      const modal = document.getElementById('modal-edit-cron');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    async function submitEditCron(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btn-submit-edit-cron');
+      if (btn) btn.innerText = 'Saving...';
+
+      const jobId = document.getElementById('edit-cron-id').value;
+      const payload = {
+        title: document.getElementById('edit-cron-title').value.trim(),
+        url: document.getElementById('edit-cron-url').value.trim(),
+        interval: document.getElementById('edit-cron-interval').value,
+        timezone: document.getElementById('edit-cron-tz').value.trim() || 'Asia/Dhaka',
+        enabled: document.getElementById('edit-cron-enabled').checked
+      };
+
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs/' + jobId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok && res.data?.success) {
+          showToast('✓ Cron job updated successfully!');
+          closeModal('modal-edit-cron');
+          loadCronJobs(true);
+        } else {
+          showToast('Error updating job: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        if (btn) btn.innerText = 'Save Changes';
+      }
+    }
+
+    async function deleteCronJob(jobId, title) {
+      if (!confirm('Are you sure you want to delete cron job "' + title + '" (ID #' + jobId + ')?')) {
+        return;
+      }
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs/' + jobId, { method: 'DELETE' });
+        if (res.ok && res.data?.success) {
+          showToast('✓ Job deleted');
+          allCronJobs = allCronJobs.filter(j => j.jobId !== jobId);
+          updateCronMetrics(allCronJobs);
+          filterCronJobsList();
+        } else {
+          showToast('Delete error: ' + (res.data?.error || res.error), true);
+        }
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      }
+    }
+
+    async function viewCronHistory(jobId, title) {
+      const modal = document.getElementById('modal-cron-history');
+      const titleEl = document.getElementById('cron-history-modal-title');
+      const subEl = document.getElementById('cron-history-modal-subtitle');
+      const tbody = document.getElementById('cron-history-table-body');
+
+      if (titleEl) titleEl.innerText = title;
+      if (subEl) subEl.innerText = 'Job ID: #' + jobId + ' • Fetching execution logs...';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500 font-mono">Loading history...</td></tr>';
+      if (modal) modal.classList.remove('hidden');
+
+      try {
+        const res = await safeFetchJson('/api/cronjob/jobs/' + jobId + '/history');
+        if (res.ok && res.data?.history) {
+          const logs = res.data.history || [];
+          if (subEl) subEl.innerText = 'Job ID: #' + jobId + ' • ' + logs.length + ' logged execution(s)';
+          if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400 font-mono">No execution history recorded yet.</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = logs.map(l => {
+            const isSuccess = l.status === 1 || l.httpStatus === 200;
+            const badgeClass = isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-rose-950 text-rose-300 border-rose-700';
+            const dateStr = l.dateFormatted || (l.date ? new Date(l.date * 1000).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) : '--');
+
+            return '<tr class="hover:bg-slate-800/40 transition">' +
+              '<td class="py-2 px-3"><span class="px-2 py-0.5 text-[9px] font-bold rounded-full border ' + badgeClass + '">' + (isSuccess ? 'Success' : 'Error') + '</span></td>' +
+              '<td class="py-2 px-3 font-mono font-bold ' + (isSuccess ? 'text-emerald-400' : 'text-rose-400') + '">' + (l.httpStatus || '--') + '</td>' +
+              '<td class="py-2 px-3 font-mono text-slate-300">' + escapeHtml(dateStr) + '</td>' +
+              '<td class="py-2 px-3 font-mono text-cyan-300">' + (l.duration ? (l.duration + 'ms') : '--') + '</td>' +
+              '<td class="py-2 px-3 font-mono text-slate-400">' + (l.jitter ? (l.jitter + 'ms') : '0ms') + '</td>' +
+            '</tr>';
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-rose-400 font-mono">Failed loading history: ' + escapeHtml(res.data?.error || res.error) + '</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-rose-400 font-mono">Network error: ' + escapeHtml(err.message) + '</td></tr>';
       }
     }
 

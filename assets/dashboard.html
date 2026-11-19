@@ -200,6 +200,15 @@
           </button>
         </div>
 
+        <!-- 7. Cron Jobs Management Tab (cron-job.org API v2) -->
+        <div class="relative">
+          <button id="nav-btn-cron-jobs" onclick="selectNavTab('cron-jobs')" class="nav-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-amber-400 hover:text-amber-200 hover:bg-amber-950/60 border border-amber-800/40 transition flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+            <span>⏱️</span>
+            <span>Cron Jobs</span>
+            <span id="nav-cron-count-badge" class="px-1.5 py-0.2 text-[9px] rounded-full bg-slate-800 text-slate-300 font-mono hidden">0</span>
+          </button>
+        </div>
+
 
 
       </div>
@@ -2546,7 +2555,298 @@
 
     </div>
 
+    <!-- 8. CRON JOBS MANAGEMENT TAB (cron-job.org API v2) -->
+    <div id="tab-cron-jobs" class="tab-content hidden space-y-6">
+      <!-- Header & Connection Card -->
+      <div class="glass-panel p-5 rounded-xl border border-amber-500/30 shadow-xl space-y-4">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-xl shadow-inner font-mono font-bold">⏱️</div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold text-white tracking-wide">Cron Management Hub</h2>
+                <span id="cron-connection-badge" class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Checking...
+                </span>
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-950/80 text-amber-300 border border-amber-700/60 font-mono">cron-job.org API v2</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Automated webhook scheduler, real-time trigger monitor, execution logs &amp; health diagnostics</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="loadCronJobs(true)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+              <span>🔄</span> Refresh
+            </button>
+            <button onclick="syncAutomationCrons()" id="btn-sync-crons" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition flex items-center gap-1.5 shadow-md">
+              <span>⚡</span> 1-Click Sync Webhooks
+            </button>
+            <button onclick="openCreateCronModal()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 transition flex items-center gap-1.5 shadow-md">
+              <span>➕</span> New Cron Job
+            </button>
+          </div>
+        </div>
+
+        <!-- API Key Storage Bar -->
+        <div class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2 flex-1 w-full sm:w-auto">
+            <span class="text-xs font-semibold text-slate-400 whitespace-nowrap">API Key:</span>
+            <div class="relative flex-1 max-w-md">
+              <input id="cronjob-api-key-input" type="password" placeholder="Enter cron-job.org API Key" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500 transition pr-8">
+              <button onclick="toggleCronKeyVisibility()" type="button" class="absolute right-2 top-1 text-slate-400 hover:text-white text-xs">👁️</button>
+            </div>
+            <button onclick="saveCronJobApiKey()" class="px-2.5 py-1 text-xs font-bold rounded bg-amber-500 hover:bg-amber-400 text-slate-950 transition whitespace-nowrap">
+              Save Key
+            </button>
+          </div>
+          <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
+            <span>Target Host: <strong class="text-cyan-300">automation-software-ten.vercel.app</strong></span>
+            <span>Timezone: <strong class="text-amber-300">Asia/Dhaka (+06:00)</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-800/80 text-amber-400 border border-slate-700 flex items-center justify-center text-lg font-bold">📋</div>
+          <div>
+            <div id="cron-stat-total" class="text-xl font-mono font-bold text-white">--</div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Total Scheduled</div>
+          </div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-emerald-900/40 bg-emerald-950/10 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg font-bold">✓</div>
+          <div>
+            <div id="cron-stat-active" class="text-xl font-mono font-bold text-emerald-400">--</div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Active Jobs</div>
+          </div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-800/80 text-slate-400 border border-slate-700 flex items-center justify-center text-lg font-bold">⏸️</div>
+          <div>
+            <div id="cron-stat-disabled" class="text-xl font-mono font-bold text-slate-300">--</div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Paused Jobs</div>
+          </div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-cyan-900/40 bg-cyan-950/10 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-lg font-bold">⚡</div>
+          <div>
+            <div id="cron-stat-health" class="text-xl font-mono font-bold text-cyan-300">100%</div>
+            <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Execution Health</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter, Search & Table Container -->
+      <div class="glass-panel rounded-xl border border-slate-800 overflow-hidden shadow-2xl space-y-3 p-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-lg border border-slate-800">
+            <button onclick="setCronFilter('all')" id="cron-filter-all" class="px-2.5 py-1 text-xs font-semibold rounded text-white bg-slate-800 border border-slate-700 transition">All Jobs</button>
+            <button onclick="setCronFilter('app')" id="cron-filter-app" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition">App Webhooks</button>
+            <button onclick="setCronFilter('active')" id="cron-filter-active" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition">Active</button>
+            <button onclick="setCronFilter('paused')" id="cron-filter-paused" class="px-2.5 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white transition">Paused</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input id="cron-search-input" oninput="filterCronJobsList()" type="text" placeholder="Search by title or URL..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono transition">
+            <span class="absolute left-2.5 top-2 text-slate-500 text-xs">🔍</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-slate-800/80">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-900/90 text-slate-400 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">Job Title &amp; ID</th>
+                <th class="py-2.5 px-3">Target Webhook URL</th>
+                <th class="py-2.5 px-3">Schedule</th>
+                <th class="py-2.5 px-3">Last Execution</th>
+                <th class="py-2.5 px-3">Next Run</th>
+                <th class="py-2.5 px-3 text-center">Status</th>
+                <th class="py-2.5 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cron-jobs-table-body" class="divide-y divide-slate-800/60 font-sans text-slate-200">
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-500 font-mono">Loading scheduled cron jobs from cron-job.org...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
+
+  <!-- Modal: Create Cron Job -->
+  <div id="modal-create-cron" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-5 rounded-xl border border-amber-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold">➕</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Create New Cron Job</h3>
+            <p class="text-[10px] text-slate-400">Schedule automatic execution via cron-job.org</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-create-cron')" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form onsubmit="submitCreateCron(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Preset Webhooks (Quick Pick)</label>
+          <select id="create-cron-preset" onchange="applyCronPreset(this.value)" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            <option value="">-- Choose a predefined webhook or enter custom --</option>
+            <option value="sports">🏆 SportsClipBot: Transformative Ingest &amp; Compliance Cycle (Every 15m)</option>
+            <option value="monitoring">🛡️ SportsClipBot: Copyright &amp; Strike Monitoring Poller (Every 30m)</option>
+            <option value="input">📥 News Stage 1: RSS Ingestion to Drive Staging (Every 10m)</option>
+            <option value="output">📤 News Stage 2: Facebook Reel Auto-Poster (Every 15m)</option>
+            <option value="stories">📖 News Stories: Facebook 24h Story Poster (Every 1h)</option>
+            <option value="youtube">▶️ YouTube Shorts: Direct Channel Sync (Every 2h)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Job Title <span class="text-rose-400">*</span></label>
+          <input id="create-cron-title" type="text" placeholder="e.g. SportsClipBot Pipeline Cycle" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Webhook URL <span class="text-rose-400">*</span></label>
+          <input id="create-cron-url" type="url" placeholder="https://automation-software-ten.vercel.app/api/cron/..." required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Interval <span class="text-rose-400">*</span></label>
+            <select id="create-cron-interval" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="every_5_min">Every 5 minutes</option>
+              <option value="every_10_min">Every 10 minutes</option>
+              <option value="every_15_min" selected>Every 15 minutes</option>
+              <option value="every_30_min">Every 30 minutes</option>
+              <option value="every_1_hour">Every 1 hour</option>
+              <option value="every_2_hours">Every 2 hours</option>
+              <option value="every_6_hours">Every 6 hours</option>
+              <option value="every_12_hours">Every 12 hours</option>
+              <option value="once_daily">Once a day (midnight)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Timezone</label>
+            <input id="create-cron-tz" type="text" value="Asia/Dhaka" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input id="create-cron-enabled" type="checkbox" checked class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-amber-500">
+          <label for="create-cron-enabled" class="text-xs text-slate-300">Enable this job immediately upon creation</label>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-create-cron')" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
+          <button type="submit" id="btn-submit-create-cron" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md">Create Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Cron Job -->
+  <div id="modal-edit-cron" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg p-5 rounded-xl border border-amber-500/30 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold">✎</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Edit Cron Job</h3>
+            <p id="edit-cron-id-label" class="text-[10px] text-slate-400 font-mono">Job ID: --</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-edit-cron')" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <form onsubmit="submitEditCron(event)" class="space-y-3">
+        <input type="hidden" id="edit-cron-id">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Job Title <span class="text-rose-400">*</span></label>
+          <input id="edit-cron-title" type="text" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Webhook URL <span class="text-rose-400">*</span></label>
+          <input id="edit-cron-url" type="url" required class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Interval</label>
+            <select id="edit-cron-interval" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="every_5_min">Every 5 minutes</option>
+              <option value="every_10_min">Every 10 minutes</option>
+              <option value="every_15_min">Every 15 minutes</option>
+              <option value="every_30_min">Every 30 minutes</option>
+              <option value="every_1_hour">Every 1 hour</option>
+              <option value="every_2_hours">Every 2 hours</option>
+              <option value="every_6_hours">Every 6 hours</option>
+              <option value="every_12_hours">Every 12 hours</option>
+              <option value="once_daily">Once a day</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Timezone</label>
+            <input id="edit-cron-tz" type="text" value="Asia/Dhaka" class="w-full bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input id="edit-cron-enabled" type="checkbox" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-amber-500">
+          <label for="edit-cron-enabled" class="text-xs text-slate-300">Enabled (active and running on schedule)</label>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button type="button" onclick="closeModal('modal-edit-cron')" class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
+          <button type="submit" id="btn-submit-edit-cron" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Execution History / Logs -->
+  <div id="modal-cron-history" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="glass-panel w-full max-w-2xl p-5 rounded-xl border border-amber-500/30 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm font-bold">📜</div>
+          <div>
+            <h3 id="cron-history-modal-title" class="text-sm font-bold text-white">Cron Job Execution History</h3>
+            <p id="cron-history-modal-subtitle" class="text-[10px] text-slate-400 font-mono truncate max-w-md">Loading logs...</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-cron-history')" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 rounded-lg border border-slate-800/80">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-900/90 text-slate-400 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-800 sticky top-0">
+            <tr>
+              <th class="py-2 px-3">Status</th>
+              <th class="py-2 px-3">HTTP Code</th>
+              <th class="py-2 px-3">Execution Time (GMT+6)</th>
+              <th class="py-2 px-3">Duration</th>
+              <th class="py-2 px-3">Jitter</th>
+            </tr>
+          </thead>
+          <tbody id="cron-history-table-body" class="divide-y divide-slate-800/60 font-sans text-slate-200">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500 font-mono">Loading history...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-slate-800 flex-shrink-0">
+        <button onclick="closeModal('modal-cron-history')" class="px-4 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">Close</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add Group Modal -->
 

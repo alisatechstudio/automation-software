@@ -11,6 +11,7 @@ import { scanGoogleDriveFolder, extractFolderId } from '../services/gdrive-scann
 import { GoogleDriveUploader } from '../services/gdrive-uploader.js';
 import { GDriveReelService } from '../services/gdrive/service.js';
 import { InputPipelineService } from '../services/pipeline/input-pipeline.js';
+import { CronJobOrgService } from '../services/cronjob-service.js';
 
 export interface ServerDependencies {
   repo: DbRepository;
@@ -25,6 +26,7 @@ export function createServer(deps: ServerDependencies) {
   const gdriveUploader = new GoogleDriveUploader(repo);
   const gdriveReelService = new GDriveReelService();
   const inputPipelineService = new InputPipelineService();
+  const cronJobService = new CronJobOrgService();
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -1065,6 +1067,206 @@ export function createServer(deps: ServerDependencies) {
     // Return catalog if no job query specified
     req.url = '/api/cron/catalog';
     return app(req, res);
+  });
+
+  // ==========================================
+  // CRON-JOB.ORG MANAGEMENT API
+  // ==========================================
+
+  // 1. Connection Status & Account Verification
+  app.get('/api/cronjob/status', async (req: Request, res: Response) => {
+    try {
+      const apiKey = await cronJobService.getApiKey();
+      const test = await cronJobService.testConnection(apiKey);
+      res.json({
+        success: true,
+        hasKey: Boolean(apiKey),
+        maskedKey: apiKey ? `${apiKey.slice(0, 6)}...${apiKey.slice(-4)}` : '',
+        valid: test.valid,
+        jobsCount: test.jobsCount || 0,
+        error: test.error,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2. Save Updated cron-job.org API Key
+  app.post('/api/cronjob/key', async (req: Request, res: Response) => {
+    try {
+      const apiKey = (req.body?.apiKey || '').trim();
+      await cronJobService.saveApiKey(apiKey);
+      const test = await cronJobService.testConnection(apiKey);
+      res.json({ success: true, valid: test.valid, jobsCount: test.jobsCount, error: test.error });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 3. List All Live Cron Jobs
+  app.get('/api/cronjob/jobs', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.listJobs();
+      if (result.error) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      res.json({ success: true, jobs: result.jobs });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4. Get Single Job Details
+  app.get('/api/cronjob/jobs/:id', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.getJob(req.params.id);
+      if (result.error) return res.status(400).json({ success: false, error: result.error });
+      res.json({ success: true, job: result.job });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 5. Get Job Execution History Logs
+  app.get('/api/cronjob/jobs/:id/history', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.getJobHistory(req.params.id);
+      if (result.error) return res.status(400).json({ success: false, error: result.error });
+      res.json({ success: true, history: result.history, predictions: result.predictions });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 6. Create New Cron Job
+  app.put('/api/cronjob/jobs', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.createJob(req.body);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 7. Update / Patch Cron Job
+  app.patch('/api/cronjob/jobs/:id', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.updateJob(req.params.id, req.body);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 8. Delete Cron Job
+  app.delete('/api/cronjob/jobs/:id', async (req: Request, res: Response) => {
+    try {
+      const result = await cronJobService.deleteJob(req.params.id);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 9. Run Cron Job Instantly ("Run Now")
+  app.post('/api/cronjob/jobs/:id/run', async (req: Request, res: Response) => {
+    try {
+      let targetUrl = req.body?.url;
+      if (!targetUrl) {
+        const details = await cronJobService.getJob(req.params.id);
+        targetUrl = details.job?.url;
+      }
+      if (!targetUrl) return res.status(400).json({ success: false, error: 'Could not resolve job target URL' });
+
+      const execResult = await cronJobService.runJobUrl(targetUrl);
+      res.json(execResult);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 10. 1-Click Sync Missing Automation Webhooks into cron-job.org
+  app.post('/api/cronjob/sync-catalog', async (req: Request, res: Response) => {
+    try {
+      const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+      const host = req.get('host') || 'automation-software-ten.vercel.app';
+      const baseUrl = `${protocol}://${host}`;
+
+      const { jobs } = await cronJobService.listJobs();
+      const existingUrls = new Set(jobs.map((j) => (j.url || '').trim().toLowerCase()));
+
+      const created: Array<{ title: string; url: string; jobId: number }> = [];
+      const skipped: string[] = [];
+
+      const catalogItems = [
+        {
+          title: 'SportsClipBot Pipeline',
+          url: `${baseUrl}/api/cron/sports-pipeline?max=1`,
+          interval: '2h',
+        },
+        {
+          title: 'SportsClipBot Monitoring',
+          url: `${baseUrl}/api/cron/sports-monitoring`,
+          interval: '30m',
+        },
+        {
+          title: 'News Stage 1 Input Pipeline',
+          url: `${baseUrl}/api/cron/input`,
+          interval: '15m',
+        },
+        {
+          title: 'News Stage 2 Output Pipeline',
+          url: `${baseUrl}/api/cron/output`,
+          interval: '1h',
+        },
+        {
+          title: 'Facebook Stories Automation',
+          url: `${baseUrl}/api/cron/stories`,
+          interval: '2h',
+        },
+        {
+          title: 'YouTube Channel Sync',
+          url: `${baseUrl}/api/cron/youtube`,
+          interval: '2h',
+        },
+      ];
+
+      for (const item of catalogItems) {
+        const itemUrlNorm = item.url.trim().toLowerCase();
+        // Check if matching job already exists (by url or normalized url)
+        const alreadyExists = Array.from(existingUrls).some((u) => u.includes(itemUrlNorm.split('?')[0]));
+        if (alreadyExists) {
+          skipped.push(item.title);
+          continue;
+        }
+
+        const createRes = await cronJobService.createJob({
+          title: item.title,
+          url: item.url,
+          enabled: true,
+          scheduleInterval: item.interval,
+          timezone: 'Asia/Dhaka',
+        });
+
+        if (createRes.success && createRes.jobId) {
+          created.push({ title: item.title, url: item.url, jobId: createRes.jobId });
+          existingUrls.add(itemUrlNorm);
+        }
+      }
+
+      res.json({
+        success: true,
+        createdCount: created.length,
+        created,
+        skippedCount: skipped.length,
+        skipped,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
   // Approve Video Endpoint
