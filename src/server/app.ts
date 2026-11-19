@@ -211,11 +211,11 @@ export function createInputServer(pipeline: InputPipelineService): Express {
     });
   });
 
-  // Trigger Input Pipeline Cycle (Fetch RSS -> AI/TTS & Video Reel Rendering -> Google Drive Staging)
-  app.all(['/api/cron/input', '/api/input/run', '/api/pipeline/run'], async (req: Request, res: Response) => {
+  // Shared Input Pipeline Execution Handler
+  const handleCronTrigger = async (req: Request, res: Response, paramFolderId?: string) => {
     const force = req.query.force === 'true' || req.body?.force === true;
     const sourceId = (req.query.sourceId || req.body?.sourceId) as string | undefined;
-    const folderId = (req.query.folderId || req.body?.folderId) as string | undefined;
+    const folderId = (paramFolderId || req.query.folderId || req.query.folder || req.body?.folderId || req.body?.folder) as string | undefined;
     const limit = req.query.limit
       ? parseInt(req.query.limit as string, 10)
       : req.body?.limit
@@ -233,8 +233,10 @@ export function createInputServer(pipeline: InputPipelineService): Express {
       });
     }
 
+    const folderTag = folderId ? ` [Folder: ${folderId}]` : ' [Global]';
+
     if (isSync) {
-      console.log(`[InputServer] 🚀 Triggering Input cycle in SYNC mode (limit=${limit})...`);
+      console.log(`[InputServer] 🚀 Triggering Input cycle in SYNC mode (limit=${limit})${folderTag}...`);
       try {
         const result = await pipeline.runInputCron({
           force,
@@ -249,7 +251,7 @@ export function createInputServer(pipeline: InputPipelineService): Express {
     }
 
     // ASYNC execution: prevents Vercel 504 Gateway Timeout while supporting live log polling
-    console.log(`[InputServer] 🚀 Triggering Input cycle in ASYNC mode (limit=${limit})...`);
+    console.log(`[InputServer] 🚀 Triggering Input cycle in ASYNC mode (limit=${limit})${folderTag}...`);
     const jobPromise = pipeline.runInputCron({
       force,
       sourceId,
@@ -268,16 +270,119 @@ export function createInputServer(pipeline: InputPipelineService): Express {
     }
 
     jobPromise.catch((err) => {
-      console.error('[InputServer] Background pipeline error:', err);
+      console.error(`[InputServer] Background pipeline error${folderTag}:`, err);
     });
 
     return res.status(200).json({
       success: true,
       status: 'started',
-      message: 'Input automation cycle started in background! Polling live status...',
+      message: `Input automation cycle${folderTag} started in background! Polling live status...`,
       options: { force, sourceId, folderId, limit },
       jobState: pipeline.getJobState(),
     });
+  };
+
+  // Global Input Pipeline Trigger
+  app.all(['/api/cron/input', '/api/input/run', '/api/pipeline/run'], async (req: Request, res: Response) => {
+    return handleCronTrigger(req, res);
+  });
+
+  // Folder-Wise Dedicated Cron Trigger (e.g. /api/cron/folder/1BiCbgwkRVS-XHt92MXcwuOEcbKjtgRq8 or /api/cron/folder/bdnews)
+  app.all(
+    ['/api/cron/folder/:folderId', '/api/cron/folders/:folderId', '/api/cron/:folderId'],
+    async (req: Request, res: Response) => {
+      return handleCronTrigger(req, res, req.params.folderId);
+    }
+  );
+
+  // List all Distinct Google Drive Folders with Folder-Wise Cron Webhook URLs
+  app.get(['/api/folders', '/api/gdrive/folders'], async (req: Request, res: Response) => {
+    try {
+      const uploader = pipeline.getUploader();
+      const host = req.get('host') || 'localhost:3000';
+      const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+      const baseUrl = `${proto}://${host}`;
+
+      let sources: any[] = [];
+      const db = await initDatabase().catch(() => null);
+      if (db) {
+        sources = await db.collection('rss_sources').find({}).toArray();
+      }
+
+      const folderMap = new Map<string, {
+        folderId: string;
+        name: string;
+        slug: string;
+        sources: Array<{ id: string; name: string; url: string; pageId?: string }>;
+        isActive: boolean;
+      }>();
+
+      for (const s of sources) {
+        const rawFid = s.gdriveFolderId || s.gdriveFolderUrlOrId || config.GDRIVE_FOLDER_ID || '';
+        const fid = uploader.extractFolderId(rawFid) || 'default';
+        const isActive = s.isActive !== false && s.isActive !== 'false' && s.is_active !== 0;
+
+        if (!folderMap.has(fid)) {
+          let folderName = s.name ? `${s.name} Staging Folder` : 'Google Drive Folder';
+          let slug = (s.name || fid).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          if (fid === uploader.extractFolderId(config.GDRIVE_FOLDER_ID || '')) {
+            folderName = 'Default Staging Folder';
+          }
+          folderMap.set(fid, {
+            folderId: fid,
+            name: folderName,
+            slug,
+            sources: [],
+            isActive: false,
+          });
+        }
+
+        const entry = folderMap.get(fid)!;
+        entry.sources.push({
+          id: String(s._id),
+          name: s.name,
+          url: s.url,
+          pageId: s.pageId,
+        });
+        if (isActive) entry.isActive = true;
+      }
+
+      // Include Sports Folder if configured in env
+      const sportsFolderId = uploader.extractFolderId(process.env.GDRIVE_SPORTS_FOLDER_ID || '');
+      if (sportsFolderId && !folderMap.has(sportsFolderId)) {
+        folderMap.set(sportsFolderId, {
+          folderId: sportsFolderId,
+          name: 'Sports Highlights Staging Folder',
+          slug: 'sports',
+          sources: [],
+          isActive: true,
+        });
+      }
+
+      const folders = Array.from(folderMap.values()).map((f) => {
+        const webhookUrl = `${baseUrl}/api/cron/folder/${f.folderId}`;
+        const aliasWebhookUrl = `${baseUrl}/api/cron/folder/${f.slug}`;
+        const cronTitle = encodeURIComponent(`Input Automation - ${f.name}`);
+        const cronTargetUrl = encodeURIComponent(webhookUrl);
+        return {
+          ...f,
+          sourceCount: f.sources.length,
+          webhookUrl,
+          aliasWebhookUrl,
+          cronJobOrgUrl: `https://console.cron-job.org/jobs/create?title=${cronTitle}&url=${cronTargetUrl}&schedule=${encodeURIComponent('*/15 * * * *')}`,
+          driveFolderUrl: f.folderId && f.folderId !== 'default' ? `https://drive.google.com/drive/folders/${f.folderId}` : null,
+        };
+      });
+
+      res.json({
+        success: true,
+        count: folders.length,
+        folders,
+        globalWebhookUrl: `${baseUrl}/api/cron/input`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // List all RSS Sources

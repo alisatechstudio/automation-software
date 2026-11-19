@@ -225,13 +225,43 @@ export class InputPipelineService {
       if (options?.sourceId) {
         activeSources = activeSources.filter((s) => s._id === options.sourceId);
       } else if (options?.folderId) {
-        const cleanTarget = this.gdriveUploader.extractFolderId(options.folderId);
-        activeSources = activeSources.filter((s: any) => {
+        const rawTarget = options.folderId.trim();
+        const cleanTarget = this.gdriveUploader.extractFolderId(rawTarget);
+
+        let matched = activeSources.filter((s: any) => {
           const directFid = this.gdriveUploader.extractFolderId(
-            s.gdriveFolderId || s.gdriveFolderUrlOrId || s.gdrive_folder_url
+            s.gdriveFolderId || s.gdriveFolderUrlOrId || s.gdrive_folder_url || config.GDRIVE_FOLDER_ID || ''
           );
-          return directFid && directFid === cleanTarget;
+          return Boolean(cleanTarget && directFid === cleanTarget);
         });
+
+        // If no match by exact clean Drive ID, try matching by slug / source name / pageId
+        if (matched.length === 0) {
+          const targetLower = rawTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
+          matched = activeSources.filter((s: any) => {
+            const nameLower = (s.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const pageLower = (s.pageId || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            return nameLower.includes(targetLower) || targetLower.includes(nameLower) || (pageLower && pageLower === targetLower);
+          });
+        }
+
+        if (matched.length === 0) {
+          this.addLog(`⚠️ Notice: No active RSS sources matched folder or alias "${options.folderId}".`);
+        } else {
+          this.addLog(`🎯 Folder-wise run: Found ${matched.length} source(s) matching "${options.folderId}".`);
+        }
+
+        activeSources = matched;
+
+        // If multiple sources match the folder and not allSources, rotate to the least recently polled
+        if (activeSources.length > 1 && !options?.allSources) {
+          activeSources.sort((a: any, b: any) => {
+            const timeA = a.lastPolledAt ? new Date(a.lastPolledAt).getTime() : 0;
+            const timeB = b.lastPolledAt ? new Date(b.lastPolledAt).getTime() : 0;
+            return timeA - timeB;
+          });
+          activeSources = [activeSources[0]];
+        }
       } else if (options?.pageId && options.pageId !== 'all') {
         activeSources = activeSources.filter((s: any) => (s.pageId || s.page_id) === options.pageId);
       } else if (!options?.allSources && activeSources.length > 1) {
