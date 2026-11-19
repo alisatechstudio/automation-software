@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Input Automation — Sourcing, Reel Production & Drive Staging</title>
+  <!-- Compiled Tailwind CSS & Suppress Play CDN Production Warning -->
+  <link rel="stylesheet" href="/css/tailwind.min.css">
+  <script>
+    (function() {
+      const origWarn = console.warn;
+      console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
+          return;
+        }
+        origWarn.apply(console, args);
+      };
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -976,12 +989,18 @@
     }
 
     // Run Modal Controls
+    let runPollTimer = null;
+
     function openRunModal() {
       document.getElementById('runModal').classList.remove('hidden');
       document.getElementById('runProgressBox').classList.add('hidden');
       document.getElementById('runProgressLog').innerText = '';
     }
     function closeRunModal() {
+      if (runPollTimer) {
+        clearInterval(runPollTimer);
+        runPollTimer = null;
+      }
       document.getElementById('runModal').classList.add('hidden');
     }
 
@@ -992,32 +1011,69 @@
 
       const btn = document.getElementById('btnExecuteRun');
       const progressBox = document.getElementById('runProgressBox');
+      const progressText = document.getElementById('runProgressText');
       const progressLog = document.getElementById('runProgressLog');
 
       btn.disabled = true;
-      btn.innerText = 'Executing Cycle...';
+      btn.innerText = 'Starting Cycle...';
       progressBox.classList.remove('hidden');
-      progressLog.innerText = `Starting Input cycle (force=${force}, limit=${limit})...\nConnecting to RSS feeds...\n`;
+      progressText.innerText = 'Triggering Input Automation...';
+      progressLog.innerText = `[${new Date().toLocaleTimeString('en-US', { hour12: false })}] 🚀 Triggering background pipeline cycle (force=${force}, limit=${limit})...\n`;
 
       try {
         const res = await fetch('/api/input/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sourceId: sourceId || undefined, limit, force }),
+          body: JSON.stringify({ sourceId: sourceId || undefined, limit, force, async: true }),
         });
-        const result = await res.json();
+        const initial = await res.json();
 
-        progressLog.innerText += JSON.stringify(result, null, 2);
-        if (result.success) {
-          showToast(`Input Cycle Completed! Reels: ${result.totalReelsCreated}, Staged to Drive: ${result.totalUploadedToDrive}`);
-          loadAllData();
+        if (initial.alreadyRunning) {
+          progressLog.innerText += `\n[Notice] ${initial.message}\nConnecting to active live log stream...\n`;
         } else {
-          showToast(result.error || 'Pipeline run reported a warning.', 'error');
+          progressLog.innerText += `[Success] ${initial.message || 'Cycle started in background.'}\nStreaming live logs...\n`;
         }
+
+        progressText.innerText = 'Pipeline Running (Rendering & Staging)...';
+        btn.innerText = 'Running in Background...';
+
+        // Poll for live logs & completion every 1200ms
+        if (runPollTimer) clearInterval(runPollTimer);
+        runPollTimer = setInterval(async () => {
+          try {
+            const statusRes = await fetch('/api/input/status');
+            const job = await statusRes.json();
+
+            if (job.logs && job.logs.length > 0) {
+              progressLog.innerText = job.logs.join('\n');
+              progressLog.scrollTop = progressLog.scrollHeight;
+            }
+
+            if (!job.isRunning) {
+              clearInterval(runPollTimer);
+              runPollTimer = null;
+              btn.disabled = false;
+              btn.innerText = 'Start Pipeline Execution';
+
+              if (job.stage === 'error') {
+                progressText.innerText = 'Run Failed';
+                showToast(job.lastError || 'Pipeline reported an error', 'error');
+              } else {
+                progressText.innerText = 'Cycle Completed!';
+                const reelsCount = job.lastResult?.totalReelsCreated ?? 0;
+                const uploadCount = job.lastResult?.totalUploadedToDrive ?? 0;
+                showToast(`Cycle Completed! Created: ${reelsCount}, Uploaded: ${uploadCount}`, 'success');
+                loadAllData();
+              }
+            }
+          } catch (pollErr) {
+            console.warn('Poll error:', pollErr);
+          }
+        }, 1200);
+
       } catch (err) {
-        progressLog.innerText += `\nError executing pipeline: ${err.message}`;
+        progressLog.innerText += `\n⚠️ Error executing pipeline: ${err.message}`;
         showToast(err.message, 'error');
-      } finally {
         btn.disabled = false;
         btn.innerText = 'Start Pipeline Execution';
       }

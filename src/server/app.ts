@@ -198,6 +198,14 @@ export function createInputServer(pipeline: InputPipelineService): Express {
     }
   });
 
+  // Real-time Pipeline Execution Status & Live Log Stream
+  app.get(['/api/input/status', '/api/pipeline/status'], (_req: Request, res: Response) => {
+    res.json({
+      success: true,
+      ...pipeline.getJobState(),
+    });
+  });
+
   // Trigger Input Pipeline Cycle (Fetch RSS -> AI/TTS & Video Reel Rendering -> Google Drive Staging)
   app.all(['/api/cron/input', '/api/input/run', '/api/pipeline/run'], async (req: Request, res: Response) => {
     const force = req.query.force === 'true' || req.body?.force === true;
@@ -207,20 +215,64 @@ export function createInputServer(pipeline: InputPipelineService): Express {
       ? parseInt(req.query.limit as string, 10)
       : req.body?.limit
       ? parseInt(req.body.limit as string, 10)
-      : undefined;
+      : 1;
+    const isSync = req.query.sync === 'true' || req.body?.sync === true;
 
-    console.log(`[InputServer] 🚀 Triggering Input Automation cycle (force=${force}, limit=${limit || 1})...`);
-    try {
-      const result = await pipeline.runInputCron({
-        force,
-        sourceId,
-        folderId,
-        limit,
+    // Check if pipeline is already running
+    if (pipeline.isJobRunning()) {
+      return res.status(200).json({
+        success: true,
+        alreadyRunning: true,
+        message: 'Input pipeline cycle is already in progress.',
+        jobState: pipeline.getJobState(),
       });
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
     }
+
+    if (isSync) {
+      console.log(`[InputServer] 🚀 Triggering Input cycle in SYNC mode (limit=${limit})...`);
+      try {
+        const result = await pipeline.runInputCron({
+          force,
+          sourceId,
+          folderId,
+          limit,
+        });
+        return res.json(result);
+      } catch (err: any) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+    }
+
+    // ASYNC execution: prevents Vercel 504 Gateway Timeout while supporting live log polling
+    console.log(`[InputServer] 🚀 Triggering Input cycle in ASYNC mode (limit=${limit})...`);
+    const jobPromise = pipeline.runInputCron({
+      force,
+      sourceId,
+      folderId,
+      limit,
+    });
+
+    // Notify Vercel runtime to keep the serverless process alive in background
+    try {
+      const vercelFn = await import('@vercel/functions').catch(() => null);
+      if (vercelFn && typeof vercelFn.waitUntil === 'function') {
+        vercelFn.waitUntil(jobPromise);
+      }
+    } catch {
+      // Non-Vercel environment
+    }
+
+    jobPromise.catch((err) => {
+      console.error('[InputServer] Background pipeline error:', err);
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 'started',
+      message: 'Input automation cycle started in background! Polling live status...',
+      options: { force, sourceId, folderId, limit },
+      jobState: pipeline.getJobState(),
+    });
   });
 
   // List all RSS Sources

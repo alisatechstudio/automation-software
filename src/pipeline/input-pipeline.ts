@@ -45,18 +45,57 @@ export interface InputCronResult {
   error?: string;
 }
 
+export interface PipelineJobState {
+  isRunning: boolean;
+  stage: string;
+  progressPercent: number;
+  logs: string[];
+  startedAt: string | null;
+  completedAt: string | null;
+  lastResult: InputCronResult | null;
+  lastError: string | null;
+}
+
 export class InputPipelineService {
   private parserService: RssParserService;
   private reelRenderer: ReelVideoRenderer;
   private canvasRenderer: CanvasCardRenderer;
   private gdriveUploader: GoogleDriveUploader;
   private isRunning: boolean = false;
+  private jobState: PipelineJobState = {
+    isRunning: false,
+    stage: 'idle',
+    progressPercent: 0,
+    logs: [],
+    startedAt: null,
+    completedAt: null,
+    lastResult: null,
+    lastError: null,
+  };
 
   constructor() {
     this.parserService = new RssParserService();
     this.reelRenderer = new ReelVideoRenderer();
     this.canvasRenderer = new CanvasCardRenderer();
     this.gdriveUploader = new GoogleDriveUploader();
+  }
+
+  public getJobState(): PipelineJobState {
+    return this.jobState;
+  }
+
+  public isJobRunning(): boolean {
+    return this.jobState.isRunning;
+  }
+
+  public addLog(msg: string) {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const line = `[${time}] ${msg}`;
+    console.log(`[InputPipeline] ${msg}`);
+    this.jobState.logs.push(line);
+    if (this.jobState.logs.length > 80) {
+      this.jobState.logs.shift();
+    }
   }
 
   public getParser(): RssParserService {
@@ -108,11 +147,23 @@ export class InputPipelineService {
     }
 
     this.isRunning = true;
+    this.jobState.isRunning = true;
+    this.jobState.stage = 'starting';
+    this.jobState.progressPercent = 5;
+    this.jobState.logs = [];
+    this.jobState.startedAt = new Date().toISOString();
+    this.jobState.completedAt = null;
+    this.jobState.lastError = null;
+    this.addLog('🚀 Starting Input Automation cycle...');
+
     try {
       if (!isDbConnected()) {
         try {
+          this.addLog('Connecting to database...');
           await initDatabase(config.MONGODB_URI, config.MONGODB_DB_NAME);
+          this.addLog('✓ Connected to MongoDB Atlas.');
         } catch (dbErr: any) {
+          this.addLog(`Note: MongoDB connection warning: ${dbErr.message}`);
           console.warn('[InputPipeline] Note: MongoDB connection warning:', dbErr.message);
         }
       }
@@ -192,7 +243,8 @@ export class InputPipelineService {
         activeSources = [activeSources[0]];
       }
 
-      console.log(`[InputPipeline] 📥 Evaluating ${activeSources.length} active source(s)...`);
+      this.addLog(`📥 Evaluating ${activeSources.length} active source(s)...`);
+      this.jobState.stage = 'evaluating_sources';
 
       const maxAgeHours = config.MAX_ARTICLE_AGE_HOURS;
       const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
@@ -204,7 +256,8 @@ export class InputPipelineService {
       let grandTotalUploadedToDrive = 0;
 
       for (const source of activeSources) {
-        console.log(`\n[InputPipeline] 📡 Fetching source: "${source.name}" (${source.url})...`);
+        this.addLog(`📡 Fetching source: "${source.name}" (${source.url})...`);
+        this.jobState.stage = 'fetching_rss';
         const folderId = this.gdriveUploader.extractFolderId(
           source.gdriveFolderId || source.gdriveFolderUrlOrId || config.GDRIVE_FOLDER_ID || ''
         );
@@ -296,9 +349,10 @@ export class InputPipelineService {
             } catch {}
           }
 
-          console.log(
-            `[InputPipeline] 🎬 Rendering Reel for: "${item.title}" (Theme: ${targetTheme}, Duration: ${reelDuration}s)...`
+          this.addLog(
+            `🎬 Rendering Reel for: "${item.title.substring(0, 45)}..." (Theme: ${targetTheme}, Duration: ${reelDuration}s)...`
           );
+          this.jobState.stage = 'rendering_reel';
 
           let reelBuffer: Buffer | null = null;
           try {
@@ -333,9 +387,10 @@ export class InputPipelineService {
             const firstTag = hashtags.split(' ')[0] || '#Shorts';
             filename = `${cleanHeadline} ${firstTag}.mp4`;
 
-            console.log(
-              `[InputPipeline] ☁️ Uploading reel "${filename}" to Google Drive folder "${folderId}"...`
+            this.addLog(
+              `☁️ Uploading reel "${filename}" to Google Drive folder "${folderId}"...`
             );
+            this.jobState.stage = 'uploading_drive';
 
             try {
               const uploadRes = await this.gdriveUploader.uploadVideo({
@@ -433,7 +488,7 @@ export class InputPipelineService {
         `\n✓ [InputPipeline] Cycle Complete in ${totalDuration}ms: Generated ${grandTotalReelsCreated} reel(s), uploaded ${grandTotalUploadedToDrive} to Drive!`
       );
 
-      return {
+      const result: InputCronResult = {
         success: true,
         timestamp: new Date().toISOString(),
         durationMs: totalDuration,
@@ -443,8 +498,23 @@ export class InputPipelineService {
         totalUploadedToDrive: grandTotalUploadedToDrive,
         results: sourceResults,
       };
+
+      this.jobState.isRunning = false;
+      this.jobState.stage = 'completed';
+      this.jobState.progressPercent = 100;
+      this.jobState.completedAt = new Date().toISOString();
+      this.jobState.lastResult = result;
+      this.addLog(
+        `✓ Cycle Complete in ${totalDuration}ms: Generated ${grandTotalReelsCreated} reel(s), uploaded ${grandTotalUploadedToDrive} to Drive!`
+      );
+
+      return result;
     } catch (err: any) {
       console.error('[InputPipeline] Fatal cycle error:', err);
+      this.jobState.isRunning = false;
+      this.jobState.stage = 'error';
+      this.jobState.lastError = err.message;
+      this.addLog(`⚠️ Fatal pipeline error: ${err.message}`);
       return {
         success: false,
         timestamp: new Date().toISOString(),
@@ -458,6 +528,7 @@ export class InputPipelineService {
       };
     } finally {
       this.isRunning = false;
+      this.jobState.isRunning = false;
     }
   }
 }
