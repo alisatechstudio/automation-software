@@ -7,14 +7,17 @@ import { fileURLToPath } from 'url';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
+import { createRequire } from 'node:module';
 import { UnifiedTtsService } from '../tts/index.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const nodeRequire = createRequire(import.meta.url);
 
 let ffmpegPath: string = '';
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-  ffmpegPath = ffmpegInstaller.path;
+  const ffmpegInstaller = nodeRequire('@ffmpeg-installer/ffmpeg');
+  ffmpegPath = ffmpegInstaller?.path || 'ffmpeg';
 } catch (e) {
   ffmpegPath = 'ffmpeg';
 }

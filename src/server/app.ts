@@ -890,6 +890,35 @@ export function createServer(deps: ServerDependencies) {
     }
   });
 
+  // Single scheduled entry point for both news reels and sports clips.
+  app.all(['/api/cron/all', '/api/cron/unified'], async (req: Request, res: Response) => {
+    if (!verifyCronSecret(req, res)) return;
+    const results: Record<string, unknown> = {};
+    const errors: string[] = [];
+    try {
+      results.news = await inputPipelineService.runInputCron({
+        allSources: req.query.all === 'true',
+        maxArticlesPerSource: parseInt((req.query.max as string) || '1', 10) || 1,
+      });
+    } catch (err: any) {
+      errors.push(`news: ${err.message}`);
+      results.news = { success: false, error: err.message };
+    }
+    try {
+      results.sports = await pipeline.runCycle(parseInt((req.query.maxClips as string) || '1', 10) || 1);
+    } catch (err: any) {
+      errors.push(`sports: ${err.message}`);
+      results.sports = { success: false, error: err.message };
+    }
+    res.status(errors.length ? 500 : 200).json({
+      success: errors.length === 0,
+      job: 'unified_content_pipeline',
+      timestamp: new Date().toISOString(),
+      results,
+      ...(errors.length ? { errors } : {}),
+    });
+  });
+
   // 4B. Universal Cron Gateway Endpoint (/api/cron)
   app.all('/api/cron', async (req: Request, res: Response) => {
     if (!verifyCronSecret(req, res)) return;
@@ -976,6 +1005,14 @@ export function createServer(deps: ServerDependencies) {
         ? 'Pass "Authorization: Bearer <secret>" header or append "?secret=<secret>"'
         : 'CRON_SECRET not set, endpoints accept public triggers',
       cronJobs: [
+        {
+          id: 'unified_content_pipeline',
+          title: 'Unified News Reels + Sports Clips Pipeline',
+          url: `${baseUrl}/api/cron/all${secretParam}`,
+          method: 'GET',
+          recommendedSchedule: 'Every 15 minutes (*/15 * * * *)',
+          purpose: 'Runs the RSS news reel input and licensed sports clip pipeline in one scheduled request',
+        },
         {
           id: 'sports_pipeline',
           title: 'SportsClipBot - Ingestion & Compliance Cycle',
