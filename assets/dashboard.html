@@ -109,6 +109,12 @@
           <span id="driveStatusText">Drive Staging</span>
         </div>
 
+        <!-- cron-job.org Webhook Link Button -->
+        <button onclick="openCronModal()" class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-emerald-800/60 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 font-semibold text-xs transition" title="cron-job.org Webhook Setup">
+          <span>⏰</span>
+          <span>cron-job.org</span>
+        </button>
+
         <!-- Refresh Button -->
         <button id="btnRefresh" onclick="loadAllData()" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition" title="Refresh Dashboard">
           <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,15 +197,18 @@
         </div>
       </div>
 
-      <!-- Pipeline Automation Status -->
-      <div class="col-span-2 lg:col-span-1 bg-dark-card border border-dark-border rounded-xl p-4 flex flex-col justify-between">
+      <!-- cron-job.org Webhook Automation -->
+      <div class="col-span-2 lg:col-span-1 bg-dark-card border border-dark-border rounded-xl p-4 flex flex-col justify-between cursor-pointer hover:border-emerald-500/50 transition group" onclick="openCronModal()" title="Click to view/copy cron-job.org webhook URL">
         <div class="flex items-center justify-between text-slate-400">
-          <span class="text-xs font-semibold uppercase tracking-wider">Automation Cron</span>
-          <span id="badgeCronStatus" class="w-2.5 h-2.5 rounded-full bg-slate-600" title="Cron Status"></span>
+          <span class="text-xs font-semibold uppercase tracking-wider">cron-job.org</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="Ready for cron-job.org triggers"></span>
         </div>
         <div class="mt-3">
-          <span id="statCronSchedule" class="text-base font-bold font-mono text-emerald-400 tracking-tight">*/15 * * * *</span>
-          <p id="statCronMode" class="text-[11px] text-slate-400 mt-0.5">Active Serverless Cron</p>
+          <span class="text-xs font-bold font-mono text-emerald-400 tracking-tight block truncate">/api/cron/input</span>
+          <p class="text-[11px] text-cyan-400 group-hover:underline mt-0.5 font-medium flex items-center space-x-1">
+            <span>Setup cron-job.org</span>
+            <span>&rarr;</span>
+          </p>
         </div>
       </div>
 
@@ -716,6 +725,76 @@
       <div class="flex items-center justify-end space-x-2 pt-2 border-t border-dark-border">
         <button onclick="closeDbModal()" class="px-3.5 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-medium transition">Cancel</button>
         <button onclick="submitDbConnect()" id="btnConnectDb" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition">Connect Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: cron-job.org Webhook Setup Modal -->
+  <div id="cronModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-dark-card border border-dark-border rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-dark-border pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">⏰</span>
+          <h3 class="text-base font-bold text-white">cron-job.org Setup & Webhook Link</h3>
+        </div>
+        <button onclick="closeCronModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <p class="text-slate-300 leading-relaxed">
+          Internal in-app cron timers have been removed for serverless cloud stability. Schedule your pipeline reliably using <strong class="text-emerald-400">cron-job.org</strong>.
+        </p>
+
+        <!-- Webhook URL Box -->
+        <div class="space-y-1.5">
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider">Your Live Webhook Trigger URL</label>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="cronWebhookInput" readonly class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-400 font-mono select-all focus:outline-none">
+            <button onclick="copyCronWebhookUrl()" class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center space-x-1.5 shrink-0">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span>Copy URL</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Configuration Specs -->
+        <div class="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px]">
+          <div>
+            <span class="text-slate-400">HTTP Method:</span>
+            <div class="font-mono text-white font-semibold">GET or POST</div>
+          </div>
+          <div>
+            <span class="text-slate-400">Recommended Interval:</span>
+            <div class="font-mono text-emerald-400 font-semibold">Every 15 Minutes</div>
+          </div>
+          <div>
+            <span class="text-slate-400">Execution Mode:</span>
+            <div class="font-mono text-cyan-400 font-semibold">Async (50ms Instant Response)</div>
+          </div>
+          <div>
+            <span class="text-slate-400">Timeout Risk:</span>
+            <div class="font-mono text-emerald-400 font-semibold">Zero (No 504 Timeouts)</div>
+          </div>
+        </div>
+
+        <!-- 3-Step Setup Guide -->
+        <div class="space-y-2 text-slate-300">
+          <div class="font-semibold text-white">How to set up in 60 seconds on cron-job.org:</div>
+          <ol class="list-decimal list-inside space-y-1 text-slate-400 text-[11px] leading-relaxed">
+            <li>Open <a href="https://console.cron-job.org/jobs/create" target="_blank" class="text-cyan-400 underline font-medium">cron-job.org Console (Create Job) ↗</a></li>
+            <li>Paste your webhook URL in the <strong class="text-slate-300">URL</strong> field.</li>
+            <li>Set Schedule to <strong class="text-slate-300">Every 15 minutes</strong> (or custom cron <code class="font-mono text-emerald-400">*/15 * * * *</code>).</li>
+            <li>Click <strong class="text-slate-300">Create</strong>. Done!</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-dark-border">
+        <a href="https://console.cron-job.org/jobs/create" target="_blank" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium transition flex items-center space-x-1.5">
+          <span>Open cron-job.org Console</span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+        <button onclick="closeCronModal()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition">Got it</button>
       </div>
     </div>
   </div>
@@ -1346,6 +1425,31 @@
       } finally {
         btn.disabled = false;
         btn.innerText = 'Connect Now';
+      }
+    }
+
+    // cron-job.org Modal Controls
+    function openCronModal() {
+      const origin = window.location.origin || `${window.location.protocol}//${window.location.host}`;
+      document.getElementById('cronWebhookInput').value = `${origin}/api/cron/input`;
+      document.getElementById('cronModal').classList.remove('hidden');
+    }
+    function closeCronModal() {
+      document.getElementById('cronModal').classList.add('hidden');
+    }
+    function copyCronWebhookUrl() {
+      const input = document.getElementById('cronWebhookInput');
+      input.select();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          showToast('Webhook URL copied to clipboard! (Ready for cron-job.org)');
+        }).catch(() => {
+          document.execCommand('copy');
+          showToast('Webhook URL copied to clipboard!');
+        });
+      } else {
+        document.execCommand('copy');
+        showToast('Webhook URL copied to clipboard!');
       }
     }
 

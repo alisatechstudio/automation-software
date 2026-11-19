@@ -23,7 +23,6 @@
     "googleapis": "^190.0.0",
     "https-proxy-agent": "^9.1.0",
     "mongodb": "^7.9.0",
-    "node-cron": "^3.0.3",
     "node-edge-tts": "^1.2.12",
     "pino": "^10.4.0",
     "pino-pretty": "^13.2.0",
@@ -38,7 +37,6 @@
     "@types/express": "^4.17.21",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^22.13.1",
-    "@types/node-cron": "^3.0.11",
     "@types/ws": "^8.18.2",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
