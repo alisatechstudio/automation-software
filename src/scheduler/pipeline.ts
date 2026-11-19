@@ -50,7 +50,7 @@ export class SportsClipPipeline {
   /**
    * Runs the complete ingestion, transformation, compliance evaluation, and review submission workflow.
    */
-  public async runCycle(): Promise<{ ingested: number; processed: number; submittedForApproval: number }> {
+  public async runCycle(maxClips = 1): Promise<{ ingested: number; processed: number; submittedForApproval: number }> {
     const { isPaused, reason } = await this.repo.isPipelinePaused();
     if (isPaused) {
       logger.warn({ reason }, 'Pipeline cycle skipped: System is in PAUSED state.');
@@ -118,6 +118,10 @@ export class SportsClipPipeline {
         const success = await this.processSingleClip(clip, cleanFilePath);
         processedCount++;
         if (success) submittedCount++;
+        if (processedCount >= maxClips) {
+          logger.info({ processedCount, maxClips }, 'Target clips processed for current cycle. Yielding for next run.');
+          break;
+        }
       } catch (err: any) {
         logger.error({ clipId: clip.id, err: err.message }, 'Failed processing clip through pipeline');
         await this.repo.updateClipStatus(clip.id, 'ERROR', err.message);

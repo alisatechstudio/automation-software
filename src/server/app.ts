@@ -788,15 +788,14 @@ export function createServer(deps: ServerDependencies) {
         });
       }
 
-      logger.info('External cron trigger: SportsClipBot Pipeline Cycle');
-      const cyclePromise = pipeline.runCycle();
-      if (process.env.VERCEL) {
-        await cyclePromise.catch(err => logger.error({ err: err.message }, 'Sports pipeline error in cron'));
-      }
+      const maxClips = parseInt((req.query.max as string) || (req.query.limit as string) || '1', 10) || 1;
+      logger.info({ maxClips }, 'External cron trigger: SportsClipBot Pipeline Cycle');
+      const cycleResult = await pipeline.runCycle(maxClips);
       res.json({
         success: true,
         job: 'sports_pipeline_cycle',
         status: 'completed',
+        ...cycleResult,
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
