@@ -3,10 +3,14 @@ import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
 import { resolveCategoryTheme, isEnglishText } from '../../config/constants.js';
 import { UnifiedTtsService } from '../tts/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 let ffmpegPath: string = '';

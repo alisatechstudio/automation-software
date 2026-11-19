@@ -1,10 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { ImageRenderer, RenderInput, RenderOutput } from './types.js';
 import { config } from '../../config/env.js';
 import { isEnglishText } from '../../config/constants.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class CanvasCardRenderer implements ImageRenderer {
   private fontsRegistered: boolean = false;
