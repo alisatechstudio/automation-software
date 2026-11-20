@@ -67,7 +67,7 @@ export class RssParserService {
 
         const title = this.cleanText(item.title || '');
         const description = this.cleanHtmlSnippet(
-          item['content:encoded'] || item.content || item.summary || item.description || ''
+          item.description || item.summary || item.contentSnippet || item['content:encoded'] || item.content || ''
         );
 
         const isEnglishArticle =

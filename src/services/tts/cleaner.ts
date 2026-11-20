@@ -25,22 +25,26 @@ export function cleanSpeechScript(description?: string, headline?: string): stri
     .trim();
 
   if (!clean || clean.length < 15) {
-    return fallbackHeadline.slice(0, 80);
+    return fallbackHeadline;
   }
 
-  // Snappy news script: keep first 1-2 punchy sentences (max 80 chars) for ~3-4 seconds voiceover
-  const sentences = clean.split(/(?<=[।!?.\n])\s+/);
-  let concise = '';
-  for (const s of sentences) {
-    if ((concise + ' ' + s).trim().length <= 80) {
-      concise = (concise + ' ' + s).trim();
-    } else {
-      break;
+  // Preserve complete description from RSS. If text exceptionally exceeds 500 characters
+  // (e.g. if the full article body was provided instead of a summary), keep complete sentences up to 500 characters.
+  if (clean.length > 500) {
+    const sentences = clean.split(/(?<=[।!?.\n])\s+/);
+    let concise = '';
+    for (const s of sentences) {
+      if ((concise + ' ' + s).trim().length <= 500) {
+        concise = (concise + ' ' + s).trim();
+      } else {
+        break;
+      }
     }
-  }
-  if (!concise || concise.length < 15) {
-    concise = clean.slice(0, 80).trim();
+    if (concise && concise.length >= 30) {
+      return concise;
+    }
+    return clean.slice(0, 500).trim();
   }
 
-  return concise || fallbackHeadline.slice(0, 80);
+  return clean;
 }

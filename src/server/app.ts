@@ -702,6 +702,7 @@ export function createInputServer(pipeline: InputPipelineService): Express {
       const reelRenderer = pipeline.getReelRenderer();
       const reelBuffer = await reelRenderer.renderReel({
         headline,
+        description: body.description || headline,
         category,
         imageUrl,
         theme,

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { createCanvas, GlobalFonts, loadImage } from '@napi-rs/canvas';
 import { config } from '../../config/env.js';
@@ -20,6 +20,14 @@ try {
   ffmpegPath = ffmpegInstaller?.path || 'ffmpeg';
 } catch (e) {
   ffmpegPath = 'ffmpeg';
+}
+
+let ffprobePath: string = '';
+try {
+  const ffprobeInstaller = nodeRequire('@ffprobe-installer/ffprobe');
+  ffprobePath = ffprobeInstaller?.path || 'ffprobe';
+} catch (e) {
+  ffprobePath = 'ffprobe';
 }
 
 export type ReelTheme =
@@ -573,8 +581,8 @@ export class ReelVideoRenderer {
     const scaleY = height / refHeight;
     const needsScale = scaleX !== 1 || scaleY !== 1;
 
-    // Strict 25s cron timeout budget: 5 seconds reel duration
-    let durationSeconds = input.durationSeconds ? Math.min(5, input.durationSeconds) : 5;
+    // Base reel duration (minimum 5s if no audio)
+    let durationSeconds = input.durationSeconds ? Math.max(4, input.durationSeconds) : 5;
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
     const fps = 24;
 
@@ -622,18 +630,6 @@ export class ReelVideoRenderer {
 
     let tempVoiceFile: string | null = null;
     if (voiceoverBuffer && voiceoverBuffer.length > 500) {
-      // Estimate voice duration from audio buffer to ensure the reel plays out the full description
-      let estVoiceSecs = 0;
-      if (voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF') {
-        estVoiceSecs = voiceoverBuffer.length / 48000;
-      } else {
-        estVoiceSecs = voiceoverBuffer.length / 16000;
-      }
-      if (estVoiceSecs > 0) {
-        // Enforce snappy news duration (4 to 5 seconds max) to guarantee full render & staging within 25s
-        durationSeconds = Math.min(5, Math.max(4, Math.ceil(estVoiceSecs)));
-      }
-
       const isWav = voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF';
       const voiceExt = isWav ? '.wav' : '.mp3';
       tempVoiceFile = path.join(tempOutputDir, `voice_${Date.now()}_${crypto.randomBytes(4).toString('hex')}${voiceExt}`);
@@ -642,6 +638,40 @@ export class ReelVideoRenderer {
       } catch (e: any) {
         console.warn('[ReelVideoRenderer] Could not write temporary voice file:', e.message);
         tempVoiceFile = null;
+      }
+
+      // Calculate exact audio readout duration so reel strictly complies with the complete RSS description
+      let voiceDurationSecs = 0;
+      if (tempVoiceFile && ffprobePath) {
+        try {
+          const probe = spawnSync(
+            ffprobePath,
+            ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', tempVoiceFile],
+            { timeout: 3000 }
+          );
+          const probed = parseFloat(probe.stdout?.toString().trim());
+          if (!isNaN(probed) && probed > 0) {
+            voiceDurationSecs = probed;
+          }
+        } catch (err: any) {
+          console.warn('[ReelVideoRenderer] ffprobe duration check:', err.message);
+        }
+      }
+
+      // Accurate fallback from audio buffer bitrate (48kbps mono MP3 = 6000 bytes/sec; RIFF WAV = 48000 bytes/sec)
+      if (voiceDurationSecs <= 0) {
+        if (isWav) {
+          voiceDurationSecs = voiceoverBuffer.length / 48000;
+        } else {
+          voiceDurationSecs = voiceoverBuffer.length / 6000;
+        }
+      }
+
+      if (voiceDurationSecs > 0) {
+        // Reel duration strictly complies with readout of complete RSS description (+ 0.75s smooth outro padding)
+        const matchedDuration = Math.ceil(voiceDurationSecs + 0.75);
+        durationSeconds = Math.max(durationSeconds, matchedDuration);
+        console.log(`[ReelVideoRenderer] ⏱️ Voiceover readout: ${voiceDurationSecs.toFixed(2)}s -> Reel duration set to: ${durationSeconds}s`);
       }
     }
 
