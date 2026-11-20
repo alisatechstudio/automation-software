@@ -914,9 +914,7 @@ export class ReelVideoRenderer {
   /**
    * Renders broadcast-grade animated kinetic headline text with:
    * - Sequential word-by-word spring entrance (0-1.5s)
-   * - Continuous CapCut/Hormozi-style Word-by-Word Karaoke Highlighting synced to audio speech
-   * - High-contrast text readability on mobile screens with soft highlight pill and scale pop
-   * - Periodic specular light beam / sheen sweep across typography
+   * - Clean, uniform typography with high readability and zero color highlighting
    */
   private drawKineticHeadlineText(
     ctx: any,
@@ -939,18 +937,6 @@ export class ReelVideoRenderer {
     const lineWords = lines.map((l) => l.split(/\s+/).filter(Boolean));
     const totalWords = lineWords.reduce((sum, words) => sum + words.length, 0);
     const spaceWidth = ctx.measureText(' ').width;
-
-    // Periodic text shimmer sweep (runs every 96 frames = 4s, duration 28 frames)
-    const sweepCycle = f % 96;
-    const isSweeping = f >= 45 && sweepCycle >= 48 && sweepCycle <= 76;
-    const sweepProgress = isSweeping ? (sweepCycle - 48) / 28 : -1;
-
-    // Active speech synchronization: map progress (from 6% to 92%) across total word count
-    const speechProgress = Math.min(1, Math.max(0, (progress - 0.06) / 0.86));
-    const activeWordIdx = Math.min(totalWords - 1, Math.floor(speechProgress * totalWords));
-    const wordPhase = (speechProgress * totalWords) - activeWordIdx; // 0.0 -> 1.0 within this word
-
-    const isLightCard = !headlineColor.startsWith('#f') && !headlineColor.startsWith('#e') && !headlineColor.startsWith('rgba(255');
 
     let globalWordIdx = 0;
 
@@ -991,67 +977,10 @@ export class ReelVideoRenderer {
           ctx.fillStyle = headlineColor || '#0f172a';
           ctx.fillText(word, wordX, lineY + offsetY);
         } else {
-          const isCurrentActive = currentWordIdx === activeWordIdx && f >= 36;
-          const isSpoken = currentWordIdx < activeWordIdx;
-
-          if (isCurrentActive) {
-            // ========================================================
-            // ACTIVE WORD KARAOKE HIGHLIGHT (CapCut / Hormozi Style)
-            // ========================================================
-            const popScale = 1.0 + Math.sin(wordPhase * Math.PI) * 0.10;
-            const centerX = wordX + wordW / 2;
-            const centerY = lineY + fontSize / 2;
-
-            // Highlight Pill Background
-            ctx.save();
-            ctx.fillStyle = isLightCard ? 'rgba(254, 240, 138, 0.75)' : 'rgba(245, 158, 11, 0.30)';
-            ctx.beginPath();
-            ctx.roundRect(wordX - 6, lineY - 2, wordW + 12, Math.round(fontSize * 1.25), 8);
-            ctx.fill();
-
-            // Word with scale pop & glow
-            ctx.translate(centerX, centerY);
-            ctx.scale(popScale, popScale);
-            ctx.translate(-centerX, -centerY);
-
-            ctx.fillStyle = isLightCard ? (accentColor || '#c2410c') : '#facc15';
-            ctx.shadowColor = accentColor || '#f59e0b';
-            ctx.shadowBlur = 12;
-            ctx.fillText(word, wordX, lineY);
-            ctx.restore();
-          } else {
-            // Already spoken or upcoming word
-            if (isSpoken) {
-              // Settled in crisp high-contrast color
-              ctx.globalAlpha = 1.0;
-              ctx.fillStyle = headlineColor || '#0f172a';
-            } else {
-              // Upcoming word with slight softness for focal contrast
-              ctx.globalAlpha = 0.82;
-              ctx.fillStyle = headlineColor || '#0f172a';
-            }
-
-            // Check if periodic light gleam is sweeping over this word
-            if (isSweeping) {
-              const sweepX = width * 0.12 + sweepProgress * (width * 0.76);
-              const dist = Math.abs(wordX + wordW / 2 - sweepX);
-              if (dist < 130) {
-                const sheenIntensity = 1 - dist / 130;
-                ctx.fillText(word, wordX, lineY);
-
-                // Specular white light sheen overlay
-                ctx.fillStyle = `rgba(255, 255, 255, ${sheenIntensity * 0.8})`;
-                ctx.shadowColor = '#ffffff';
-                ctx.shadowBlur = Math.round(sheenIntensity * 14);
-                ctx.fillText(word, wordX, lineY);
-                ctx.restore();
-                wordX += wordW + spaceWidth;
-                continue;
-              }
-            }
-
-            ctx.fillText(word, wordX, lineY);
-          }
+          // Clean, uniform headline typography with no color highlighting or karaoke highlight pills
+          ctx.globalAlpha = 1.0;
+          ctx.fillStyle = headlineColor || '#0f172a';
+          ctx.fillText(word, wordX, lineY);
         }
         ctx.restore();
 
@@ -2877,12 +2806,7 @@ export class ReelVideoRenderer {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
       ctx.shadowBlur = 10;
       ctx.shadowOffsetY = 3;
-
-      if (i === 0) {
-        ctx.fillStyle = '#fef08a'; // Vibrant Gold Highlight for opening
-      } else {
-        ctx.fillStyle = '#ffffff';
-      }
+      ctx.fillStyle = '#ffffff';
       ctx.fillText(l, boxX + 45, startY + i * lineHeight);
     });
     ctx.restore();
