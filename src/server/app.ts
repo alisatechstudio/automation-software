@@ -221,14 +221,19 @@ export function createInputServer(pipeline: InputPipelineService): Express {
       : req.body?.limit
       ? parseInt(req.body.limit as string, 10)
       : 1;
-    const isSync = req.query.sync === 'true' || req.body?.sync === true;
+    const isCronPath = req.path?.startsWith('/api/cron');
+    const isExplicitAsync = req.query.async === 'true' || req.body?.async === true;
+    const isExplicitSync = req.query.sync === 'true' || req.body?.sync === true;
+    const isSync = isExplicitSync || (isCronPath && !isExplicitAsync);
 
-    // Check if pipeline is already running
-    if (pipeline.isJobRunning()) {
+    // Check if pipeline is already running for this folder or globally
+    if (pipeline.isJobRunning(folderId)) {
       return res.status(200).json({
         success: true,
         alreadyRunning: true,
-        message: 'Input pipeline cycle is already in progress.',
+        message: folderId
+          ? `Input pipeline cycle for folder ${folderId} is already in progress.`
+          : 'Input pipeline cycle is already in progress.',
         jobState: pipeline.getJobState(),
       });
     }

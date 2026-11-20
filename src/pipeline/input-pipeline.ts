@@ -62,6 +62,8 @@ export class InputPipelineService {
   private canvasRenderer: CanvasCardRenderer;
   private gdriveUploader: GoogleDriveUploader;
   private isRunning: boolean = false;
+  private activeFolders: Set<string> = new Set<string>();
+  private isGlobalRunning: boolean = false;
   private jobState: PipelineJobState = {
     isRunning: false,
     stage: 'idle',
@@ -84,8 +86,12 @@ export class InputPipelineService {
     return this.jobState;
   }
 
-  public isJobRunning(): boolean {
-    return this.jobState.isRunning;
+  public isJobRunning(folderId?: string): boolean {
+    if (folderId) {
+      const clean = this.gdriveUploader.extractFolderId(folderId) || folderId.trim().toLowerCase();
+      return this.activeFolders.has(clean) || this.isGlobalRunning;
+    }
+    return this.isGlobalRunning || this.activeFolders.size > 0;
   }
 
   public addLog(msg: string) {
@@ -132,20 +138,47 @@ export class InputPipelineService {
     allSources?: boolean;
   }): Promise<InputCronResult> {
     const startTime = Date.now();
-    if (this.isRunning && !options?.force) {
-      return {
-        success: false,
-        timestamp: new Date().toISOString(),
-        durationMs: 0,
-        sourcesProcessed: 0,
-        totalFetched: 0,
-        totalReelsCreated: 0,
-        totalUploadedToDrive: 0,
-        results: [],
-        error: 'Input Cron already in progress. Please wait for current run to finish.',
-      };
+    const folderLockKey = options?.folderId
+      ? (this.gdriveUploader.extractFolderId(options.folderId) || options.folderId.trim().toLowerCase())
+      : null;
+
+    if (!options?.force) {
+      if (folderLockKey) {
+        if (this.activeFolders.has(folderLockKey) || this.isGlobalRunning) {
+          return {
+            success: false,
+            timestamp: new Date().toISOString(),
+            durationMs: 0,
+            sourcesProcessed: 0,
+            totalFetched: 0,
+            totalReelsCreated: 0,
+            totalUploadedToDrive: 0,
+            results: [],
+            error: `Input Cron for folder "${options?.folderId}" already in progress. Please wait for current run to finish.`,
+          };
+        }
+      } else {
+        if (this.isGlobalRunning || this.activeFolders.size > 0) {
+          return {
+            success: false,
+            timestamp: new Date().toISOString(),
+            durationMs: 0,
+            sourcesProcessed: 0,
+            totalFetched: 0,
+            totalReelsCreated: 0,
+            totalUploadedToDrive: 0,
+            results: [],
+            error: 'Input Cron already in progress. Please wait for current run to finish.',
+          };
+        }
+      }
     }
 
+    if (folderLockKey) {
+      this.activeFolders.add(folderLockKey);
+    } else {
+      this.isGlobalRunning = true;
+    }
     this.isRunning = true;
     this.jobState.isRunning = true;
     this.jobState.stage = 'starting';
@@ -154,7 +187,7 @@ export class InputPipelineService {
     this.jobState.startedAt = new Date().toISOString();
     this.jobState.completedAt = null;
     this.jobState.lastError = null;
-    this.addLog('🚀 Starting Input Automation cycle...');
+    this.addLog(`🚀 Starting Input Automation cycle${folderLockKey ? ` [Folder: ${options?.folderId}]` : ' [Global]'}...`);
 
     try {
       if (!isDbConnected()) {
@@ -289,7 +322,7 @@ export class InputPipelineService {
         this.addLog(`📡 Fetching source: "${source.name}" (${source.url})...`);
         this.jobState.stage = 'fetching_rss';
         const folderId = this.gdriveUploader.extractFolderId(
-          source.gdriveFolderId || source.gdriveFolderUrlOrId || config.GDRIVE_FOLDER_ID || ''
+          source.gdriveFolderId || source.gdriveFolderUrlOrId || options?.folderId || config.GDRIVE_FOLDER_ID || ''
         );
 
         let fetchedItems: any[] = [];
@@ -343,11 +376,11 @@ export class InputPipelineService {
               $or: [{ guid: item.guid }, { link: item.link }],
             });
             const hasRealDriveFile =
-              Boolean(existing.gdriveFileId) && !existing.gdriveFileId.startsWith('local_');
+              Boolean(existing?.gdriveFileId) && !existing?.gdriveFileId?.startsWith('local_');
             const alreadyInDrive =
               existing &&
               ((existing.status === 'uploaded_to_drive' && hasRealDriveFile) ||
-                existing.status === 'published' ||
+                (existing.status === 'published' && hasRealDriveFile) ||
                 hasRealDriveFile);
 
             if (alreadyInDrive) {
@@ -571,8 +604,13 @@ export class InputPipelineService {
         error: err.message,
       };
     } finally {
-      this.isRunning = false;
-      this.jobState.isRunning = false;
+      if (folderLockKey) {
+        this.activeFolders.delete(folderLockKey);
+      } else {
+        this.isGlobalRunning = false;
+      }
+      this.isRunning = this.isGlobalRunning || this.activeFolders.size > 0;
+      this.jobState.isRunning = this.isRunning;
     }
   }
 }

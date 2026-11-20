@@ -377,6 +377,8 @@ export class GoogleDriveUploader {
               'Content-Length': String(options.videoBuffer.length),
             },
             body: options.videoBuffer as any,
+            // @ts-ignore
+            duplex: 'half',
           });
 
           if (putRes.ok) {

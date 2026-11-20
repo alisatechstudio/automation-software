@@ -72,7 +72,7 @@ try {
 };
 
 export class EdgeTtsService {
-  public static readonly BENGALI_VOICE = 'bn-BD-PradeepNeural';
+  public static readonly BENGALI_VOICE = 'bn-BD-NabanitaNeural';
   public static readonly ENGLISH_VOICE = 'en-US-GuyNeural';
 
   private isBengali(text: string): boolean {
