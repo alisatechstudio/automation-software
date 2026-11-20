@@ -406,7 +406,7 @@ export class InputPipelineService {
 
           const effectiveWebsite = isEnglish ? 'https://trendingnews.world' : 'https://bdnews.site';
           const targetTheme = source.reelTheme || config.REEL_DEFAULT_THEME;
-          const reelDuration = source.reelDuration || config.REEL_DEFAULT_DURATION;
+          const reelDuration = Math.min(10, source.reelDuration ? Math.min(source.reelDuration, 10) : 8);
 
           if (!item.imageUrl && item.link) {
             try {

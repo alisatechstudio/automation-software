@@ -374,7 +374,6 @@ export class GoogleDriveUploader {
             method: 'PUT',
             headers: {
               'Content-Type': mimeType,
-              'Content-Length': String(options.videoBuffer.length),
             },
             body: options.videoBuffer as any,
             // @ts-ignore
@@ -390,7 +389,8 @@ export class GoogleDriveUploader {
             lastPutError = `Drive upload binary PUT failed (${putRes.status}): ${putErr}`;
           }
         } catch (netErr: any) {
-          lastPutError = `Drive PUT network error: ${netErr.message}`;
+          console.error('[GoogleDriveUploader] PUT netErr:', netErr?.message, 'cause:', netErr?.cause);
+          lastPutError = `Drive PUT network error: ${netErr.message} (${netErr?.cause?.message || netErr?.cause || ''})`;
         }
       }
 

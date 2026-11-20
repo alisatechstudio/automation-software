@@ -52,7 +52,7 @@ export const config: InputAppConfig = {
   CRON_ENABLED: process.env.CRON_ENABLED !== 'false',
   CRON_SCHEDULE: process.env.CRON_SCHEDULE || '*/15 * * * *',
   MAX_ARTICLE_AGE_HOURS: process.env.MAX_ARTICLE_AGE_HOURS ? parseInt(process.env.MAX_ARTICLE_AGE_HOURS, 10) : 24,
-  REEL_DEFAULT_DURATION: process.env.REEL_DEFAULT_DURATION ? parseInt(process.env.REEL_DEFAULT_DURATION, 10) : 15,
+  REEL_DEFAULT_DURATION: process.env.REEL_DEFAULT_DURATION ? parseInt(process.env.REEL_DEFAULT_DURATION, 10) : 8,
   REEL_DEFAULT_THEME: process.env.REEL_DEFAULT_THEME || 'canva-studio-rotate',
   DATA_DIR: dataDir,
   ASSETS_DIR: assetsDir,

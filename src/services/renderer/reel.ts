@@ -482,11 +482,11 @@ export class ReelVideoRenderer {
     // Defaults to 720x1280 (HD vertical) for 56% less CPU/RAM and 4x faster encoding on shared hosting / cPanel.
     // Can be set to 1080p via REEL_RESOLUTION=1080p or HIGH_DEFINITION=true in .env.
     const isHighDef = process.env.REEL_RESOLUTION === '1080p' || process.env.HIGH_DEFINITION === 'true';
-    const defaultWidth = isHighDef ? 1080 : (isVertical ? 720 : 1080);
-    const defaultHeight = isHighDef ? (isVertical ? 1920 : 1080) : (isVertical ? 1280 : 1080);
+    const defaultWidth = isHighDef ? 1080 : (isVertical ? 540 : 1080);
+    const defaultHeight = isHighDef ? (isVertical ? 1920 : 1080) : (isVertical ? 960 : 1080);
 
-    let width = input.width ? Math.max(720, input.width) : defaultWidth;
-    let height = input.height ? Math.max(isVertical ? 1280 : 720, input.height) : defaultHeight;
+    let width = input.width || defaultWidth;
+    let height = input.height || defaultHeight;
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -504,7 +504,7 @@ export class ReelVideoRenderer {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = 'medium';
 
     ctx.save();
     if (scaleX !== 1 || scaleY !== 1) {
@@ -561,11 +561,11 @@ export class ReelVideoRenderer {
     // Defaults to 720x1280 (HD vertical) for 56% less CPU/RAM and 4x faster encoding on shared hosting / cPanel.
     // Can be set to 1080p via REEL_RESOLUTION=1080p or HIGH_DEFINITION=true in .env.
     const isHighDef = process.env.REEL_RESOLUTION === '1080p' || process.env.HIGH_DEFINITION === 'true';
-    const defaultWidth = isHighDef ? 1080 : (isVertical ? 720 : 1080);
-    const defaultHeight = isHighDef ? (isVertical ? 1920 : 1080) : (isVertical ? 1280 : 1080);
+    const defaultWidth = isHighDef ? 1080 : (isVertical ? 540 : 1080);
+    const defaultHeight = isHighDef ? (isVertical ? 1920 : 1080) : (isVertical ? 960 : 1080);
 
-    let width = input.width ? Math.max(720, input.width) : defaultWidth;
-    let height = input.height ? Math.max(isVertical ? 1280 : 720, input.height) : defaultHeight;
+    let width = input.width || defaultWidth;
+    let height = input.height || defaultHeight;
 
     const refWidth = 1080;
     const refHeight = isVertical ? 1920 : 1080;
@@ -573,9 +573,10 @@ export class ReelVideoRenderer {
     const scaleY = height / refHeight;
     const needsScale = scaleX !== 1 || scaleY !== 1;
 
-    let durationSeconds = input.durationSeconds || 25; // 25 seconds minimum for Instagram Reels
+    // Strict 25s cron timeout budget: 5 seconds reel duration
+    let durationSeconds = input.durationSeconds ? Math.min(5, input.durationSeconds) : 5;
     // Meta Reels strictly requires frame rate between 24 and 60 fps (Sub-24 fps triggers Error 1363129)
-    const fps = Math.max(24, input.fps || 24);
+    const fps = 24;
 
     // 1. Preload article image
     let articleImg: any = null;
@@ -629,8 +630,8 @@ export class ReelVideoRenderer {
         estVoiceSecs = voiceoverBuffer.length / 16000;
       }
       if (estVoiceSecs > 0) {
-        // Ensure minimum 25 seconds for Instagram Reels
-        durationSeconds = Math.max(durationSeconds, Math.ceil(estVoiceSecs + 2));
+        // Enforce snappy news duration (4 to 5 seconds max) to guarantee full render & staging within 25s
+        durationSeconds = Math.min(5, Math.max(4, Math.ceil(estVoiceSecs)));
       }
 
       const isWav = voiceoverBuffer.toString('ascii', 0, 4) === 'RIFF';
@@ -648,8 +649,8 @@ export class ReelVideoRenderer {
 
     // 4. Configure FFmpeg spawn arguments with low-resource featherweight settings
     const numThreads = Math.min(2, os.cpus()?.length || 1);
-    const ffmpegPreset = process.env.FFMPEG_PRESET || (isHighDef ? 'veryfast' : 'ultrafast');
-    const ffmpegCrf = process.env.FFMPEG_CRF || (isHighDef ? '22' : '24');
+    const ffmpegPreset = 'ultrafast';
+    const ffmpegCrf = '26';
 
     const ffmpegArgs = [
       '-y',
@@ -689,9 +690,7 @@ export class ReelVideoRenderer {
       '-keyint_min', String(fps * 2),
       '-sc_threshold', '0'
     );
-    if (isHighDef) {
-      ffmpegArgs.push('-tune', 'film');
-    }
+    ffmpegArgs.push('-tune', 'zerolatency');
 
     ffmpegArgs.push(
       '-c:a', 'aac',
@@ -732,7 +731,7 @@ export class ReelVideoRenderer {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = 'medium';
 
     // 5. Render frames loop
     for (let f = 0; f < totalFrames; f++) {
@@ -778,15 +777,15 @@ export class ReelVideoRenderer {
       }
     } catch {}
 
-    // 120-second watchdog timer to guarantee FFmpeg process is ALWAYS killed and never leaks
+    // 20-second watchdog timer to guarantee execution never breaches 25s threshold
     const killWatchdog = setTimeout(() => {
       try {
         if (!ffmpegProcess.killed) {
-          console.warn('[ReelVideoRenderer] Watchdog: FFmpeg exceeded 120s timeout, terminating process...');
+          console.warn('[ReelVideoRenderer] Watchdog: FFmpeg exceeded 20s timeout, terminating process...');
           ffmpegProcess.kill('SIGKILL');
         }
       } catch {}
-    }, 120000);
+    }, 20000);
 
     try {
       // Wait for ffmpeg to complete

@@ -41,25 +41,15 @@ export async function initDatabase(
 
     logger.info({ dbName }, 'Connected to MongoDB successfully. Initializing indexes...');
 
-    // Initialize indexes gracefully without throwing if an index with different options already exists
+    // Initialize indexes gracefully in background without blocking the connection
     const indexPromises = [
-      db.collection('rss_sources').createIndex({ isActive: 1 }).catch((e) => {
-        logger.warn({ index: 'isActive_1', err: e.message }, 'Index creation notice');
-      }),
-      db.collection('news_articles').createIndex({ guid: 1 }).catch((e) => {
-        logger.warn({ index: 'guid_1', err: e.message }, 'Index creation notice');
-      }),
-      db.collection('news_articles').createIndex({ link: 1 }).catch((e) => {
-        logger.warn({ index: 'link_1', err: e.message }, 'Index creation notice');
-      }),
-      db.collection('news_articles').createIndex({ status: 1 }).catch((e) => {
-        logger.warn({ index: 'status_1', err: e.message }, 'Index creation notice');
-      }),
-      db.collection('news_articles').createIndex({ createdAt: -1 }).catch((e) => {
-        logger.warn({ index: 'createdAt_-1', err: e.message }, 'Index creation notice');
-      }),
+      db.collection('rss_sources').createIndex({ isActive: 1 }).catch(() => {}),
+      db.collection('news_articles').createIndex({ guid: 1 }).catch(() => {}),
+      db.collection('news_articles').createIndex({ link: 1 }).catch(() => {}),
+      db.collection('news_articles').createIndex({ status: 1 }).catch(() => {}),
+      db.collection('news_articles').createIndex({ createdAt: -1 }).catch(() => {}),
     ];
-    await Promise.all(indexPromises);
+    Promise.all(indexPromises).catch(() => {});
 
     clientInstance = client;
     dbInstance = db;

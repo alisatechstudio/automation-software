@@ -101,7 +101,7 @@ export class EdgeTtsService {
           voice,
           lang: isEn ? 'en-US' : 'bn-BD',
           outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-          timeout: 15000,
+          timeout: 6000,
         });
 
         await tts.ttsPromise(cleanText, tempFile);
